@@ -238,6 +238,18 @@ esac
 AC_DEFINE_UNQUOTED([ENABLE_ARM_OABI], [$enable_arm_oabi],
 		   [Define to 1 if you want OABI support on ARM EABI.])
 
+AC_ARG_ENABLE([dataseries],
+	      [AS_HELP_STRING([--enable-dataseries],
+			      [enable DataSeries output format])],
+	      [], [enable_dataseries=no])
+case "$enable_dataseries" in
+	yes) enable_dataseries=1 ;;
+	no) enable_dataseries=0 ;;
+	*) AC_MSG_ERROR([bad value $enable_dataseries for dataseries option]) ;;
+esac
+AC_DEFINE_UNQUOTED([ENABLE_DATASERIES], [$enable_dataseries],
+		   [Define to 1 if you want DataSeries output format support.])
+
 gl_WARN_ADD([-Wall])
 gl_WARN_ADD([-Wwrite-strings])
 gl_WARN_ADD([-Wsign-compare])
