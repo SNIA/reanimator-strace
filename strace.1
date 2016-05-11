@@ -273,6 +273,13 @@ This option is available only if
 .B strace
 is built with libunwind.
 .TP
+.BI "\-X " dsfilename
+Outputs binary format strace data in DataSeries format to file
+.IR dsfilename .
+This option is available only if
+.B strace
+is built with the --enable-dataseries option and linked with the DataSeries library.
+.TP
 .B \-q
 Suppress messages about attaching, detaching etc.  This happens
 automatically when output is redirected to a file and the command

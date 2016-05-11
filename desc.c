@@ -32,7 +32,15 @@
 
 SYS_FUNC(close)
 {
+#ifdef ENABLE_DATASERIES
+	/* XXX: example how to process DS data per syscall. -ezk */
+	if (dataseries_fname)
+		fprintf(stderr, "DS file \"%s\", close fd %lu", dataseries_fname, tcp->u_arg[0]);
+	else
+		printfd(tcp, tcp->u_arg[0]);
+#else
 	printfd(tcp, tcp->u_arg[0]);
+#endif
 
 	return RVAL_DECODED;
 }

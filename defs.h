@@ -460,6 +460,10 @@ extern unsigned os_release;
 #undef KERNEL_VERSION
 #define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
 
+#ifdef ENABLE_DATASERIES
+extern char *dataseries_fname;
+#endif
+
 void error_msg(const char *fmt, ...) ATTRIBUTE_FORMAT((printf, 1, 2));
 void perror_msg(const char *fmt, ...) ATTRIBUTE_FORMAT((printf, 1, 2));
 void error_msg_and_die(const char *fmt, ...)

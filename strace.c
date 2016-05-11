@@ -153,6 +153,9 @@ static char *acolumn_spaces;
 static char *outfname = NULL;
 /* If -ff, points to stderr. Else, it's our common output log */
 static FILE *shared_log;
+#ifdef ENABLE_DATASERIES
+char *dataseries_fname = NULL;
+#endif
 
 struct tcb *printing_tcp = NULL;
 static struct tcb *current_tcp;
@@ -258,6 +261,10 @@ Miscellaneous:\n\
 "
 #ifdef USE_LIBUNWIND
 "  -k             obtain stack trace between each syscall (experimental)\n\
+"
+#endif
+#ifdef ENABLE_DATASERIES
+"  -X DSFILE      write DataSeries output to DSFILE instead of human readable to stderr (experimental)\n\
 "
 #endif
 /* ancient, no one should use it
@@ -1522,6 +1529,9 @@ init(int argc, char *argv[])
 #ifdef USE_LIBUNWIND
 		"k"
 #endif
+#ifdef ENABLE_DATASERIES
+		"X:"
+#endif
 		"D"
 		"a:e:o:O:p:s:S:u:E:P:I:")) != EOF) {
 		switch (c) {
@@ -1630,6 +1640,11 @@ init(int argc, char *argv[])
 #ifdef USE_LIBUNWIND
 		case 'k':
 			stack_trace_enabled = true;
+			break;
+#endif
+#ifdef ENABLE_DATASERIES
+		case 'X':
+			dataseries_fname = xstrdup(optarg);
 			break;
 #endif
 		case 'E':
