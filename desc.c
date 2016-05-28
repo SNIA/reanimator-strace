@@ -34,8 +34,9 @@ SYS_FUNC(close)
 {
 #ifdef ENABLE_DATASERIES
 	/* XXX: example how to process DS data per syscall. -ezk */
-	if (dataseries_fname)
-		fprintf(stderr, "DS file \"%s\", close fd %lu", dataseries_fname, tcp->u_arg[0]);
+        if (dataseries_module) {
+	        write_ds_record(dataseries_module, "close", tcp->u_arg);
+	}
 	else
 		printfd(tcp, tcp->u_arg[0]);
 #else

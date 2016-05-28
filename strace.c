@@ -154,7 +154,7 @@ static char *outfname = NULL;
 /* If -ff, points to stderr. Else, it's our common output log */
 static FILE *shared_log;
 #ifdef ENABLE_DATASERIES
-char *dataseries_fname = NULL;
+DataSeriesOutputModule *dataseries_module = NULL;
 #endif
 
 struct tcb *printing_tcp = NULL;
@@ -1644,7 +1644,7 @@ init(int argc, char *argv[])
 #endif
 #ifdef ENABLE_DATASERIES
 		case 'X':
-			dataseries_fname = xstrdup(optarg);
+		        dataseries_module = create_ds_module(xstrdup(optarg), "tables/snia_syscall_fields.table", "./xml/");
 			break;
 #endif
 		case 'E':
@@ -2394,6 +2394,17 @@ main(int argc, char *argv[])
 		   Exit with 128 + signo then.  */
 		exit_code += 128;
 	}
+
+#ifdef ENABLE_DATASERIES
+        /*
+	 * Free up memory that are used by DataSeriesOutputModule.
+	 * Destructor will be called and extents are flushed to the output file.
+	 * - Leixiang
+	 */
+        if (dataseries_module) {
+	  destroy_ds_module(dataseries_module);
+        }
+#endif
 
 	return exit_code;
 }

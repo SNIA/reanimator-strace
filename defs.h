@@ -31,6 +31,10 @@
 # include "config.h"
 #endif
 
+#ifdef ENABLE_DATASERIES
+# include "/home/ubuntu/trace2model/strace2ds-library/strace2ds.h"
+#endif
+
 #include <features.h>
 #ifdef HAVE_STDBOOL_H
 # include <stdbool.h>
@@ -461,7 +465,7 @@ extern unsigned os_release;
 #define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
 
 #ifdef ENABLE_DATASERIES
-extern char *dataseries_fname;
+extern DataSeriesOutputModule *dataseries_module;
 #endif
 
 void error_msg(const char *fmt, ...) ATTRIBUTE_FORMAT((printf, 1, 2));
