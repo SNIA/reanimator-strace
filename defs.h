@@ -32,7 +32,7 @@
 #endif
 
 #ifdef ENABLE_DATASERIES
-# include "/home/ubuntu/trace2model/strace2ds-library/strace2ds.h"
+# include <strace2ds.h>
 #endif
 
 #include <features.h>

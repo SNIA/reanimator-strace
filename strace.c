@@ -1500,6 +1500,9 @@ init(int argc, char *argv[])
 	int c, i;
 	int optF = 0;
 	struct sigaction sa;
+#ifdef ENABLE_DATASERIES
+	char *dataseries_fname = NULL;
+#endif
 
 	progname = argv[0] ? argv[0] : "strace";
 
@@ -1644,7 +1647,10 @@ init(int argc, char *argv[])
 #endif
 #ifdef ENABLE_DATASERIES
 		case 'X':
-		        dataseries_module = create_ds_module(xstrdup(optarg), "tables/snia_syscall_fields.table", "./xml/");
+			dataseries_fname = xstrdup(optarg);
+			if (!dataseries_fname)
+				error_msg_and_help("xstrdup(%s) failed",
+						   optarg);
 			break;
 #endif
 		case 'E':
@@ -1703,6 +1709,27 @@ init(int argc, char *argv[])
 		if (show_fd_path)
 			error_msg("-%c has no effect with -c", 'y');
 	}
+
+#ifdef ENABLE_DATASERIES
+	if (dataseries_fname) {
+		char tab_path[MAXPATHLEN], xml_path[MAXPATHLEN];
+		const char *ds_top = getenv("STRACE2DS");
+		if (!ds_top)
+			ds_top = "/usr/local/strace2ds";
+		snprintf(tab_path, MAXPATHLEN, "%s/%s", ds_top,
+			 "tables/snia_syscall_fields.table");
+		snprintf(xml_path, MAXPATHLEN, "%s/%s", ds_top,
+			 "xml/");
+		dataseries_module = create_ds_module(dataseries_fname,
+						     tab_path, xml_path);
+		if (!dataseries_module)
+			error_msg_and_help("create_ds_module failed"
+					   "fname=\"%s\" table_path=\"%s\" "
+					   "xml_path=\"%s\" ",
+					   dataseries_fname,
+					   tab_path, xml_path);
+	}
+#endif
 
 #ifdef USE_LIBUNWIND
 	if (stack_trace_enabled)
@@ -2398,12 +2425,12 @@ main(int argc, char *argv[])
 #ifdef ENABLE_DATASERIES
         /*
 	 * Free up memory that are used by DataSeriesOutputModule.
-	 * Destructor will be called and extents are flushed to the output file.
-	 * - Leixiang
+	 * Destructor will be called and extents are flushed to the
+	 * output file.
+	 * - Leixiang @ FSL
 	 */
-        if (dataseries_module) {
-	  destroy_ds_module(dataseries_module);
-        }
+        if (dataseries_module)
+		destroy_ds_module(dataseries_module);
 #endif
 
 	return exit_code;

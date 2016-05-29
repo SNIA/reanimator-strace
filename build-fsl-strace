@@ -1,0 +1,34 @@
+#!/bin/bash
+
+function runcmd
+{
+    echo "CMD: $@"
+    sleep 0.2
+    $@
+    ret=$?
+    if test $ret -ne 0 ; then
+	exit $ret
+    fi
+}
+
+#runcmd autoreconf -v -i
+#runcmd /bin/rm -fr BUILD
+runcmd mkdir -p BUILD
+runcmd cd BUILD
+export CPPFLAGS="-I$HOME/strace2ds/include"
+export LDFLAGS="\
+	-Xlinker -rpath=/usr/local/dataseries/lib:$HOME/strace2ds/lib \
+	-L/usr/local/dataseries/lib -L$HOME/strace2ds/lib"
+LIBS="-lstrace2ds -lLintel -lDataSeries"
+echo CPPFLAGS="$CPPFLAGS" LDFLAGS="$LDFLAGS" ../configure --enable-dataseries
+CPPFLAGS="$CPPFLAGS" LDFLAGS="$LDFLAGS" \
+    ../configure --enable-dataseries || exit $?
+runcmd make clean
+echo make LIBS="$LIBS" CCLD=g++
+make LIBS="$LIBS" CCLD=g++ || exit $?
+#runcmd make install
+
+# example how to run new strace
+# $ cd BUILD
+# $ STRACE2DS=~/strace2ds ./strace -X foo.ds /bin/cat stamp-h
+# ls -l foo.ds
