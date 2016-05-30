@@ -1647,10 +1647,9 @@ init(int argc, char *argv[])
 #endif
 #ifdef ENABLE_DATASERIES
 		case 'X':
-			dataseries_fname = xstrdup(optarg);
+			dataseries_fname = optarg;
 			if (!dataseries_fname)
-				error_msg_and_help("xstrdup(%s) failed",
-						   optarg);
+				error_msg_and_die("empty dataseries filename");
 			break;
 #endif
 		case 'E':
@@ -1723,7 +1722,7 @@ init(int argc, char *argv[])
 		dataseries_module = create_ds_module(dataseries_fname,
 						     tab_path, xml_path);
 		if (!dataseries_module)
-			error_msg_and_help("create_ds_module failed"
+			error_msg_and_die("create_ds_module failed"
 					   "fname=\"%s\" table_path=\"%s\" "
 					   "xml_path=\"%s\" ",
 					   dataseries_fname,
