@@ -15,15 +15,23 @@ function runcmd
 #runcmd /bin/rm -fr BUILD
 runcmd mkdir -p BUILD
 runcmd cd BUILD
+
+# pass parameters to configure for linking with our libs
 export CPPFLAGS="-I$HOME/strace2ds/include"
 export LDFLAGS="\
 	-Xlinker -rpath=/usr/local/dataseries/lib:$HOME/strace2ds/lib \
 	-L/usr/local/dataseries/lib -L$HOME/strace2ds/lib"
 LIBS="-lstrace2ds -lLintel -lDataSeries"
+
+# show configure command than run it
 echo CPPFLAGS="$CPPFLAGS" LDFLAGS="$LDFLAGS" ../configure --enable-dataseries
 CPPFLAGS="$CPPFLAGS" LDFLAGS="$LDFLAGS" \
     ../configure --enable-dataseries || exit $?
+
+# no need to make clean if you only changed source code here
 runcmd make clean
+# if all you changed is C code, you can "cd BUILD" and run the same
+# make command below.
 echo make LIBS="$LIBS" CCLD=g++
 make LIBS="$LIBS" CCLD=g++ || exit $?
 #runcmd make install
