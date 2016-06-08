@@ -32,17 +32,7 @@
 
 SYS_FUNC(close)
 {
-#ifdef ENABLE_DATASERIES
-	/* XXX: example how to process DS data per syscall. -ezk */
-        if (dataseries_module) {
-		write_ds_record(dataseries_module, "close", tcp->u_arg);
-	}
-	else
-		printfd(tcp, tcp->u_arg[0]);
-#else
 	printfd(tcp, tcp->u_arg[0]);
-#endif
-
 	return RVAL_DECODED;
 }
 
