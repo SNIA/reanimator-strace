@@ -877,9 +877,16 @@ trace_syscall_entering(struct tcb *tcp)
  ret:
 	tcp->flags |= TCB_INSYSCALL;
 	tcp->sys_func_rval = res;
+	
+#ifdef ENABLE_DATASERIES
+	// Get a timestamp for time_called and put in the tcp structure as etime (entry time)
+	gettimeofday(&tcp->etime, NULL);
+#else
 	/* Measure the entrance time as late as possible to avoid errors. */
 	if (Tflag || cflag)
 		gettimeofday(&tcp->etime, NULL);
+#endif
+
 	return res;
 }
 
@@ -891,9 +898,14 @@ trace_syscall_exiting(struct tcb *tcp)
 	int res;
 	long u_error;
 
+#ifdef ENABLE_DATASERIES
+	// Get a time stamp for time_returned and store it in a timeval tv
+	gettimeofday(&tv, NULL);
+#else
 	/* Measure the exit time as early as possible to avoid errors. */
 	if (Tflag || cflag)
-		gettimeofday(&tv, NULL);
+	        gettimeofday(&tv, NULL);
+#endif
 
 #ifdef USE_LIBUNWIND
 	if (stack_trace_enabled) {
@@ -1113,6 +1125,16 @@ trace_syscall_exiting(struct tcb *tcp)
 		tprintf(" <%ld.%06ld>",
 			(long) tv.tv_sec, (long) tv.tv_usec);
 	}
+
+#ifdef ENABLE_DATASERIES
+	// Write a DS record for each system call
+	switch(tcp->scno) {
+	    case 3:
+	        write_ds_record(dataseries_module, "close", tcp->u_arg, tcp->etime, tv, tcp->u_rval, tcp->u_error, tcp->pid);
+	        break;
+	}
+#endif
+
 	tprints("\n");
 	dumpio(tcp);
 	line_ended();
