@@ -1407,7 +1407,7 @@ print_array(struct tcb *tcp,
 
 /*
  * This function saves the path string passed as an argument to
- * system call. It internally calls umovestr() function which 
+ * system call. It internally calls umovestr() function which
  * copies data from one address space to another. -Shubhi
  */
 #ifdef ENABLE_DATASERIES
