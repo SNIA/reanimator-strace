@@ -879,7 +879,12 @@ trace_syscall_entering(struct tcb *tcp)
 	tcp->sys_func_rval = res;
 
 #ifdef ENABLE_DATASERIES
-	gettimeofday(&tcp->etime, NULL);
+	if (dataseries_module)
+		gettimeofday(&tcp->etime, NULL);
+	else {
+		if (Tflag || cflag)
+			gettimeofday(&tcp->etime, NULL);
+	}
 #else
 	/* Measure the entrance time as late as possible to avoid errors. */
 	if (Tflag || cflag)
@@ -897,7 +902,12 @@ trace_syscall_exiting(struct tcb *tcp)
 	long u_error;
 
 #ifdef ENABLE_DATASERIES
-	gettimeofday(&tv, NULL);
+	if (dataseries_module)
+		gettimeofday(&tv, NULL);
+	else {
+		if (Tflag || cflag)
+			gettimeofday(&tcp->etime, NULL);
+	}
 #else
 	/* Measure the exit time as early as possible to avoid errors. */
 	if (Tflag || cflag)
@@ -1136,16 +1146,18 @@ trace_syscall_exiting(struct tcb *tcp)
 	 * Write record in dataseries file for the system call which
 	 * is being traced.
 	 */
-	switch(tcp->scno) {
-		case 2:
-		// Open system call
-			savepath_dataseries(tcp, tcp->u_arg[0]);
-			write_ds_record(dataseries_module, "open", tcp->u_arg);
-			break;
-		case 3:
-		// Close system call
-			write_ds_record(dataseries_module, "close", tcp->u_arg);
-			break;
+	if (dataseries_module) {
+		switch(tcp->scno) {
+			case 2:
+			/* Open system call */
+				savepath_dataseries(tcp, tcp->u_arg[0]);
+				write_ds_record(dataseries_module, "open", tcp->u_arg);
+				break;
+			case 3:
+			/* Close system call */
+				write_ds_record(dataseries_module, "close", tcp->u_arg);
+				break;
+		}
 	}
 #endif
 
