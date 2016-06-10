@@ -832,7 +832,6 @@ printstr(struct tcb *tcp, long addr, long len)
 	 */
 	ellipsis = (string_quote(str, outstr, size, style) &&
 			(len < 0 || (unsigned long) len > max_strlen));
-
 	tprints(outstr);
 	if (ellipsis)
 		tprints("...");
@@ -1412,30 +1411,23 @@ print_array(struct tcb *tcp,
  */
 #ifdef ENABLE_DATASERIES
 void
-savepath_dataseries(struct tcb *tcp, long addr) {
-        char path[PATH_MAX + 1];
-        int nul_seen;
-        unsigned int n = PATH_MAX;
+save_path_dataseries(struct tcb *tcp, long addr) {
+	char path[PATH_MAX + 1];
+	int nul_seen;
 
-        if (dataseries_module) {
-                if (!addr) {
-                        save_path_string(dataseries_module, NULL);
-                        return;
-                }
-        }
+	if (!addr) {
+		save_path_string(dataseries_module, NULL);
+		return;
+	}
 
-        /* Cap path length to the path buffer size */
-        if (n > sizeof path - 1)
-                n = sizeof path - 1;
-
-        /* Fetch one byte more to find out whether path length > n. */
-        nul_seen = umovestr(tcp, addr, n + 1, path);
-        if (dataseries_module) {
-                if (nul_seen < 0)
-                        save_path_string(dataseries_module, NULL);
-                else
-                        save_path_string(dataseries_module, path);
-        }
-
+        /*
+	 * Fetch one byte more to find out whether path length is
+	 * greater than PATH_MAX.
+	 */
+        nul_seen = umovestr(tcp, addr, PATH_MAX + 1, path);
+	if (nul_seen < 0)
+		save_path_string(dataseries_module, NULL);
+	else
+		save_path_string(dataseries_module, path);
 }
 #endif

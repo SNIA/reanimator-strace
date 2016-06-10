@@ -1147,13 +1147,13 @@ trace_syscall_exiting(struct tcb *tcp)
 	 * is being traced. -Shubhi
 	 */
 	if (dataseries_module) {
-		switch(tcp->scno) {
-			case 2:
+		switch (tcp->s_ent->sen) {
+			case SEN_open:
 			/* Open system call */
-				savepath_dataseries(tcp, tcp->u_arg[0]);
+				save_path_dataseries(tcp, tcp->u_arg[0]);
 				write_ds_record(dataseries_module, "open", tcp->u_arg);
 				break;
-			case 3:
+			case SEN_close:
 			/* Close system call */
 				write_ds_record(dataseries_module, "close", tcp->u_arg);
 				break;
