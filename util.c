@@ -832,6 +832,7 @@ printstr(struct tcb *tcp, long addr, long len)
 	 */
 	ellipsis = (string_quote(str, outstr, size, style) &&
 			(len < 0 || (unsigned long) len > max_strlen));
+
 	tprints(outstr);
 	if (ellipsis)
 		tprints("...");
