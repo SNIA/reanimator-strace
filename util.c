@@ -1428,7 +1428,9 @@ save_path_dataseries(struct tcb *tcp, long addr) {
         nul_seen = umovestr(tcp, addr, PATH_MAX + 1, path);
 	if (nul_seen < 0)
 		save_path_string(dataseries_module, NULL);
-	else
+	else {
+		path[PATH_MAX] = '\0';
 		save_path_string(dataseries_module, path);
+	}
 }
 #endif
