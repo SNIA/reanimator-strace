@@ -848,3 +848,7 @@ extern unsigned num_quals;
 #define PRI__d64 PRI__64"d"
 #define PRI__u64 PRI__64"u"
 #define PRI__x64 PRI__64"x"
+
+#ifdef ENABLE_DATASERIES
+     void save_path_dataseries(struct tcb *tcp, long addr);
+#endif
