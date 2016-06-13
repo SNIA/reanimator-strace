@@ -877,7 +877,7 @@ trace_syscall_entering(struct tcb *tcp)
  ret:
 	tcp->flags |= TCB_INSYSCALL;
 	tcp->sys_func_rval = res;
-	
+
 #ifdef ENABLE_DATASERIES
 	// Get a timestamp for time_called and put in the tcp structure as etime (entry time)
 	gettimeofday(&tcp->etime, NULL);
@@ -1127,14 +1127,29 @@ trace_syscall_exiting(struct tcb *tcp)
 	}
 
 #ifdef ENABLE_DATASERIES
-	// Write a DS record for each system call
-	switch(tcp->scno) {
-	    case 3:
-	        write_ds_record(dataseries_module, "close", tcp->u_arg, tcp->etime, tv, tcp->u_rval, tcp->u_error, tcp->pid);
-	        break;
+	if (dataseries_module) {
+		 /*
+		  * Write record in dataseries file for the system call which
+		  * is being traced
+		  */
+		switch (tcp->s_ent->sen) {
+			case SEN_close:
+				write_ds_record(dataseries_module, "close", tcp->u_arg, tcp->etime, 
+						tv, tcp->u_rval, tcp->u_error, tcp->pid);
+				break;
+			case SEN_chdir:
+				save_path_dataseries(tcp, tcp->u_arg[0]);
+				write_ds_record(dataseries_module, "chdir", tcp->u_arg, tcp->etime, 
+						tv, tcp->u_rval, tcp->u_error, tcp->pid);
+				break;
+			case SEN_mkdir:
+				save_path_dataseries(tcp, tcp->u_arg[0]);
+				write_ds_record(dataseries_module, "mkdir", tcp->u_arg, tcp->etime, 
+						tv, tcp->u_rval, tcp->u_error, tcp->pid);
+				break;
+		}
 	}
 #endif
-
 	tprints("\n");
 	dumpio(tcp);
 	line_ended();
