@@ -565,6 +565,22 @@ strace_popen(const char *command)
 void
 tprintf(const char *fmt, ...)
 {
+#ifdef ENABLE_DATASERIES
+	if (!dataseries_module) {
+		va_list args;
+
+		va_start(args, fmt);
+		if (current_tcp) {
+			int n = strace_vfprintf(current_tcp->outf, fmt, args);
+			if (n < 0) {
+				if (current_tcp->outf != stderr)
+					perror_msg("%s", outfname);
+			} else
+				current_tcp->curcol += n;
+		}
+		va_end(args);
+	}
+#else
 	va_list args;
 
 	va_start(args, fmt);
@@ -577,6 +593,7 @@ tprintf(const char *fmt, ...)
 			current_tcp->curcol += n;
 	}
 	va_end(args);
+#endif
 }
 
 #ifndef HAVE_FPUTS_UNLOCKED
@@ -586,6 +603,19 @@ tprintf(const char *fmt, ...)
 void
 tprints(const char *str)
 {
+#ifdef ENABLE_DATASERIES
+	if (!dataseries_module) {
+		if (current_tcp) {
+			int n = fputs_unlocked(str, current_tcp->outf);
+			if (n >= 0) {
+				current_tcp->curcol += strlen(str);
+				return;
+			}
+			if (current_tcp->outf != stderr)
+				perror_msg("%s", outfname);
+		}
+	}
+#else
 	if (current_tcp) {
 		int n = fputs_unlocked(str, current_tcp->outf);
 		if (n >= 0) {
@@ -595,6 +625,7 @@ tprints(const char *str)
 		if (current_tcp->outf != stderr)
 			perror_msg("%s", outfname);
 	}
+#endif
 }
 
 void
