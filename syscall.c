@@ -879,7 +879,7 @@ trace_syscall_entering(struct tcb *tcp)
 	tcp->sys_func_rval = res;
 
 #ifdef ENABLE_DATASERIES
-	// Get a timestamp for time_called and put in the tcp structure as etime (entry time)
+	// Get a timestamp for time_called and store it as a timeval in tcp->etime
 	gettimeofday(&tcp->etime, NULL);
 #else
 	/* Measure the entrance time as late as possible to avoid errors. */
@@ -899,7 +899,7 @@ trace_syscall_exiting(struct tcb *tcp)
 	long u_error;
 
 #ifdef ENABLE_DATASERIES
-	// Get a time stamp for time_returned and store it in a timeval tv
+	// Get a time stamp for time_returned and store as in a timeval tv
 	gettimeofday(&tv, NULL);
 #else
 	/* Measure the exit time as early as possible to avoid errors. */
@@ -1133,20 +1133,20 @@ trace_syscall_exiting(struct tcb *tcp)
 		  * is being traced
 		  */
 		switch (tcp->s_ent->sen) {
-			case SEN_close:
-				write_ds_record(dataseries_module, "close", tcp->u_arg, tcp->etime,
-						tv, tcp->u_rval, tcp->u_error, tcp->pid);
-				break;
-			case SEN_chdir:
-				save_path_dataseries(tcp, tcp->u_arg[0]);
-				write_ds_record(dataseries_module, "chdir", tcp->u_arg, tcp->etime,
-						tv, tcp->u_rval, tcp->u_error, tcp->pid);
-				break;
-			case SEN_mkdir:
-				save_path_dataseries(tcp, tcp->u_arg[0]);
-				write_ds_record(dataseries_module, "mkdir", tcp->u_arg, tcp->etime,
-						tv, tcp->u_rval, tcp->u_error, tcp->pid);
-				break;
+		case SEN_close: /* Close system call */
+			write_ds_record(dataseries_module, "close", tcp->u_arg, tcp->etime,
+					tv, tcp->u_rval, tcp->u_error, tcp->pid);
+			break;
+		case SEN_chdir: /* Chdir system call */
+			save_path_dataseries(tcp, tcp->u_arg[0]);
+			write_ds_record(dataseries_module, "chdir", tcp->u_arg, tcp->etime,
+					tv, tcp->u_rval, tcp->u_error, tcp->pid);
+			break;
+		case SEN_mkdir: /* Mkdir system call */
+			save_path_dataseries(tcp, tcp->u_arg[0]);
+			write_ds_record(dataseries_module, "mkdir", tcp->u_arg, tcp->etime,
+					tv, tcp->u_rval, tcp->u_error, tcp->pid);
+			break;
 		}
 	}
 #endif
