@@ -1419,7 +1419,7 @@ void save_path_dataseries(struct tcb *tcp, long addr) {
 	 * Fetch one byte more to find out whether path length
 	 * is greater than PATH_MAX
 	 */
-	nul_seen = umovestr(tcp, addr, n + 1, path);
+	nul_seen = umovestr(tcp, addr, PATH_MAX + 1, path);
 	if (nul_seen < 0)
 		save_path_string(dataseries_module, NULL);
 	else {
