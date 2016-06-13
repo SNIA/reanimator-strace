@@ -906,7 +906,7 @@ trace_syscall_exiting(struct tcb *tcp)
 		gettimeofday(&tv, NULL);
 	else {
 		if (Tflag || cflag)
-			gettimeofday(&tcp->etime, NULL);
+			gettimeofday(&tv, NULL);
 	}
 #else
 	/* Measure the exit time as early as possible to avoid errors. */
@@ -1148,13 +1148,11 @@ trace_syscall_exiting(struct tcb *tcp)
 	 */
 	if (dataseries_module) {
 		switch (tcp->s_ent->sen) {
-			case SEN_open:
-			/* Open system call */
+			case SEN_open: /* Open system call */
 				save_path_dataseries(tcp, tcp->u_arg[0]);
 				write_ds_record(dataseries_module, "open", tcp->u_arg);
 				break;
-			case SEN_close:
-			/* Close system call */
+			case SEN_close: /* Close system call */
 				write_ds_record(dataseries_module, "close", tcp->u_arg);
 				break;
 		}

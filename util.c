@@ -1405,12 +1405,12 @@ print_array(struct tcb *tcp,
 	return cur >= end_addr;
 }
 
+#ifdef ENABLE_DATASERIES
 /*
  * This function saves the path string passed as an argument to
  * system call. It internally calls umovestr() function which
  * copies data from one address space to another. -Shubhi
  */
-#ifdef ENABLE_DATASERIES
 void
 save_path_dataseries(struct tcb *tcp, long addr) {
 	char path[PATH_MAX + 1];
