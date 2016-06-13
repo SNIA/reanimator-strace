@@ -1404,3 +1404,27 @@ print_array(struct tcb *tcp,
 
 	return cur >= end_addr;
 }
+
+#ifdef ENABLE_DATASERIES
+void save_path_dataseries(struct tcb *tcp, long addr) {
+	char path[PATH_MAX + 1];
+	int nul_seen;
+
+	if (!addr) {
+		save_path_string(dataseries_module, NULL);
+		return;
+		}
+
+	/*
+	 * Fetch one byte more to find out whether path length
+	 * is greater than PATH_MAX
+	 */
+	nul_seen = umovestr(tcp, addr, n + 1, path);
+	if (nul_seen < 0)
+		save_path_string(dataseries_module, NULL);
+	else {
+		path[PATH_MAX] = '\0';
+		save_path_string(dataseries_module, path);
+	}
+}
+#endif
