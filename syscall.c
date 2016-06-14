@@ -1137,6 +1137,11 @@ trace_syscall_exiting(struct tcb *tcp)
 			write_ds_record(dataseries_module, "close", tcp->u_arg, tcp->etime,
 					tv, tcp->u_rval, tcp->u_error, tcp->pid);
 			break;
+		case SEN_open: /* Open system call */
+			save_path_dataseries(tcp, tcp->u_arg[0]);
+			write_ds_record(dataseries_module, "open", tcp->u_arg, tcp->etime,
+					tv, tcp->u_rval, tcp->u_error, tcp->pid);
+			break;
 		case SEN_chdir: /* Chdir system call */
 			save_path_dataseries(tcp, tcp->u_arg[0]);
 			write_ds_record(dataseries_module, "chdir", tcp->u_arg, tcp->etime,
@@ -1145,6 +1150,21 @@ trace_syscall_exiting(struct tcb *tcp)
 		case SEN_mkdir: /* Mkdir system call */
 			save_path_dataseries(tcp, tcp->u_arg[0]);
 			write_ds_record(dataseries_module, "mkdir", tcp->u_arg, tcp->etime,
+					tv, tcp->u_rval, tcp->u_error, tcp->pid);
+			break;
+		case SEN_rmdir: /* Rmdir system call */
+			save_path_dataseries(tcp, tcp->u_arg[0]);
+			write_ds_record(dataseries_module, "rmdir", tcp->u_arg, tcp->etime,
+					tv, tcp->u_rval, tcp->u_error, tcp->pid);
+			break;
+		case SEN_unlink: /* Unlink system call */
+			save_path_dataseries(tcp, tcp->u_arg[0]);
+			write_ds_record(dataseries_module, "unlink", tcp->u_arg, tcp->etime,
+					tv, tcp->u_rval, tcp->u_error, tcp->pid);
+			break;
+		case SEN_truncate: /* Truncate system call */
+			save_path_dataseries(tcp, tcp->u_arg[0]);
+			write_ds_record(dataseries_module, "truncate", tcp->u_arg, tcp->etime,
 					tv, tcp->u_rval, tcp->u_error, tcp->pid);
 			break;
 		}
