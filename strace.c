@@ -1719,7 +1719,7 @@ init(int argc, char *argv[])
 			 "tables/snia_syscall_fields.table");
 		snprintf(xml_path, MAXPATHLEN, "%s/%s", ds_top,
 			 "xml/");
-		dataseries_module = create_ds_module(dataseries_fname,
+		dataseries_module = ds_create_module(dataseries_fname,
 						     tab_path, xml_path);
 		if (!dataseries_module)
 			error_msg_and_die("create_ds_module failed"
@@ -2429,7 +2429,7 @@ main(int argc, char *argv[])
 	 * - Leixiang @ FSL
 	 */
         if (dataseries_module)
-		destroy_ds_module(dataseries_module);
+		ds_destroy_module(dataseries_module);
 #endif
 
 	return exit_code;

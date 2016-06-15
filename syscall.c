@@ -1147,13 +1147,32 @@ trace_syscall_exiting(struct tcb *tcp)
 	 * is being traced. -Shubhi
 	 */
 	if (dataseries_module) {
+		u_int ds_max_args = 3;
+		void *v_args[ds_max_args];
 		switch (tcp->s_ent->sen) {
 			case SEN_open: /* Open system call */
-				save_path_dataseries(tcp, tcp->u_arg[0]);
-				write_ds_record(dataseries_module, "open", tcp->u_arg);
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				ds_write_record(dataseries_module, "open",
+						tcp->u_arg, v_args);
+				free(v_args[0]);
 				break;
 			case SEN_close: /* Close system call */
-				write_ds_record(dataseries_module, "close", tcp->u_arg);
+				ds_write_record(dataseries_module, "close",
+						tcp->u_arg, NULL);
+				break;
+			case SEN_read: /* Read system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							   tcp->u_rval);
+				ds_write_record(dataseries_module, "read",
+						tcp->u_arg, v_args);
+				free(v_args[0]);
+				break;
+			case SEN_write: /* Write system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							   tcp->u_arg[2]);
+				ds_write_record(dataseries_module, "write",
+						tcp->u_arg, v_args);
+				free(v_args[0]);
 				break;
 		}
 	}
