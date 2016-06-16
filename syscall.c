@@ -1128,46 +1128,54 @@ trace_syscall_exiting(struct tcb *tcp)
 
 #ifdef ENABLE_DATASERIES
 	if (dataseries_module) {
-		 /*
-		  * Write record in dataseries file for the system call which
-		  * is being traced
-		  */
+		/*
+		 * Write record in dataseries file for the system call which
+		 * is being traced
+		 * First, make an array of pointers to the common field values
+		 * in the order: time_called, time_returned, return_value,
+		 * errno_number, executing_pid
+		 */
+	        u_int ds_max_args = 3;
+	        void *v_args[ds_max_args];
+		u_int num_common_fields = 5;
+		void * common_fields[num_common_fields];
+		common_fields[0] = &tcp->etime;
+		common_fields[1] = &tv;
+		common_fields[2] = &tcp->u_rval;
+		common_fields[3] = &tcp->u_error;
+		common_fields[4] = &tcp->pid;
+
 		switch (tcp->s_ent->sen) {
-		case SEN_close: /* Close system call */
-			write_ds_record(dataseries_module, "close", tcp->u_arg, tcp->etime,
-					tv, tcp->u_rval, tcp->u_error, tcp->pid);
-			break;
-		case SEN_open: /* Open system call */
-			save_path_dataseries(tcp, tcp->u_arg[0]);
-			write_ds_record(dataseries_module, "open", tcp->u_arg, tcp->etime,
-					tv, tcp->u_rval, tcp->u_error, tcp->pid);
-			break;
-		case SEN_chdir: /* Chdir system call */
-			save_path_dataseries(tcp, tcp->u_arg[0]);
-			write_ds_record(dataseries_module, "chdir", tcp->u_arg, tcp->etime,
-					tv, tcp->u_rval, tcp->u_error, tcp->pid);
-			break;
-		case SEN_mkdir: /* Mkdir system call */
-			save_path_dataseries(tcp, tcp->u_arg[0]);
-			write_ds_record(dataseries_module, "mkdir", tcp->u_arg, tcp->etime,
-					tv, tcp->u_rval, tcp->u_error, tcp->pid);
-			break;
-		case SEN_rmdir: /* Rmdir system call */
-			save_path_dataseries(tcp, tcp->u_arg[0]);
-			write_ds_record(dataseries_module, "rmdir", tcp->u_arg, tcp->etime,
-					tv, tcp->u_rval, tcp->u_error, tcp->pid);
-			break;
-		case SEN_unlink: /* Unlink system call */
-			save_path_dataseries(tcp, tcp->u_arg[0]);
-			write_ds_record(dataseries_module, "unlink", tcp->u_arg, tcp->etime,
-					tv, tcp->u_rval, tcp->u_error, tcp->pid);
-			break;
-		case SEN_truncate: /* Truncate system call */
-			save_path_dataseries(tcp, tcp->u_arg[0]);
-			write_ds_record(dataseries_module, "truncate", tcp->u_arg, tcp->etime,
-					tv, tcp->u_rval, tcp->u_error, tcp->pid);
-			break;
+			case SEN_open: /* Open system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				ds_write_record(dataseries_module, "open",
+						tcp->u_arg, common_fields,
+						v_args);
+				free(v_args[0]);
+				break;
+			case SEN_close: /* Close system call */
+				ds_write_record(dataseries_module, "close",
+						tcp->u_arg, common_fields,
+						NULL);
+				break;
+			case SEN_read: /* Read system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  tcp->u_rval);
+				ds_write_record(dataseries_module, "read",
+						tcp->u_arg, common_fields,
+						v_args);
+				free(v_args[0]);
+				break;
+			case SEN_write: /* Write system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						       tcp->u_arg[2]);
+				ds_write_record(dataseries_module, "write",
+						tcp->u_arg, common_fields,
+						v_args);
+				free(v_args[0]);
+				break;
 		}
+	
 	}
 #endif
 	tprints("\n");
