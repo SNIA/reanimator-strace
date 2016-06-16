@@ -1175,7 +1175,6 @@ trace_syscall_exiting(struct tcb *tcp)
 				free(v_args[0]);
 				break;
 		}
-	
 	}
 #endif
 	tprints("\n");
