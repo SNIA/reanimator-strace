@@ -1162,14 +1162,14 @@ trace_syscall_exiting(struct tcb *tcp)
 				break;
 			case SEN_read: /* Read system call */
 				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-							   tcp->u_rval);
+							  tcp->u_rval);
 				ds_write_record(dataseries_module, "read",
 						tcp->u_arg, v_args);
 				free(v_args[0]);
 				break;
 			case SEN_write: /* Write system call */
 				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-							   tcp->u_arg[2]);
+							  tcp->u_arg[2]);
 				ds_write_record(dataseries_module, "write",
 						tcp->u_arg, v_args);
 				free(v_args[0]);
