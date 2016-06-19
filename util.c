@@ -1414,11 +1414,11 @@ print_array(struct tcb *tcp,
 char *
 ds_get_path(struct tcb *tcp, long addr)
 {
-	char *path = xmalloc(PATH_MAX + 1);;
+	char *path = xmalloc(PATH_MAX + 1);
 	int nul_seen;
 
 	if (!addr)
-		return NULL;
+		goto out_free;
 
 	/*
 	 * Fetch one byte more to find out whether path length is
@@ -1426,11 +1426,15 @@ ds_get_path(struct tcb *tcp, long addr)
 	 */
 	nul_seen = umovestr(tcp, addr, PATH_MAX + 1, path);
 	if (nul_seen < 0)
-		return NULL;
+		goto out_free;
 	else {
 		path[PATH_MAX] = '\0';
 		return path;
 	}
+out_free:
+	if (path)
+		free(path);
+	return NULL;
 }
 
 /*
@@ -1445,10 +1449,13 @@ ds_get_buffer(struct tcb *tcp, long addr, long len)
 	char *buf = xmalloc(len + 1);
 
 	if (!addr)
-		return NULL;
+		goto out_free;
 
 	if (len != -1 && (umoven(tcp, addr, len + 1, buf) >= 0))
 		return buf;
+out_free:
+	if (buf)
+		free(buf);
 	return NULL;
 }
 #endif
