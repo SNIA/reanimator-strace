@@ -1138,7 +1138,8 @@ trace_syscall_exiting(struct tcb *tcp)
 		 * in the order: time_called, time_returned, return_value,
 		 * errno_number, and executing_pid.
 		 */
-	        void *v_args[DS_MAX_ARGS];
+	        void *v_args[ds_max_args];
+		int i;
 		void *common_fields[DS_NUM_COMMON_FIELDS];
 		common_fields[DS_COMMON_FIELD_TIME_CALLED] = &tcp->etime;
 		common_fields[DS_COMMON_FIELD_TIME_RETURNED] = &tv;
