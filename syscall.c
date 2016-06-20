@@ -893,7 +893,6 @@ trace_syscall_entering(struct tcb *tcp)
 	if (Tflag || cflag)
 		gettimeofday(&tcp->etime, NULL);
 #endif
-
 	return res;
 }
 
@@ -904,6 +903,13 @@ trace_syscall_exiting(struct tcb *tcp)
 	struct timeval tv;
 	int res;
 	long u_error;
+	/*
+	 * Arguments such as pathname or read/write buffer passed to
+	 * system calls cannot be referenced directly from tcp->u_args.
+	 * These arguments are copied from the address space of actual
+	 * process being traced and stored in an array of pointers
+	 * named as v_args.
+	 */
 	void *v_args[DS_MAX_ARGS];
 	int i;
 	void *common_fields[DS_NUM_COMMON_FIELDS];
@@ -1140,20 +1146,27 @@ trace_syscall_exiting(struct tcb *tcp)
 			(long) tv.tv_sec, (long) tv.tv_usec);
 	}
 
+	tprints("\n");
+	dumpio(tcp);
+	line_ended();
+
+#ifdef USE_LIBUNWIND
+	if (stack_trace_enabled)
+		unwind_print_stacktrace(tcp);
+#endif
+
 #ifdef ENABLE_DATASERIES
 	if (!ds_module)
-	        goto ret;
+		goto ret;
+
 	/*
 	 * Write record in dataseries file for the system call which
-	 * is being traced.
-	 *
+	 * is being traced.  -Shubhi @ FSL
 	 * First, initialize v_args with null arguments.
-	 *
-	 * Then, make an array of pointers to the common field values
-	 * in the order: time_called, time_returned, return_value,
-	 * errno_number, and executing_pid.
 	 */
 	memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
+
+	/* Then, store the common field values */
 	common_fields[DS_COMMON_FIELD_TIME_CALLED] = &tcp->etime;
 	common_fields[DS_COMMON_FIELD_TIME_RETURNED] = &tv;
 	common_fields[DS_COMMON_FIELD_RETURN_VALUE] = &tcp->u_rval;
@@ -1167,23 +1180,27 @@ trace_syscall_exiting(struct tcb *tcp)
 					common_fields, v_args);
 			break;
 		case SEN_close: /* Close system call */
-		        ds_write_record(ds_module, "close", tcp->u_arg,
+			ds_write_record(ds_module, "close", tcp->u_arg,
 					common_fields, NULL);
+			break;
+		case SEN_read: /* Read system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  tcp->u_rval);
+			ds_write_record(ds_module, "read", tcp->u_arg,
+					common_fields, v_args);
+			break;
+		case SEN_write: /* Write system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  tcp->u_arg[2]);
+			ds_write_record(ds_module, "write", tcp->u_arg,
+					common_fields, v_args);
 			break;
 	}
 	/* Free memory allocated to v_args. */
 	for (i = 0; i < DS_MAX_ARGS; i++) {
-	        if (v_args[i])
-		        free(v_args[i]);
+		if (v_args[i])
+			free(v_args[i]);
 	}
-#endif
-	tprints("\n");
-	dumpio(tcp);
-	line_ended();
-
-#ifdef USE_LIBUNWIND
-	if (stack_trace_enabled)
-		unwind_print_stacktrace(tcp);
 #endif
 
  ret:

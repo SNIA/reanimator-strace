@@ -1736,14 +1736,12 @@ init(int argc, char *argv[])
 			 "tables/snia_syscall_fields.table");
 		snprintf(xml_path, MAXPATHLEN, "%s/%s", ds_top,
 			 "xml/");
-		ds_module = ds_create_module(ds_fname,
-						     tab_path, xml_path);
+		ds_module = ds_create_module(ds_fname, tab_path, xml_path);
 		if (!ds_module)
-			error_msg_and_die("ds_create_module failed"
+			error_msg_and_die("create_ds_module failed"
 					   "fname=\"%s\" table_path=\"%s\" "
 					   "xml_path=\"%s\" ",
-					   ds_fname,
-					   tab_path, xml_path);
+					   ds_fname, tab_path, xml_path);
 	}
 #endif
 

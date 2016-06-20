@@ -33,7 +33,6 @@
 SYS_FUNC(close)
 {
 	printfd(tcp, tcp->u_arg[0]);
-
 	return RVAL_DECODED;
 }
 
