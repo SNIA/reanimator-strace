@@ -879,8 +879,8 @@ trace_syscall_entering(struct tcb *tcp)
 	tcp->sys_func_rval = res;
 
 #ifdef ENABLE_DATASERIES
-	/* 
-	 * Get a timestamp for time_called and store it as a timeval 
+	/*
+	 * Get a timestamp for time_called and store it as a timeval
 	 * in tcp->etime.
 	 */
 	gettimeofday(&tcp->etime, NULL);

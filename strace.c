@@ -1,4 +1,4 @@
-/*
+*
  * Copyright (c) 1991, 1992 Paul Kranenburg <pk@cs.few.eur.nl>
  * Copyright (c) 1993 Branko Lankester <branko@hacktic.nl>
  * Copyright (c) 1993, 1994, 1995, 1996 Rick Sladkey <jrs@world.std.com>
@@ -566,13 +566,12 @@ void
 tprintf(const char *fmt, ...)
 {
 /*
- * If writing to a DataSeries record, prevents strace from printing its 
+ * If writing to a DataSeries record, prevents strace from printing its
  * regular output.
  */
 #ifdef ENABLE_DATASERIES
 	if (dataseries_module)
 		return;
-	
 #endif
 	va_list args;
 
