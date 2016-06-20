@@ -1141,7 +1141,7 @@ trace_syscall_exiting(struct tcb *tcp)
 	}
 
 #ifdef ENABLE_DATASERIES
-	if (!ds_module) 
+	if (!ds_module)
 	        goto ret;
 	/*
 	 * Write record in dataseries file for the system call which
