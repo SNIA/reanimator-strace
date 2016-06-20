@@ -1408,17 +1408,23 @@ print_array(struct tcb *tcp,
 #ifdef ENABLE_DATASERIES
 /*
  * This function retrieves the path string passed as an argument to
- * system call. It internally calls umovestr() function which
- * copies data from one address space to another. -Shubhi
+ * system call.  It internally calls umovestr() function which
+ * copies data from one address space to another.  -Shubhi
  */
 char *
 ds_get_path(struct tcb *tcp, long addr)
 {
-	char *path = xmalloc(PATH_MAX + 1);
+	char *path = NULL;
 	int nul_seen;
 
 	if (!addr)
-		goto out_free;
+		goto out;
+
+	/*
+	 * Note: xmalloc succeeds always or aborts the trace process
+	 * with an error message to stderr.
+	 */
+	path = xmalloc(PATH_MAX + 1);
 
 	/*
 	 * Fetch one byte more to find out whether path length is
@@ -1429,33 +1435,45 @@ ds_get_path(struct tcb *tcp, long addr)
 		goto out_free;
 	else {
 		path[PATH_MAX] = '\0';
-		return path;
+		goto out;
 	}
 out_free:
-	if (path)
+	if (path) {
 		free(path);
-	return NULL;
+		path = NULL;
+	}
+out:
+	return path;
 }
 
 /*
  * This function retrieves the read or write buffer passed as an
- * argument to system call. It internally calls umoven()
+ * argument to system call.  It internally calls umoven()
  * function which copies len bytes from one address space
  * to another.
  */
 char *
 ds_get_buffer(struct tcb *tcp, long addr, long len)
 {
-	char *buf = xmalloc(len + 1);
+	char *buf = NULL;
 
 	if (!addr)
-		goto out_free;
+		goto out;
+
+	/*
+	 * Note: xmalloc succeeds always or aborts the trace process
+	 * with an error message to stderr.
+	 */
+	buf = xmalloc(len + 1);
 
 	if (len != -1 && (umoven(tcp, addr, len + 1, buf) >= 0))
-		return buf;
-out_free:
-	if (buf)
+		goto out; /* Success condition */
+
+	if (buf) {
 		free(buf);
-	return NULL;
+		buf = NULL;
+	}
+out:
+	return buf;
 }
 #endif

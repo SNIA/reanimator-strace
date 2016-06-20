@@ -879,7 +879,7 @@ trace_syscall_entering(struct tcb *tcp)
 	tcp->sys_func_rval = res;
 
 #ifdef ENABLE_DATASERIES
-	if (dataseries_module)
+	if (ds_module)
 		gettimeofday(&tcp->etime, NULL);
 	else {
 		if (Tflag || cflag)
@@ -902,7 +902,16 @@ trace_syscall_exiting(struct tcb *tcp)
 	long u_error;
 
 #ifdef ENABLE_DATASERIES
-	if (dataseries_module)
+	/*
+	 * Arguments such as pathname or read/write buffer passed to
+	 * system calls cannot be referenced directly from tcp->u_args.
+	 * These arguments are copied from the address space of actual
+	 * process being traced and stored in an array of pointers
+	 * named as v_args.
+	 */
+	void *v_args[DS_MAX_ARGS];
+	int i;
+	if (ds_module)
 		gettimeofday(&tv, NULL);
 	else {
 		if (Tflag || cflag)
@@ -1142,50 +1151,37 @@ trace_syscall_exiting(struct tcb *tcp)
 #endif
 
 #ifdef ENABLE_DATASERIES
+	if (!ds_module)
+		goto ret;
+
 	/*
 	 * Write record in dataseries file for the system call which
-	 * is being traced. -Shubhi
+	 * is being traced.  -Shubhi @ FSL
 	 */
-	if (dataseries_module) {
-		/*
-		 * Arguments such as pathname or read/write buffer passed to
-		 * system calls cannot be referenced directly from tcp->u_args.
-		 * These arguments are copied from the address space of actual
-		 * process being traced and stored in an array of pointers
-		 * named as v_args.
-		 */
-		void *v_args[ds_max_args];
-		int i;
-		for (i = 0; i < ds_max_args; i++)
-			v_args[i] = NULL;
-		switch (tcp->s_ent->sen) {
-			case SEN_open: /* Open system call */
-				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-				ds_write_record(dataseries_module, "open",
-						tcp->u_arg, v_args);
-				break;
-			case SEN_close: /* Close system call */
-				ds_write_record(dataseries_module, "close",
-						tcp->u_arg, NULL);
-				break;
-			case SEN_read: /* Read system call */
-				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-							  tcp->u_rval);
-				ds_write_record(dataseries_module, "read",
-						tcp->u_arg, v_args);
-				break;
-			case SEN_write: /* Write system call */
-				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-							  tcp->u_arg[2]);
-				ds_write_record(dataseries_module, "write",
-						tcp->u_arg, v_args);
-				break;
-		}
-		/* Free memory allocated to v_args. */
-		for (i = 0; i < ds_max_args; i++) {
-			if (v_args[i])
-				free(v_args[i]);
-		}
+	memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
+	switch (tcp->s_ent->sen) {
+		case SEN_open: /* Open system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+			ds_write_record(ds_module, "open", tcp->u_arg, v_args);
+			break;
+		case SEN_close: /* Close system call */
+			ds_write_record(ds_module, "close", tcp->u_arg, NULL);
+			break;
+		case SEN_read: /* Read system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  tcp->u_rval);
+			ds_write_record(ds_module, "read", tcp->u_arg, v_args);
+			break;
+		case SEN_write: /* Write system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  tcp->u_arg[2]);
+			ds_write_record(ds_module, "write", tcp->u_arg, v_args);
+			break;
+	}
+	/* Free memory allocated to v_args. */
+	for (i = 0; i < DS_MAX_ARGS; i++) {
+		if (v_args[i])
+			free(v_args[i]);
 	}
 #endif
 

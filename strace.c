@@ -154,7 +154,7 @@ static char *outfname = NULL;
 /* If -ff, points to stderr. Else, it's our common output log */
 static FILE *shared_log;
 #ifdef ENABLE_DATASERIES
-DataSeriesOutputModule *dataseries_module = NULL;
+DataSeriesOutputModule *ds_module = NULL;
 #endif
 
 struct tcb *printing_tcp = NULL;
@@ -1501,7 +1501,7 @@ init(int argc, char *argv[])
 	int optF = 0;
 	struct sigaction sa;
 #ifdef ENABLE_DATASERIES
-	char *dataseries_fname = NULL;
+	char *ds_fname = NULL;
 #endif
 
 	progname = argv[0] ? argv[0] : "strace";
@@ -1647,8 +1647,8 @@ init(int argc, char *argv[])
 #endif
 #ifdef ENABLE_DATASERIES
 		case 'X':
-			dataseries_fname = optarg;
-			if (!dataseries_fname)
+			ds_fname = optarg;
+			if (!ds_fname)
 				error_msg_and_die("empty dataseries filename");
 			break;
 #endif
@@ -1710,7 +1710,7 @@ init(int argc, char *argv[])
 	}
 
 #ifdef ENABLE_DATASERIES
-	if (dataseries_fname) {
+	if (ds_fname) {
 		char tab_path[MAXPATHLEN], xml_path[MAXPATHLEN];
 		const char *ds_top = getenv("STRACE2DS");
 		if (!ds_top)
@@ -1719,14 +1719,12 @@ init(int argc, char *argv[])
 			 "tables/snia_syscall_fields.table");
 		snprintf(xml_path, MAXPATHLEN, "%s/%s", ds_top,
 			 "xml/");
-		dataseries_module = ds_create_module(dataseries_fname,
-						     tab_path, xml_path);
-		if (!dataseries_module)
+		ds_module = ds_create_module(ds_fname, tab_path, xml_path);
+		if (!ds_module)
 			error_msg_and_die("create_ds_module failed"
 					   "fname=\"%s\" table_path=\"%s\" "
 					   "xml_path=\"%s\" ",
-					   dataseries_fname,
-					   tab_path, xml_path);
+					   ds_fname, tab_path, xml_path);
 	}
 #endif
 
@@ -2428,8 +2426,8 @@ main(int argc, char *argv[])
 	 * output file.
 	 * - Leixiang @ FSL
 	 */
-        if (dataseries_module)
-		ds_destroy_module(dataseries_module);
+        if (ds_module)
+		ds_destroy_module(ds_module);
 #endif
 
 	return exit_code;
