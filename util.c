@@ -1407,29 +1407,56 @@ print_array(struct tcb *tcp,
 
 #ifdef ENABLE_DATASERIES
 /*
- * This function saves the path string passed as an argument to
+ * This function retrieves the path string passed as an argument to
  * system call. It internally calls umovestr() function which
  * copies data from one address space to another. -Shubhi
  */
-void save_path_dataseries(struct tcb *tcp, long addr) {
-	char path[PATH_MAX + 1];
+char *
+ds_get_path(struct tcb *tcp, long addr)
+{
+	char *path = xmalloc(PATH_MAX + 1);;
 	int nul_seen;
 
-	if (!addr) {
-		save_path_string(dataseries_module, NULL);
-		return;
-		}
+	if (!addr)
+		goto out_free;
 
 	/*
-	 * Fetch one byte more to find out whether path length
-	 * is greater than PATH_MAX
+	 * Fetch one byte more to find out whether path length is
+	 * greater than PATH_MAX.
 	 */
 	nul_seen = umovestr(tcp, addr, PATH_MAX + 1, path);
 	if (nul_seen < 0)
-		save_path_string(dataseries_module, NULL);
+		goto out_free;
 	else {
 		path[PATH_MAX] = '\0';
-		save_path_string(dataseries_module, path);
+		return path;
 	}
+out_free:
+	if (path)
+		free(path);
+	return NULL;
+}
+
+/*
+ * This function retrieves the read or write buffer passed as an
+ * argument to system call. It internally calls umoven()
+ * function which copies len bytes from one address space
+ * to another.
+ */
+char *
+ds_get_buffer(struct tcb *tcp, long addr, long len)
+{
+	char *buf = xmalloc(len + 1);
+
+	if (!addr)
+		goto out_free;
+
+	if (len != -1 && (umoven(tcp, addr, len + 1, buf) >= 0))
+		return buf;
+	return NULL;
+out_free:
+	if (buf)
+		free(buf);
+	return NULL;
 }
 #endif

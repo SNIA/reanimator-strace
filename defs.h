@@ -850,5 +850,7 @@ extern unsigned num_quals;
 #define PRI__x64 PRI__64"x"
 
 #ifdef ENABLE_DATASERIES
-     extern void save_path_dataseries(struct tcb *tcp, long addr);
+#define DS_MAX_ARGS 3
+char *ds_get_path(struct tcb *tcp, long addr);
+char *ds_get_buffer(struct tcb *tcp, long addr, long len);
 #endif

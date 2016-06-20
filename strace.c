@@ -565,22 +565,15 @@ strace_popen(const char *command)
 void
 tprintf(const char *fmt, ...)
 {
+/*
+ * If writing to a DataSeries record, prevents strace from printing its 
+ * regular output.
+ */
 #ifdef ENABLE_DATASERIES
-	if (!dataseries_module) {
-		va_list args;
-
-		va_start(args, fmt);
-		if (current_tcp) {
-			int n = strace_vfprintf(current_tcp->outf, fmt, args);
-			if (n < 0) {
-				if (current_tcp->outf != stderr)
-					perror_msg("%s", outfname);
-			} else
-				current_tcp->curcol += n;
-		}
-		va_end(args);
-	}
-#else
+	if (dataseries_module)
+		return;
+	
+#endif
 	va_list args;
 
 	va_start(args, fmt);
@@ -593,7 +586,6 @@ tprintf(const char *fmt, ...)
 			current_tcp->curcol += n;
 	}
 	va_end(args);
-#endif
 }
 
 #ifndef HAVE_FPUTS_UNLOCKED
@@ -603,19 +595,14 @@ tprintf(const char *fmt, ...)
 void
 tprints(const char *str)
 {
+/*
+ * If writing to a DataSeries record, prevents strace from printing its
+ * regular output.
+ */
 #ifdef ENABLE_DATASERIES
-	if (!dataseries_module) {
-		if (current_tcp) {
-			int n = fputs_unlocked(str, current_tcp->outf);
-			if (n >= 0) {
-				current_tcp->curcol += strlen(str);
-				return;
-			}
-			if (current_tcp->outf != stderr)
-				perror_msg("%s", outfname);
-		}
-	}
-#else
+	if (dataseries_module)
+		return;
+#endif
 	if (current_tcp) {
 		int n = fputs_unlocked(str, current_tcp->outf);
 		if (n >= 0) {
@@ -625,7 +612,6 @@ tprints(const char *str)
 		if (current_tcp->outf != stderr)
 			perror_msg("%s", outfname);
 	}
-#endif
 }
 
 void
@@ -1532,7 +1518,7 @@ init(int argc, char *argv[])
 	int optF = 0;
 	struct sigaction sa;
 #ifdef ENABLE_DATASERIES
-	char *dataseries_fname = NULL;
+	char *ds_fname = NULL;
 #endif
 
 	progname = argv[0] ? argv[0] : "strace";
@@ -1678,8 +1664,8 @@ init(int argc, char *argv[])
 #endif
 #ifdef ENABLE_DATASERIES
 		case 'X':
-			dataseries_fname = optarg;
-			if (!dataseries_fname)
+			ds_fname = optarg;
+			if (!ds_fname)
 				error_msg_and_die("empty dataseries filename");
 			break;
 #endif
@@ -1741,7 +1727,7 @@ init(int argc, char *argv[])
 	}
 
 #ifdef ENABLE_DATASERIES
-	if (dataseries_fname) {
+	if (ds_fname) {
 		char tab_path[MAXPATHLEN], xml_path[MAXPATHLEN];
 		const char *ds_top = getenv("STRACE2DS");
 		if (!ds_top)
@@ -1750,13 +1736,13 @@ init(int argc, char *argv[])
 			 "tables/snia_syscall_fields.table");
 		snprintf(xml_path, MAXPATHLEN, "%s/%s", ds_top,
 			 "xml/");
-		dataseries_module = create_ds_module(dataseries_fname,
+		dataseries_module = ds_create_module(ds_fname,
 						     tab_path, xml_path);
 		if (!dataseries_module)
-			error_msg_and_die("create_ds_module failed"
+			error_msg_and_die("ds_create_module failed"
 					   "fname=\"%s\" table_path=\"%s\" "
 					   "xml_path=\"%s\" ",
-					   dataseries_fname,
+					   ds_fname,
 					   tab_path, xml_path);
 	}
 #endif
@@ -2460,7 +2446,7 @@ main(int argc, char *argv[])
 	 * - Leixiang @ FSL
 	 */
         if (dataseries_module)
-		destroy_ds_module(dataseries_module);
+		ds_destroy_module(dataseries_module);
 #endif
 
 	return exit_code;
