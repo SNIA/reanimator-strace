@@ -1414,11 +1414,17 @@ print_array(struct tcb *tcp,
 char *
 ds_get_path(struct tcb *tcp, long addr)
 {
-	char *path = xmalloc(PATH_MAX + 1);;
+	char *path = NULL;
 	int nul_seen;
 
 	if (!addr)
-		goto out_free;
+		goto out;
+
+        /*
+         * Note: xmalloc succeeds always or aborts the trace process
+         * with an error message to stderr.
+         */
+        path = xmalloc(PATH_MAX + 1);
 
 	/*
 	 * Fetch one byte more to find out whether path length is
@@ -1429,12 +1435,15 @@ ds_get_path(struct tcb *tcp, long addr)
 		goto out_free;
 	else {
 		path[PATH_MAX] = '\0';
-		return path;
+		goto out;
 	}
 out_free:
-	if (path)
+	if (path) {
 		free(path);
-	return NULL;
+		path = NULL;
+	}
+out:
+	return path;
 }
 
 /*
@@ -1446,17 +1455,25 @@ out_free:
 char *
 ds_get_buffer(struct tcb *tcp, long addr, long len)
 {
-	char *buf = xmalloc(len + 1);
+	char *buf = NULL;
 
-	if (!addr)
-		goto out_free;
+	if (!addr || len < 0)
+		goto out;
 
-	if (len != -1 && (umoven(tcp, addr, len + 1, buf) >= 0))
-		return buf;
-	return NULL;
+        /*
+         * Note: xmalloc succeeds always or aborts the trace process
+         * with an error message to stderr.
+         */
+        buf = xmalloc(len + 1);
+
+	if (umoven(tcp, addr, len + 1, buf) >= 0)
+	  goto out; /* Success condition */
 out_free:
-	if (buf)
+	if (buf) {
 		free(buf);
-	return NULL;
+		buf = NULL;
+	}
+out:
+	return buf;
 }
 #endif

@@ -1147,7 +1147,9 @@ trace_syscall_exiting(struct tcb *tcp)
 	 * Write record in dataseries file for the system call which
 	 * is being traced.
 	 *
-	 * First, make an array of pointers to the common field values
+	 * First, initialize v_args with null arguments.
+	 *
+	 * Then, make an array of pointers to the common field values
 	 * in the order: time_called, time_returned, return_value,
 	 * errno_number, and executing_pid.
 	 */
