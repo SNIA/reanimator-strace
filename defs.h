@@ -850,8 +850,7 @@ extern unsigned num_quals;
 #define PRI__x64 PRI__64"x"
 
 #ifdef ENABLE_DATASERIES
-	/* Maximum number of v_args defined for dataseries */
-	#define DS_MAX_ARGS 3
-	extern char *ds_get_path(struct tcb *tcp, long addr);
-	extern char *ds_get_buffer(struct tcb *tcp, long addr, long len);
+#define DS_MAX_ARGS 3 /* Maximum number of v_args defined for dataseries */
+extern char *ds_get_path(struct tcb *tcp, long addr);
+extern char *ds_get_buffer(struct tcb *tcp, long addr, long len);
 #endif

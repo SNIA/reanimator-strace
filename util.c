@@ -1457,16 +1457,16 @@ ds_get_buffer(struct tcb *tcp, long addr, long len)
 {
 	char *buf = NULL;
 
-	if (!addr)
+	if (!addr || len < 0)
 		goto out;
 
 	/*
 	 * Note: xmalloc succeeds always or aborts the trace process
 	 * with an error message to stderr.
 	 */
-	buf = xmalloc(len + 1);
+	buf = xmalloc(len);
 
-	if (len != -1 && (umoven(tcp, addr, len + 1, buf) >= 0))
+	if (umoven(tcp, addr, len, buf) >= 0)
 		goto out; /* Success condition */
 
 	if (buf) {
