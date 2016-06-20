@@ -154,7 +154,7 @@ static char *outfname = NULL;
 /* If -ff, points to stderr. Else, it's our common output log */
 static FILE *shared_log;
 #ifdef ENABLE_DATASERIES
-DataSeriesOutputModule *dataseries_module = NULL;
+DataSeriesOutputModule *ds_module = NULL;
 #endif
 
 struct tcb *printing_tcp = NULL;
@@ -565,12 +565,13 @@ strace_popen(const char *command)
 void
 tprintf(const char *fmt, ...)
 {
+#ifdef ENABLE_DATASERIES
 /*
  * If writing to a DataSeries record, prevents strace from printing its
  * regular output.
  */
-#ifdef ENABLE_DATASERIES
-	if (dataseries_module)
+
+        if (ds_module)
 		return;
 #endif
 	va_list args;
@@ -594,12 +595,12 @@ tprintf(const char *fmt, ...)
 void
 tprints(const char *str)
 {
+#ifdef ENABLE_DATASERIES
 /*
  * If writing to a DataSeries record, prevents strace from printing its
  * regular output.
  */
-#ifdef ENABLE_DATASERIES
-	if (dataseries_module)
+	if (ds_module)
 		return;
 #endif
 	if (current_tcp) {
@@ -1735,9 +1736,9 @@ init(int argc, char *argv[])
 			 "tables/snia_syscall_fields.table");
 		snprintf(xml_path, MAXPATHLEN, "%s/%s", ds_top,
 			 "xml/");
-		dataseries_module = ds_create_module(ds_fname,
+		ds_module = ds_create_module(ds_fname,
 						     tab_path, xml_path);
-		if (!dataseries_module)
+		if (!ds_module)
 			error_msg_and_die("ds_create_module failed"
 					   "fname=\"%s\" table_path=\"%s\" "
 					   "xml_path=\"%s\" ",
@@ -2444,8 +2445,8 @@ main(int argc, char *argv[])
 	 * output file.
 	 * - Leixiang @ FSL
 	 */
-        if (dataseries_module)
-		ds_destroy_module(dataseries_module);
+        if (ds_module)
+		ds_destroy_module(ds_module);
 #endif
 
 	return exit_code;

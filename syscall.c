@@ -879,11 +879,15 @@ trace_syscall_entering(struct tcb *tcp)
 	tcp->sys_func_rval = res;
 
 #ifdef ENABLE_DATASERIES
+	if (ds_module) {
 	/*
 	 * Get a timestamp for time_called and store it as a timeval
 	 * in tcp->etime.
 	 */
-	gettimeofday(&tcp->etime, NULL);
+		gettimeofday(&tcp->etime, NULL);
+	}
+	else if (Tflag || cflag)
+		gettimeofday(&tcp->etime, NULL);
 #else
 	/* Measure the entrance time as late as possible to avoid errors. */
 	if (Tflag || cflag)
@@ -900,14 +904,21 @@ trace_syscall_exiting(struct tcb *tcp)
 	struct timeval tv;
 	int res;
 	long u_error;
+	void *v_args[DS_MAX_ARGS];
+	int i;
+	void *common_fields[DS_NUM_COMMON_FIELDS];
 
 #ifdef ENABLE_DATASERIES
+	if (ds_module) {
 	/* Get a time stamp for time_returned and store as in a timeval tv. */
-	gettimeofday(&tv, NULL);
+		gettimeofday(&tv, NULL);
+	}
+	else if (Tflag || cflag)
+		gettimeofday(&tv, NULL);
 #else
 	/* Measure the exit time as early as possible to avoid errors. */
 	if (Tflag || cflag)
-	        gettimeofday(&tv, NULL);
+		gettimeofday(&tv, NULL);
 #endif
 
 #ifdef USE_LIBUNWIND
@@ -1130,42 +1141,38 @@ trace_syscall_exiting(struct tcb *tcp)
 	}
 
 #ifdef ENABLE_DATASERIES
-	if (dataseries_module) {
-		/*
-		 * Write record in dataseries file for the system call which
-		 * is being traced.
-		 * First, make an array of pointers to the common field values
-		 * in the order: time_called, time_returned, return_value,
-		 * errno_number, and executing_pid.
-		 */
-	        void *v_args[ds_max_args];
-		int i;
-		void *common_fields[DS_NUM_COMMON_FIELDS];
-		common_fields[DS_COMMON_FIELD_TIME_CALLED] = &tcp->etime;
-		common_fields[DS_COMMON_FIELD_TIME_RETURNED] = &tv;
-		common_fields[DS_COMMON_FIELD_RETURN_VALUE] = &tcp->u_rval;
-		common_fields[DS_COMMON_FIELD_ERRNO_NUMBER] = &tcp->u_error;
-		common_fields[DS_COMMON_FIELD_EXECUTING_PID] = &tcp->pid;
+	if (!ds_module) 
+	        goto ret;
+	/*
+	 * Write record in dataseries file for the system call which
+	 * is being traced.
+	 *
+	 * First, make an array of pointers to the common field values
+	 * in the order: time_called, time_returned, return_value,
+	 * errno_number, and executing_pid.
+	 */
+	memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
+	common_fields[DS_COMMON_FIELD_TIME_CALLED] = &tcp->etime;
+	common_fields[DS_COMMON_FIELD_TIME_RETURNED] = &tv;
+	common_fields[DS_COMMON_FIELD_RETURN_VALUE] = &tcp->u_rval;
+	common_fields[DS_COMMON_FIELD_ERRNO_NUMBER] = &tcp->u_error;
+	common_fields[DS_COMMON_FIELD_EXECUTING_PID] = &tcp->pid;
 
-		switch (tcp->s_ent->sen) {
-			case SEN_open: /* Open system call */
-				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-				ds_write_record(dataseries_module, "open",
-						tcp->u_arg, common_fields,
-						v_args);
-				free(v_args[0]);
-				break;
-			case SEN_close: /* Close system call */
-				ds_write_record(dataseries_module, "close",
-						tcp->u_arg, common_fields,
-						NULL);
-				break;
-		}
-		/* Free memory allocated to v_args. */
-		for (i = 0; i < ds_max_args; i++) {
-		        if (v_args[i])
-			        free(v_args[i]);
-		}
+	switch (tcp->s_ent->sen) {
+		case SEN_open: /* Open system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+			ds_write_record(ds_module, "open", tcp->u_arg,
+					common_fields, v_args);
+			break;
+		case SEN_close: /* Close system call */
+		        ds_write_record(ds_module, "close", tcp->u_arg,
+					common_fields, NULL);
+			break;
+	}
+	/* Free memory allocated to v_args. */
+	for (i = 0; i < DS_MAX_ARGS; i++) {
+	        if (v_args[i])
+		        free(v_args[i]);
 	}
 #endif
 	tprints("\n");

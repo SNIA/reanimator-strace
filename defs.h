@@ -465,7 +465,7 @@ extern unsigned os_release;
 #define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
 
 #ifdef ENABLE_DATASERIES
-extern DataSeriesOutputModule *dataseries_module;
+extern DataSeriesOutputModule *ds_module;
 #endif
 
 void error_msg(const char *fmt, ...) ATTRIBUTE_FORMAT((printf, 1, 2));
@@ -850,7 +850,7 @@ extern unsigned num_quals;
 #define PRI__x64 PRI__64"x"
 
 #ifdef ENABLE_DATASERIES
-#define ds_max_args 3
+#define DS_MAX_ARGS 3
 char *ds_get_path(struct tcb *tcp, long addr);
 char *ds_get_buffer(struct tcb *tcp, long addr, long len);
 #endif
