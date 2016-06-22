@@ -879,11 +879,11 @@ trace_syscall_entering(struct tcb *tcp)
 	tcp->sys_func_rval = res;
 
 #ifdef ENABLE_DATASERIES
-	if (ds_module) {
 	/*
 	 * Get a timestamp for time_called and store it as a timeval
 	 * in tcp->etime.
 	 */
+	if (ds_module) {
 		gettimeofday(&tcp->etime, NULL);
 	}
 	else if (Tflag || cflag)
@@ -915,8 +915,8 @@ trace_syscall_exiting(struct tcb *tcp)
 	void *common_fields[DS_NUM_COMMON_FIELDS];
 
 #ifdef ENABLE_DATASERIES
-	if (ds_module) {
 	/* Get a time stamp for time_returned and store as in a timeval tv. */
+	if (ds_module) {
 		gettimeofday(&tv, NULL);
 	}
 	else if (Tflag || cflag)
@@ -1145,7 +1145,6 @@ trace_syscall_exiting(struct tcb *tcp)
 		tprintf(" <%ld.%06ld>",
 			(long) tv.tv_sec, (long) tv.tv_usec);
 	}
-
 	tprints("\n");
 	dumpio(tcp);
 	line_ended();
@@ -1193,12 +1192,6 @@ trace_syscall_exiting(struct tcb *tcp)
 			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
 						  tcp->u_arg[2]);
 			ds_write_record(ds_module, "write", tcp->u_arg,
-					common_fields, v_args);
-			break;
-
-	        case SEN_chdir: /* Chdir system call */
-		        v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			ds_write_record(ds_module, "chdir", tcp->u_arg,
 					common_fields, v_args);
 			break;
 	}

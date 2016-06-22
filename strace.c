@@ -566,12 +566,11 @@ void
 tprintf(const char *fmt, ...)
 {
 #ifdef ENABLE_DATASERIES
-/*
- * If writing to a DataSeries record, prevents strace from printing its
- * regular output.
- */
-
-        if (ds_module)
+	/*
+	 * If writing to a DataSeries record, prevents strace from printing its
+	 * regular output.
+	 */
+	if (ds_module)
 		return;
 #endif
 	va_list args;
@@ -596,10 +595,10 @@ void
 tprints(const char *str)
 {
 #ifdef ENABLE_DATASERIES
-/*
- * If writing to a DataSeries record, prevents strace from printing its
- * regular output.
- */
+	/*
+	 * If writing to a DataSeries record, prevents strace from printing its
+	 * regular output.
+	 */
 	if (ds_module)
 		return;
 #endif
