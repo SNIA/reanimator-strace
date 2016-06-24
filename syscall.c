@@ -1194,6 +1194,10 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "write", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_lseek: /* LSeek system call */
+			ds_write_record(ds_module, "lseek", tcp->u_arg,
+					common_fields, NULL);
+			break;
 	}
 	/* Free memory allocated to v_args. */
 	for (i = 0; i < DS_MAX_ARGS; i++) {
