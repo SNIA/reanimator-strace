@@ -1198,6 +1198,11 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "lseek", tcp->u_arg,
 					common_fields, NULL);
 			break;
+		case SEN_pread: /* PRead system call */
+			v_args[0] =  ds_get_buffer(tcp, tcp->u_arg[1],
+						   tcp->u_rval);
+			ds_write_record(ds_module, "pread", tcp->u_arg,
+					common_fields, v_args);
 	}
 	/* Free memory allocated to v_args. */
 	for (i = 0; i < DS_MAX_ARGS; i++) {
