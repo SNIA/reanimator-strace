@@ -1244,6 +1244,20 @@ trace_syscall_exiting(struct tcb *tcp)
 		case SEN_chmod: /* Chmod system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
 			ds_write_record(ds_module, "chmod", tcp->u_arg,
+		case SEN_lseek: /* LSeek system call */
+			ds_write_record(ds_module, "lseek", tcp->u_arg,
+					common_fields, NULL);
+			break;
+		case SEN_pread: /* PRead system call */
+			v_args[0] =  ds_get_buffer(tcp, tcp->u_arg[1],
+						   tcp->u_rval);
+			ds_write_record(ds_module, "pread", tcp->u_arg,
+					common_fields, v_args);
+			break;
+		case SEN_pwrite: /* PWrite system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  tcp->u_arg[2]);
+			ds_write_record(ds_module, "pwrite", tcp->u_arg,
 					common_fields, v_args);
 			break;
 	}
