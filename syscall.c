@@ -1203,6 +1203,13 @@ trace_syscall_exiting(struct tcb *tcp)
 						   tcp->u_rval);
 			ds_write_record(ds_module, "pread", tcp->u_arg,
 					common_fields, v_args);
+			break;
+		case SEN_pwrite: /* PWrite system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  tcp->u_arg[2]);
+			ds_write_record(ds_module, "pwrite", tcp->u_arg,
+					common_fields, v_args);
+			break;
 	}
 	/* Free memory allocated to v_args. */
 	for (i = 0; i < DS_MAX_ARGS; i++) {
