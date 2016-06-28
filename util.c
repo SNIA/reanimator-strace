@@ -1476,4 +1476,28 @@ ds_get_buffer(struct tcb *tcp, long addr, long len)
 out:
 	return buf;
 }
+
+/*
+ * This function retrieves the struct stat buffer passed as an
+ * argument to stat/lstat/fstat system call.  It internally
+ * calls umoven which copies the struct stat from the address
+ * space of process being traced.
+ */
+void *
+ds_get_stat_buffer(struct tcb *tcp, const long addr)
+{
+	struct stat *ds_statbuf = NULL;
+	ds_statbuf = xmalloc(sizeof(struct stat));
+
+	if (!addr)
+		goto out;
+
+	if (umoven(tcp, addr, sizeof (struct stat), ds_statbuf) < 0) {
+		free(ds_statbuf);
+		ds_statbuf = NULL;
+		goto out;
+	}
+out:
+	return ds_statbuf;
+}
 #endif
