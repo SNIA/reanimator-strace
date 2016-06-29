@@ -852,6 +852,6 @@ extern unsigned num_quals;
 #ifdef ENABLE_DATASERIES
 #define DS_MAX_ARGS 3 /* Maximum number of v_args defined for dataseries */
 extern char *ds_get_path(struct tcb *tcp, long addr);
-extern char *ds_get_buffer(struct tcb *tcp, long addr, long len);
-extern void *ds_get_stat_buffer(struct tcb *tcb, const long addr);
+extern void *ds_get_buffer(struct tcb *tcp, long addr, long len);
+extern struct stat *ds_get_stat_buffer(struct tcb *tcb, const long addr);
 #endif

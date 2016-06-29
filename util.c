@@ -1452,7 +1452,7 @@ out:
  * function which copies len bytes from one address space
  * to another.
  */
-char *
+void *
 ds_get_buffer(struct tcb *tcp, long addr, long len)
 {
 	char *buf = NULL;
@@ -1483,7 +1483,7 @@ out:
  * calls umoven which copies the struct stat from the address
  * space of process being traced.
  */
-void *
+struct stat *
 ds_get_stat_buffer(struct tcb *tcp, const long addr)
 {
 	struct stat *ds_statbuf = NULL;
@@ -1497,10 +1497,12 @@ ds_get_stat_buffer(struct tcb *tcp, const long addr)
 	 */
 	ds_statbuf = xmalloc(sizeof(struct stat));
 
-	if (umoven(tcp, addr, sizeof (struct stat), ds_statbuf) < 0) {
+	if (umoven(tcp, addr, sizeof(struct stat), ds_statbuf) >= 0)
+		goto out; /* Success condition */
+
+	if (ds_statbuf) {
 		free(ds_statbuf);
 		ds_statbuf = NULL;
-		goto out;
 	}
 out:
 	return ds_statbuf;
