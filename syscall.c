@@ -1262,6 +1262,12 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "pwrite", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_stat: /* Stat system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+			v_args[1] = ds_get_stat_buffer(tcp, tcp->u_arg[1]);
+			ds_write_record(ds_module, "stat", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		case SEN_chown: /* Chown system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
 			ds_write_record(ds_module, "chown", tcp->u_arg,
