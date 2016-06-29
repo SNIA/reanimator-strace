@@ -1487,10 +1487,15 @@ void *
 ds_get_stat_buffer(struct tcb *tcp, const long addr)
 {
 	struct stat *ds_statbuf = NULL;
-	ds_statbuf = xmalloc(sizeof(struct stat));
 
 	if (!addr)
 		goto out;
+
+	/*
+	 * Note: xmalloc succeeds always or aborts the trace process
+	 * with an error message to stderr.
+	 */
+	ds_statbuf = xmalloc(sizeof(struct stat));
 
 	if (umoven(tcp, addr, sizeof (struct stat), ds_statbuf) < 0) {
 		free(ds_statbuf);
