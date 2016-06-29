@@ -1496,13 +1496,14 @@ ds_get_utimbuf(struct tcb *tcp, long addr)
 	 */
 	ds_utimbuf = xmalloc(sizeof(struct utimbuf));
 
-	if (umoven(tcp, addr, sizeof(struct utimbuf), ds_utimbuf) < 0) {
-		/* Failure condition */
+	if (umoven(tcp, addr, sizeof(struct utimbuf), ds_utimbuf) >= 0)
+		goto out; /* Success condition */
+
+	if (ds_utimbuf) {
 		free(ds_utimbuf);
 		ds_utimbuf = NULL;
 		goto out;
 	}
-	/* Success condition: go directly to out */
 out:
 	return ds_utimbuf;
 }
