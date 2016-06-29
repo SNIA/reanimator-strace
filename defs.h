@@ -33,6 +33,7 @@
 
 #ifdef ENABLE_DATASERIES
 # include <strace2ds.h>
+# include <utime.h>
 #endif
 
 #include <features.h>
@@ -853,4 +854,5 @@ extern unsigned num_quals;
 #define DS_MAX_ARGS 3 /* Maximum number of v_args defined for dataseries */
 extern char *ds_get_path(struct tcb *tcp, long addr);
 extern char *ds_get_buffer(struct tcb *tcp, long addr, long len);
+extern struct utimbuf *ds_get_utimbuf(struct tcb *tcp, long addr);
 #endif

@@ -1476,4 +1476,34 @@ ds_get_buffer(struct tcb *tcp, long addr, long len)
 out:
 	return buf;
 }
+
+/*
+ * This function retrieves the utimbuf structure passed as an argument
+ * to the system call utime. It internally calls umoven(), which copies
+ * the utimbuf from one address space to another.
+ */
+struct utimbuf *
+ds_get_utimbuf(struct tcb *tcp, long addr)
+{
+	struct utimbuf *ds_utimbuf = NULL;
+
+	if (!addr)
+		goto out;
+
+	/*
+	 * Note: xmalloc succeeds always or aborts the trace process
+	 * with an error message to stderr.
+	 */
+	ds_utimbuf = xmalloc(sizeof(struct utimbuf));
+
+	if (umoven(tcp, addr, sizeof(struct utimbuf), ds_utimbuf) < 0) {
+		/* Failure condition */
+		free(ds_utimbuf);
+		ds_utimbuf = NULL;
+		goto out;
+	}
+	/* Success condition: go directly to out */
+out:
+	return ds_utimbuf;
+}
 #endif
