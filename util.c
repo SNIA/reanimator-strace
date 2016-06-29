@@ -1452,7 +1452,7 @@ out:
  * function which copies len bytes from one address space
  * to another.
  */
-char *
+void *
 ds_get_buffer(struct tcb *tcp, long addr, long len)
 {
 	char *buf = NULL;
@@ -1502,7 +1502,6 @@ ds_get_utimbuf(struct tcb *tcp, long addr)
 	if (ds_utimbuf) {
 		free(ds_utimbuf);
 		ds_utimbuf = NULL;
-		goto out;
 	}
 out:
 	return ds_utimbuf;
