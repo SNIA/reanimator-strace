@@ -1507,4 +1507,93 @@ ds_get_stat_buffer(struct tcb *tcp, const long addr)
 out:
 	return ds_statbuf;
 }
+
+struct iovec *
+ds_get_iov_args(struct tcb *tcp, const long addr)
+{
+	struct iovec *iov_buf = NULL;
+
+	if (!addr)
+		goto out;
+
+	/*
+	 * Note: xmalloc succeeds always or aborts the trace process
+	 * with an error message to stderr.
+	 */
+	iov_buf = xmalloc(sizeof(struct iovec));
+
+	if (umoven(tcp, addr, sizeof(struct iovec), iov_buf) >= 0)
+		goto out; /* Success condition */
+
+	if (iov_buf) {
+		free(iov_buf);
+		iov_buf = NULL;
+	}
+out:
+	return iov_buf;
+}
+
+void
+ds_write_iov_record(struct tcb *tcp, const long start_addr,
+		    void **common_fields, void **v_args)
+{
+	size_t count, size, elem_size, iov_number;
+	long end_addr, cur;
+	struct iovec *iov_buf;
+	unsigned long iov[2];
+	bool first_record;
+
+	if (!start_addr) {
+		goto out;
+	}
+
+	count = tcp->u_arg[2];
+	if (!count) {
+		goto out;
+	}
+
+	elem_size = sizeof(struct iovec);
+	size = count * elem_size;
+	end_addr = start_addr + size;
+
+	if (end_addr <= start_addr) {
+		goto out;
+	}
+
+	first_record = false;
+	iov_number = 0;
+
+	for (cur = start_addr; cur < end_addr; cur += elem_size) {
+		iov_buf = ds_get_iov_args(tcp, cur);
+
+		if (iov_buf == NULL)
+			continue;
+		iov[0] = ((uintptr_t) iov_buf->iov_base);
+		iov[1] = ((unsigned int) iov_buf->iov_len);
+
+		v_args[0] = &first_record;
+		v_args[1] = &iov_number;
+		v_args[2] = &iov[1];
+		v_args[3] = ds_get_buffer(tcp, iov[0], iov[1]);
+
+		ds_write_record(ds_module, "readv", tcp->u_arg,
+				common_fields, v_args);
+
+		iov_number++;
+		if (iov_buf) {
+			free(iov_buf);
+			iov_buf = NULL;
+		}
+		if (v_args[3]) {
+			free(v_args[3]);
+			v_args[3] = NULL;
+		}
+	}
+
+out:
+	v_args[0] = NULL;
+	v_args[1] = NULL;
+	v_args[2] = NULL;
+	return;
+}
 #endif

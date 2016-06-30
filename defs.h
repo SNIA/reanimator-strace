@@ -850,8 +850,11 @@ extern unsigned num_quals;
 #define PRI__x64 PRI__64"x"
 
 #ifdef ENABLE_DATASERIES
-#define DS_MAX_ARGS 3 /* Maximum number of v_args defined for dataseries */
+#define DS_MAX_ARGS 4 /* Maximum number of v_args defined for dataseries */
 extern char *ds_get_path(struct tcb *tcp, long addr);
 extern void *ds_get_buffer(struct tcb *tcp, long addr, long len);
-extern struct stat *ds_get_stat_buffer(struct tcb *tcb, const long addr);
+extern struct stat *ds_get_stat_buffer(struct tcb *tcp, const long addr);
+extern struct iovec *ds_get_iov_args(struct tcb *tcp, const long addr);
+extern void ds_write_iov_record(struct tcb *tcp, const long start_addr,
+				void **common_fields, void **v_args);
 #endif
