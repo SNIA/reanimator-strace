@@ -1536,4 +1536,29 @@ ds_get_stat_buffer(struct tcb *tcp, const long addr)
 out:
 	return ds_statbuf;
 }
+
+struct timeval *
+ds_get_timeval_pair(struct tcb *tcp, const long addr)
+{
+	struct timeval *ds_tv = NULL;
+
+	if (!addr)
+		goto out;
+
+	/*
+	 * Note: xmalloc succeeds always or aborts the trace process
+	 * with an error message to stderr.
+	 */
+	ds_tv = xmalloc(sizeof(struct timeval[2]));
+
+	if (umoven(tcp, addr, sizeof(struct timeval[2]), ds_tv) >= 0)
+		goto out; /* Success condition */
+
+	if (ds_tv) {
+		free(ds_tv);
+		ds_tv = NULL;
+	}
+out:
+	return ds_tv;
+}
 #endif
