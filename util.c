@@ -1537,6 +1537,11 @@ out:
 	return ds_statbuf;
 }
 
+/*
+ * This function retrieves the struct timeval array passed as an argument
+ * to the system call utimes. It internally calls umoven(), which copies
+ * the utimbuf from one address space to another.
+ */
 struct timeval *
 ds_get_timeval_pair(struct tcb *tcp, const long addr)
 {
