@@ -1511,7 +1511,7 @@ out:
 /*
  * This function retrieves the struct iovec buffer passed as an
  * argument to readv/writev/ system call.  It internally
- * calls umoven which copies the struct stat from the address
+ * calls umoven which copies the struct iovec from the address
  * space of process being traced.
  */
 struct iovec *
