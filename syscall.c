@@ -913,7 +913,6 @@ trace_syscall_exiting(struct tcb *tcp)
 	void *v_args[DS_MAX_ARGS];
 	int i, iov_number;
 	void *common_fields[DS_NUM_COMMON_FIELDS];
-	bool first_record;
 
 #ifdef ENABLE_DATASERIES
 	/* Get a time stamp for time_returned and store as in a timeval tv. */
@@ -1282,14 +1281,18 @@ trace_syscall_exiting(struct tcb *tcp)
 					common_fields, v_args);
 			break;
 		case SEN_readv: /* Readv system call */
-			first_record = true;
+			/* iov_number equals to '-1' denotes first record. */
 			iov_number = -1;
-			v_args[0] = &first_record;
-			v_args[1] = &iov_number;
-			v_args[2] = &tcp->u_rval;
+			v_args[0] = &iov_number;
+			v_args[1] = &tcp->u_rval;
+			/* First, write the first record. */
 			ds_write_record(ds_module, "readv", tcp->u_arg,
 					common_fields, v_args);
-			ds_write_iov_record(tcp, tcp->u_arg[1],
+			/*
+			 * Then, iteratively writes the record for each
+			 * buffer passed in struct iovec.
+			 */
+			ds_write_iov_records(tcp, tcp->u_arg[1],
 					    common_fields, v_args);
 			break;
 	}

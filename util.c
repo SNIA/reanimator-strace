@@ -1508,6 +1508,12 @@ out:
 	return ds_statbuf;
 }
 
+/*
+ * This function retrieves the struct iovec buffer passed as an
+ * argument to readv/writev/ system call.  It internally
+ * calls umoven which copies the struct stat from the address
+ * space of process being traced.
+ */
 struct iovec *
 ds_get_iov_args(struct tcb *tcp, const long addr)
 {
@@ -1533,15 +1539,19 @@ out:
 	return iov_buf;
 }
 
+/*
+ * This function iteratievly copies the each buffer of single
+ * readv system call and then calls the ds_write_record() to
+ * write each record in dataseries file.
+ */
 void
-ds_write_iov_record(struct tcb *tcp, const long start_addr,
+ds_write_iov_records(struct tcb *tcp, const long start_addr,
 		    void **common_fields, void **v_args)
 {
 	size_t count, size, elem_size, iov_number;
 	long end_addr, cur;
 	struct iovec *iov_buf;
 	unsigned long iov[2];
-	bool first_record;
 
 	if (!start_addr) {
 		goto out;
@@ -1560,40 +1570,53 @@ ds_write_iov_record(struct tcb *tcp, const long start_addr,
 		goto out;
 	}
 
-	first_record = false;
+	// Start iov_number with '0'.
 	iov_number = 0;
 
+	/*
+	 * Iteratively copy each buffer and add record to
+	 * dataseries file.
+	 */
 	for (cur = start_addr; cur < end_addr; cur += elem_size) {
 		iov_buf = ds_get_iov_args(tcp, cur);
 
 		if (iov_buf == NULL)
 			continue;
+
+		// Stores the address of buffer.
 		iov[0] = ((uintptr_t) iov_buf->iov_base);
+		// Stores the length of buffer.
 		iov[1] = ((unsigned int) iov_buf->iov_len);
 
-		v_args[0] = &first_record;
-		v_args[1] = &iov_number;
-		v_args[2] = &iov[1];
-		v_args[3] = ds_get_buffer(tcp, iov[0], iov[1]);
+		/*
+		 * Save iov_number, length of buffer and buffer
+		 * to v_args.
+		 */
+		v_args[0] = &iov_number;
+		v_args[1] = &iov[1];
+		v_args[2] = ds_get_buffer(tcp, iov[0], iov[1]);
 
+		// Write each individual record.
 		ds_write_record(ds_module, "readv", tcp->u_arg,
 				common_fields, v_args);
 
+		// Increment the iov number.
 		iov_number++;
+
+		// Free the memory allocated.
 		if (iov_buf) {
 			free(iov_buf);
 			iov_buf = NULL;
 		}
-		if (v_args[3]) {
-			free(v_args[3]);
-			v_args[3] = NULL;
+		if (v_args[2]) {
+			free(v_args[2]);
+			v_args[2] = NULL;
 		}
 	}
 
 out:
 	v_args[0] = NULL;
 	v_args[1] = NULL;
-	v_args[2] = NULL;
 	return;
 }
 #endif
