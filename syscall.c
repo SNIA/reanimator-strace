@@ -1303,6 +1303,12 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "utimes", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_rename: /* Rename system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+			v_args[1] = ds_get_path(tcp, tcp->u_arg[1]);
+			ds_write_record(ds_module, "rename", tcp->u_arg,
+					common_fields, v_args);
+			break;
 	}
 	/* Free memory allocated to v_args. */
 	for (i = 0; i < DS_MAX_ARGS; i++) {
