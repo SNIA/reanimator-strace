@@ -1549,9 +1549,9 @@ ds_get_timeval_pair(struct tcb *tcp, const long addr)
 	 * Note: xmalloc succeeds always or aborts the trace process
 	 * with an error message to stderr.
 	 */
-	ds_tv = xmalloc(sizeof(struct timeval[2]));
+	ds_tv = xmalloc(2 * sizeof(struct timeval));
 
-	if (umoven(tcp, addr, sizeof(struct timeval[2]), ds_tv) >= 0)
+	if (umoven(tcp, addr, 2 * sizeof(struct timeval), ds_tv) >= 0)
 		goto out; /* Success condition */
 
 	if (ds_tv) {
