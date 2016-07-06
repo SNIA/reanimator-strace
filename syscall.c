@@ -1313,6 +1313,11 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "fsync", tcp->u_arg,
 					common_fields, NULL);
 			break;
+		case SEN_mknod: /* Mknod system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+			ds_write_record(ds_module, "mknod", tcp->u_arg,
+					common_fields, v_args);
+			break;
 	}
 	/* Free memory allocated to v_args. */
 	for (i = 0; i < DS_MAX_ARGS; i++) {
