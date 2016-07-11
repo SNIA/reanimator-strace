@@ -911,7 +911,7 @@ trace_syscall_exiting(struct tcb *tcp)
 	 * named as v_args.
 	 */
 	void *v_args[DS_MAX_ARGS];
-	int i;
+	int i, iov_number;
 	void *common_fields[DS_NUM_COMMON_FIELDS];
 
 #ifdef ENABLE_DATASERIES
