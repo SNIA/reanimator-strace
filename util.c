@@ -1606,7 +1606,8 @@ out:
  */
 void
 ds_write_iov_records(struct tcb *tcp, const long start_addr,
-		    void **common_fields, void **v_args)
+		     const char *sys_call_name, void **common_fields,
+		     void **v_args)
 {
 	size_t count, size, elem_size, iov_number;
 	long end_addr, cur;
@@ -1657,7 +1658,7 @@ ds_write_iov_records(struct tcb *tcp, const long start_addr,
 		v_args[2] = ds_get_buffer(tcp, iov[0], iov[1]);
 
 		// Write each individual record.
-		ds_write_record(ds_module, "readv", tcp->u_arg,
+		ds_write_record(ds_module, sys_call_name, tcp->u_arg,
 				common_fields, v_args);
 
 		// Increment the iov number.
