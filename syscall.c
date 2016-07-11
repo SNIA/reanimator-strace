@@ -1280,6 +1280,21 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "readlink", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_readv: /* Readv system call */
+			/* iov_number equals to '-1' denotes first record. */
+			iov_number = -1;
+			v_args[0] = &iov_number;
+			v_args[1] = &tcp->u_rval;
+			/* First, write the first record. */
+			ds_write_record(ds_module, "readv", tcp->u_arg,
+					common_fields, v_args);
+			/*
+			 * Then, iteratively writes the record for each
+			 * buffer passed in struct iovec.
+			 */
+			ds_write_iov_records(tcp, tcp->u_arg[1],
+					    common_fields, v_args);
+			break;
 		case SEN_utime: /* Utime system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
 			v_args[1] = ds_get_utimbuf(tcp, tcp->u_arg[1]);
