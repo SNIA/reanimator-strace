@@ -1318,6 +1318,9 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "mknod", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		default:
+			ds_print_warning(tcp->s_ent->sys_name,
+					 tcp->scno);
 	}
 	/* Free memory allocated to v_args. */
 	for (i = 0; i < DS_MAX_ARGS; i++) {
