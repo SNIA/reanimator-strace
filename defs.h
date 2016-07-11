@@ -33,6 +33,7 @@
 
 #ifdef ENABLE_DATASERIES
 # include <strace2ds.h>
+# include <utime.h>
 #endif
 
 #include <features.h>
@@ -857,4 +858,7 @@ extern struct stat *ds_get_stat_buffer(struct tcb *tcp, const long addr);
 extern struct iovec *ds_get_iov_args(struct tcb *tcp, const long addr);
 extern void ds_write_iov_records(struct tcb *tcp, const long start_addr,
 				void **common_fields, void **v_args);
+extern struct utimbuf *ds_get_utimbuf(struct tcb *tcp, long addr);
+extern struct stat *ds_get_stat_buffer(struct tcb *tcb, const long addr);
+extern struct timeval *ds_get_timeval_pair(struct tcb *tcp, const long addr);
 #endif

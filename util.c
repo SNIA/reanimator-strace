@@ -1478,6 +1478,66 @@ out:
 }
 
 /*
+ * This function retrieves the utimbuf structure passed as an argument
+ * to the system call utime. It internally calls umoven(), which copies
+ * the utimbuf from one address space to another.
+ */
+struct utimbuf *
+ds_get_utimbuf(struct tcb *tcp, long addr)
+{
+	struct utimbuf *ds_utimbuf = NULL;
+
+	if (!addr)
+		goto out;
+
+	/*
+	 * Note: xmalloc succeeds always or aborts the trace process
+	 * with an error message to stderr.
+	 */
+	ds_utimbuf = xmalloc(sizeof(struct utimbuf));
+
+	if (umoven(tcp, addr, sizeof(struct utimbuf), ds_utimbuf) >= 0)
+		goto out; /* Success condition */
+
+	if (ds_utimbuf) {
+		free(ds_utimbuf);
+		ds_utimbuf = NULL;
+	}
+out:
+	return ds_utimbuf;
+}
+
+/*
+ * This function retrieves the struct timeval array passed as an argument
+ * to the system call utimes. It internally calls umoven(), which copies
+ * the utimbuf from one address space to another.
+ */
+struct timeval *
+ds_get_timeval_pair(struct tcb *tcp, const long addr)
+{
+        struct timeval *ds_tv = NULL;
+
+	if (!addr)
+                goto out;
+
+        /*
+         * Note: xmalloc succeeds always or aborts the trace process
+         * with an error message to stderr.
+         */
+	ds_tv = xmalloc(2 * sizeof(struct timeval));
+
+        if (umoven(tcp, addr, 2 * sizeof(struct timeval), ds_tv) >= 0)
+                goto out; /* Success condition */
+
+        if (ds_tv) {
+                free(ds_tv);
+                ds_tv = NULL;
+        }
+out:
+        return ds_tv;
+}
+
+/*
  * This function retrieves the struct stat buffer passed as an
  * argument to stat/lstat/fstat system call.  It internally
  * calls umoven which copies the struct stat from the address
