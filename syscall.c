@@ -1342,6 +1342,10 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "dup", tcp->u_arg,
 					common_fields, NULL);
 			break;
+		case SEN_dup2: /* Dup2 system call */
+			ds_write_record(ds_module, "dup2", tcp->u_arg,
+					common_fields, NULL);
+			break;
 		default:
 			ds_print_warning(tcp->s_ent->sys_name,
 					 tcp->scno);
