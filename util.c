@@ -1680,4 +1680,34 @@ out:
 	v_args[1] = NULL;
 	return;
 }
+
+/*
+ * This function retrieves the file descriptor array passed as an argument
+ * to the system call pipe. It internally calls umoven(), which copies
+ * the array from one address space to another.
+ */
+int *
+ds_get_fd_pair(struct tcb *tcp, const long addr)
+{
+	int *ds_fd = NULL;
+
+	if (!addr)
+		goto out;
+
+	/*
+	 * Note: xmalloc succeeds always or aborts the trace process
+	 * with an error message to stderr.
+	 */
+	ds_fd = xmalloc(2 * sizeof(int));
+
+	if (umoven(tcp, addr, 2 * sizeof(int), ds_fd) >= 0)
+		goto out; /* Success condition */
+
+	if (ds_fd) {
+		free(ds_fd);
+		ds_fd = NULL;
+	}
+out:
+	return ds_fd;
+}
 #endif

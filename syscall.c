@@ -1333,6 +1333,11 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "mknod", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_pipe: /* Pipe system call */
+			v_args[0] = ds_get_fd_pair(tcp, tcp->u_arg[0]);
+			ds_write_record(ds_module, "pipe", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		default:
 			ds_print_warning(tcp->s_ent->sys_name,
 					 tcp->scno);
