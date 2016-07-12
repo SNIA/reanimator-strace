@@ -1296,7 +1296,7 @@ trace_syscall_exiting(struct tcb *tcp)
 					     common_fields, v_args);
 			break;
 		case SEN_writev: /* Writev system call */
-                        /* iov_number equals to '-1' denotes first record. */
+			/* iov_number equals to '-1' denotes first record. */
 			iov_number = -1;
 			v_args[0] = &iov_number;
 			v_args[1] = &tcp->u_rval;
