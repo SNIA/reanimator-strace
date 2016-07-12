@@ -1515,26 +1515,26 @@ out:
 struct timeval *
 ds_get_timeval_pair(struct tcb *tcp, const long addr)
 {
-        struct timeval *ds_tv = NULL;
+	struct timeval *ds_tv = NULL;
 
 	if (!addr)
-                goto out;
+		goto out;
 
-        /*
-         * Note: xmalloc succeeds always or aborts the trace process
-         * with an error message to stderr.
-         */
+	/*
+	 * Note: xmalloc succeeds always or aborts the trace process
+	 * with an error message to stderr.
+	 */
 	ds_tv = xmalloc(2 * sizeof(struct timeval));
 
-        if (umoven(tcp, addr, 2 * sizeof(struct timeval), ds_tv) >= 0)
-                goto out; /* Success condition */
+	if (umoven(tcp, addr, 2 * sizeof(struct timeval), ds_tv) >= 0)
+		goto out; /* Success condition */
 
-        if (ds_tv) {
-                free(ds_tv);
-                ds_tv = NULL;
-        }
+	if (ds_tv) {
+		free(ds_tv);
+		ds_tv = NULL;
+	}
 out:
-        return ds_tv;
+	return ds_tv;
 }
 
 /*
