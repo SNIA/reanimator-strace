@@ -1711,4 +1711,36 @@ ds_get_fd_pair(struct tcb *tcp, const long addr)
 out:
 	return ds_fd;
 }
+
+/*
+ * This function retrieves the struct flock passed as an argument
+ * to the system call fcntl with the commands F_SETLK, F_SETLKW,
+ * and F_GETLK.  It internally calls umoven(), which copies the
+ * flock from one address space to another.
+ */
+struct flock *
+  ds_get_flock(struct tcb *tcp, const long addr)
+{
+  struct flock *ds_flock = NULL;
+
+  if (!addr)
+    goto out;
+
+  /*
+   * Note: xmalloc succeeds always or aborts the trace process
+   * with an error message to stderr.
+   */
+  ds_flock = xmalloc(sizeof(struct flock));
+
+  if (umoven(tcp, addr, sizeof(struct flock), ds_flock) >= 0)
+    goto out; /* Success condition */
+
+  if (ds_flock) {
+    free(ds_flock);
+    ds_flock = NULL;
+  }
+ out:
+  return ds_flock;
+}
+
 #endif

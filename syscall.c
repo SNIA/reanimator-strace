@@ -36,6 +36,10 @@
 #include <sys/param.h>
 #include <signal.h>
 
+#ifdef ENABLE_DATASERIES
+# include <fcntl.h>
+#endif
+
 /* for struct iovec */
 #include <sys/uio.h>
 
@@ -1360,6 +1364,15 @@ trace_syscall_exiting(struct tcb *tcp)
 		case SEN_dup2: /* Dup2 system call */
 			ds_write_record(ds_module, "dup2", tcp->u_arg,
 					common_fields, NULL);
+			break;
+		case SEN_fcntl: /* Fcntl system call */
+			if ((tcp->u_arg[1] == F_SETLK) ||
+			    (tcp->u_arg[1] == F_SETLKW) ||
+			    (tcp->u_arg[1] == F_GETLK)) {
+			  v_args[0] = ds_get_flock(tcp, tcp->u_arg[2]);
+			}
+			ds_write_record(ds_module, "fcntl", tcp->u_arg,
+					common_fields, v_args);
 			break;
 		default:
 			ds_print_warning(tcp->s_ent->sys_name,
