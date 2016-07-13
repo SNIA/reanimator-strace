@@ -1516,26 +1516,26 @@ out:
 struct timeval *
 ds_get_timeval_pair(struct tcb *tcp, const long addr)
 {
-        struct timeval *ds_tv = NULL;
+	struct timeval *ds_tv = NULL;
 
 	if (!addr)
-                goto out;
+		goto out;
 
-        /*
-         * Note: xmalloc succeeds always or aborts the trace process
-         * with an error message to stderr.
-         */
+	/*
+	 * Note: xmalloc succeeds always or aborts the trace process
+	 * with an error message to stderr.
+	 */
 	ds_tv = xmalloc(2 * sizeof(struct timeval));
 
-        if (umoven(tcp, addr, 2 * sizeof(struct timeval), ds_tv) >= 0)
-                goto out; /* Success condition */
+	if (umoven(tcp, addr, 2 * sizeof(struct timeval), ds_tv) >= 0)
+		goto out; /* Success condition */
 
-        if (ds_tv) {
-                free(ds_tv);
-                ds_tv = NULL;
-        }
+	if (ds_tv) {
+		free(ds_tv);
+		ds_tv = NULL;
+	}
 out:
-        return ds_tv;
+	return ds_tv;
 }
 
 /*
@@ -1607,7 +1607,8 @@ out:
  */
 void
 ds_write_iov_records(struct tcb *tcp, const long start_addr,
-		    void **common_fields, void **v_args)
+		     const char *sys_call_name, void **common_fields,
+		     void **v_args)
 {
 	size_t count, size, elem_size, iov_number;
 	long end_addr, cur;
@@ -1658,7 +1659,7 @@ ds_write_iov_records(struct tcb *tcp, const long start_addr,
 		v_args[2] = ds_get_buffer(tcp, iov[0], iov[1]);
 
 		// Write each individual record.
-		ds_write_record(ds_module, "readv", tcp->u_arg,
+		ds_write_record(ds_module, sys_call_name, tcp->u_arg,
 				common_fields, v_args);
 
 		// Increment the iov number.
