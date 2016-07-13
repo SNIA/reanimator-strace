@@ -791,6 +791,9 @@ static int
 trace_syscall_entering(struct tcb *tcp)
 {
 	int res, scno_good;
+#ifdef ENABLE_DATASERIES
+	bool exit_generated = false;
+#endif
 
 	scno_good = res = get_scno(tcp);
 	if (res == 0)
@@ -885,6 +888,24 @@ trace_syscall_entering(struct tcb *tcp)
 	 */
 	if (ds_module) {
 		gettimeofday(&tcp->etime, NULL);
+		memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
+
+		/* Then, store the common field values */
+		common_fields[DS_COMMON_FIELD_TIME_CALLED] = &tcp->etime;
+		common_fields[DS_COMMON_FIELD_TIME_RETURNED] = &tcp->etime;
+		common_fields[DS_COMMON_FIELD_RETURN_VALUE] = &tcp->u_rval;
+		common_fields[DS_COMMON_FIELD_ERRNO_NUMBER] = &tcp->u_error;
+		common_fields[DS_COMMON_FIELD_EXECUTING_PID] = &tcp->pid;
+		switch(tcp->s_ent->sen) {
+			case SEN_exit:
+				if (exiting(tcp))
+					exit_generated = true;
+				v_args[0] = &exit_generated;
+				ds_write_record(ds_module, "exit", tcp->u_arg,
+						common_fields, v_args);
+				v_args[0] = NULL;
+				break;
+		}
 	}
 	else if (Tflag || cflag)
 		gettimeofday(&tcp->etime, NULL);
@@ -903,16 +924,7 @@ trace_syscall_exiting(struct tcb *tcp)
 	struct timeval tv;
 	int res;
 	long u_error;
-	/*
-	 * Arguments such as pathname or read/write buffer passed to
-	 * system calls cannot be referenced directly from tcp->u_args.
-	 * These arguments are copied from the address space of actual
-	 * process being traced and stored in an array of pointers
-	 * named as v_args.
-	 */
-	void *v_args[DS_MAX_ARGS];
 	int i, iov_number;
-	void *common_fields[DS_NUM_COMMON_FIELDS];
 
 #ifdef ENABLE_DATASERIES
 	/* Get a time stamp for time_returned and store as in a timeval tv. */
