@@ -852,15 +852,6 @@ extern unsigned num_quals;
 
 #ifdef ENABLE_DATASERIES
 #define DS_MAX_ARGS 3 /* Maximum number of v_args defined for dataseries */
-/*
- * Arguments such as pathname or read/write buffer passed to
- * system calls cannot be referenced directly from tcp->u_args.
- * These arguments are copied from the address space of actual
- * process being traced and stored in an array of pointers
- * named as v_args.
- */
-void *v_args[DS_MAX_ARGS];
-void *common_fields[DS_NUM_COMMON_FIELDS];
 extern char *ds_get_path(struct tcb *tcp, long addr);
 extern void *ds_get_buffer(struct tcb *tcp, long addr, long len);
 extern struct stat *ds_get_stat_buffer(struct tcb *tcp, const long addr);
