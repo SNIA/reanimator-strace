@@ -284,6 +284,18 @@ static const int personality_wordsize[SUPPORTED_PERSONALITIES] = {
 };
 # endif
 
+#ifdef ENABLE_DATASERIES
+/*
+ * Arguments such as pathname or read/write buffer passed to
+ * system calls cannot be referenced directly from tcp->u_args.
+ * These arguments are copied from the address space of actual
+ * process being traced and stored in an array of pointers
+ * named as v_args.
+ */
+void *v_args[DS_MAX_ARGS];
+void *common_fields[DS_NUM_COMMON_FIELDS];
+#endif
+
 void
 set_personality(int personality)
 {
@@ -795,6 +807,9 @@ static int
 trace_syscall_entering(struct tcb *tcp)
 {
 	int res, scno_good;
+#ifdef ENABLE_DATASERIES
+	bool exit_generated = false;
+#endif
 
 	scno_good = res = get_scno(tcp);
 	if (res == 0)
@@ -889,6 +904,37 @@ trace_syscall_entering(struct tcb *tcp)
 	 */
 	if (ds_module) {
 		gettimeofday(&tcp->etime, NULL);
+		switch (tcp->s_ent->sen) {
+		case SEN_exit: /* Exit	system call */
+			/*
+			 * For exit(2) system call, trace_syscall_exiting()
+			 * function is not called. So, to capture traces for
+			 * exit system call, we should do this in
+			 * trace_syscall_entering() function.
+			 */
+
+			// First, initialize v_args with NULL
+			memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
+
+			/*
+			 * Then, store the common field values.
+			 * Since exit(2) system calls do not return,
+			 * we are not setting time_returned, return value
+			 * and error numbers in our replayer. We are only
+			 * setting time_called and executing pid fields.
+			 */
+			common_fields[DS_COMMON_FIELD_TIME_CALLED] =
+							&tcp->etime;
+			common_fields[DS_COMMON_FIELD_EXECUTING_PID] =
+							&tcp->pid;
+			if (exiting(tcp))
+				exit_generated = true;
+			v_args[0] = &exit_generated;
+			ds_write_record(ds_module, "exit", tcp->u_arg,
+					common_fields, v_args);
+			v_args[0] = NULL;
+			break;
+		}
 	}
 	else if (Tflag || cflag)
 		gettimeofday(&tcp->etime, NULL);
@@ -907,18 +953,10 @@ trace_syscall_exiting(struct tcb *tcp)
 	struct timeval tv;
 	int res;
 	long u_error;
-	/*
-	 * Arguments such as pathname or read/write buffer passed to
-	 * system calls cannot be referenced directly from tcp->u_args.
-	 * These arguments are copied from the address space of actual
-	 * process being traced and stored in an array of pointers
-	 * named as v_args.
-	 */
-	void *v_args[DS_MAX_ARGS];
-	int i, iov_number;
-	void *common_fields[DS_NUM_COMMON_FIELDS];
 
 #ifdef ENABLE_DATASERIES
+	int i, iov_number;
+
 	/* Get a time stamp for time_returned and store as in a timeval tv. */
 	if (ds_module) {
 		gettimeofday(&tv, NULL);
