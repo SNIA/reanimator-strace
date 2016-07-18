@@ -900,17 +900,20 @@ trace_syscall_entering(struct tcb *tcp)
 	 */
 	if (ds_module) {
 		gettimeofday(&tcp->etime, NULL);
+		switch (tcp->s_ent->sen) {
+		case SEN_exit: /* Exit	system call */
+			/*
+			 * For exit(2) system call, trace_syscall_exiting()
+			 * function is not called. So, to capture traces for
+			 * exit system call, we should do this in
+			 * trace_syscall_entering() function.
+			 */
 
-		/*
-		 * For exit(2) system call, trace_syscall_exiting() function
-		 * is not called. So, to capture traces for exit system call,
-		 * we should do this in trace_syscall_entering() function.
-		 */
-		if (tcp->s_ent->sen == SEN_exit) { /* Exit system call */
-			/* First initialize v_args with NULL */
+			// First, initialize v_args with NULL
 			memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
 
-			/* Then, store the common field values.
+			/*
+			 * Then, store the common field values.
 			 * Since exit(2) system calls do not return,
 			 * we are not setting time_returned, return value
 			 * and error numbers in our replayer. We are only
@@ -926,6 +929,7 @@ trace_syscall_entering(struct tcb *tcp)
 			ds_write_record(ds_module, "exit", tcp->u_arg,
 					common_fields, v_args);
 			v_args[0] = NULL;
+			break;
 		}
 	}
 	else if (Tflag || cflag)
@@ -945,9 +949,10 @@ trace_syscall_exiting(struct tcb *tcp)
 	struct timeval tv;
 	int res;
 	long u_error;
-	int i, iov_number;
 
 #ifdef ENABLE_DATASERIES
+	int i, iov_number;
+
 	/* Get a time stamp for time_returned and store as in a timeval tv. */
 	if (ds_module) {
 		gettimeofday(&tv, NULL);
