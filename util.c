@@ -1719,28 +1719,27 @@ out:
  * flock from one address space to another.
  */
 struct flock *
-  ds_get_flock(struct tcb *tcp, const long addr)
+ds_get_flock(struct tcb *tcp, const long addr)
 {
-  struct flock *ds_flock = NULL;
+	struct flock *ds_flock = NULL;
 
-  if (!addr)
-    goto out;
+	if (!addr)
+		goto out;
 
-  /*
-   * Note: xmalloc succeeds always or aborts the trace process
-   * with an error message to stderr.
-   */
-  ds_flock = xmalloc(sizeof(struct flock));
+	/*
+	 * Note: xmalloc succeeds always or aborts the trace process
+	 * with an error message to stderr.
+	 */
+	ds_flock = xmalloc(sizeof(struct flock));
 
-  if (umoven(tcp, addr, sizeof(struct flock), ds_flock) >= 0)
-    goto out; /* Success condition */
+	if (umoven(tcp, addr, sizeof(struct flock), ds_flock) >= 0)
+		goto out; /* Success condition */
 
-  if (ds_flock) {
-    free(ds_flock);
-    ds_flock = NULL;
-  }
- out:
-  return ds_flock;
+	if (ds_flock) {
+		free(ds_flock);
+		ds_flock = NULL;
+	}
+out:
+	return ds_flock;
 }
-
 #endif

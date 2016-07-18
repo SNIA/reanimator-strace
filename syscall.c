@@ -1369,7 +1369,7 @@ trace_syscall_exiting(struct tcb *tcp)
 			if ((tcp->u_arg[1] == F_SETLK) ||
 			    (tcp->u_arg[1] == F_SETLKW) ||
 			    (tcp->u_arg[1] == F_GETLK)) {
-			  v_args[0] = ds_get_flock(tcp, tcp->u_arg[2]);
+				v_args[0] = ds_get_flock(tcp, tcp->u_arg[2]);
 			}
 			ds_write_record(ds_module, "fcntl", tcp->u_arg,
 					common_fields, v_args);
