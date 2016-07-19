@@ -1711,4 +1711,76 @@ ds_get_fd_pair(struct tcb *tcp, const long addr)
 out:
 	return ds_fd;
 }
+
+/*
+ * This function iteratievly copies the elements of argument
+ * and environment strings array passed as an argument to
+ * execv system call. Each copied element is written as a new
+ * record in dataseries file.
+ */
+void
+ds_write_execve_records(struct tcb *tcp,
+			long addr,
+			const char *arg_env,
+			int *continuation_number,
+			void **common_fields,
+			void **v_args)
+{
+	u_int n;
+	const u_int wordsize = current_wordsize;
+
+	if (!addr)
+		goto out;
+
+	/*
+	 * Iteratively copies elements of argument and envrionment
+	 * arrays and add record to dataseries file.
+	 */
+	for (n = 0; addr; addr += wordsize, ++n) {
+		union {
+			u_int p32;
+			unsigned long p64;
+			char data[sizeof(long)];
+		} args;
+
+		if (umoven(tcp, addr, wordsize, args.data) >= 0)
+			goto write_record; /* Success condition */
+		else
+			continue;
+
+write_record:
+		if (!(wordsize < sizeof(args.p64) ? args.p32 : args.p64))
+			break;
+
+		// Increment the continuation number
+		*continuation_number += 1;
+		v_args[0] = continuation_number;
+
+		// Copies the argument/environment strings
+		v_args[1] = ds_get_path(tcp,
+					wordsize < sizeof(long) ?
+					args.p32 : args.p64);
+
+		/*
+		 * arg_env is either equal to "arg" to "env" which
+		 * denotes whether the record stores argument variable
+		 * or environment variable.
+		 */
+		v_args[2] = (void *) arg_env;
+
+		// Write each individual record
+		ds_write_record(ds_module, "execve", tcp->u_arg,
+				common_fields, v_args);
+
+		if (v_args[1]) {
+			free(v_args[1]);
+			v_args[1] = NULL;
+		}
+	}
+out:
+	v_args[0] = NULL;
+	v_args[1] = NULL;
+	v_args[2] = NULL;
+	return;
+}
 #endif

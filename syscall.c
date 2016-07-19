@@ -280,18 +280,6 @@ static const int personality_wordsize[SUPPORTED_PERSONALITIES] = {
 };
 # endif
 
-#ifdef ENABLE_DATASERIES
-/*
- * Arguments such as pathname or read/write buffer passed to
- * system calls cannot be referenced directly from tcp->u_args.
- * These arguments are copied from the address space of actual
- * process being traced and stored in an array of pointers
- * named as v_args.
- */
-void *v_args[DS_MAX_ARGS];
-void *common_fields[DS_NUM_COMMON_FIELDS];
-#endif
-
 void
 set_personality(int personality)
 {
@@ -804,7 +792,17 @@ trace_syscall_entering(struct tcb *tcp)
 {
 	int res, scno_good;
 #ifdef ENABLE_DATASERIES
+	/*
+	 * Arguments such as pathname or read/write buffer passed to
+	 * system calls cannot be referenced directly from tcp->u_args.
+	 * These arguments are copied from the address space of actual
+	 * process being traced and stored in an array of pointers
+	 * named as v_args.
+	 */
+	void *v_args[DS_MAX_ARGS];
+	void *common_fields[DS_NUM_COMMON_FIELDS];
 	bool exit_generated = false;
+	int continuation_number;
 #endif
 
 	scno_good = res = get_scno(tcp);
@@ -903,14 +901,16 @@ trace_syscall_entering(struct tcb *tcp)
 		switch (tcp->s_ent->sen) {
 		case SEN_exit: /* Exit	system call */
 			/*
-			 * For exit(2) system call, trace_syscall_exiting()
+			 * For _exit(2) system call, trace_syscall_exiting()
 			 * function is not called. So, to capture traces for
-			 * exit system call, we should do this in
+			 * _exit(2) system call, we should do this in
 			 * trace_syscall_entering() function.
 			 */
 
-			// First, initialize v_args with NULL
+			// Initialize v_args and common_fields with NULL
 			memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
+			memset(common_fields, 0, sizeof(void *)
+						 * DS_NUM_COMMON_FIELDS);
 
 			/*
 			 * Then, store the common field values.
@@ -929,6 +929,52 @@ trace_syscall_entering(struct tcb *tcp)
 			ds_write_record(ds_module, "exit", tcp->u_arg,
 					common_fields, v_args);
 			v_args[0] = NULL;
+			break;
+		case SEN_execve: /* Execve system call */
+			/*
+			 * _execve(2) system call does not return on success
+			 * and the memory segments of calling process is
+			 * overwritten by that of program loaded. So we should
+			 * capture traces in tarce_syscall_entering() function.
+			 */
+
+			/* Initialize v_args and common fields with NULL */
+			memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
+			memset(common_fields, 0, sizeof(void *)
+						 * DS_NUM_COMMON_FIELDS);
+
+			/*
+			 * Execve system call can accept arbitrary number
+			 * of arguments. Continuation numbers are used to
+			 * record all the arguments. First record has a
+			 * zero continuation number. Each subsequent records
+			 * have an incrementing continuation number.
+			 */
+			continuation_number = 0;
+			v_args[0] = &continuation_number;
+			v_args[1] = ds_get_path(tcp, tcp->u_arg[0]);
+
+			/* Add first record to the dataseries file. */
+			ds_write_record(ds_module, "execve", tcp->u_arg,
+					common_fields, v_args);
+			v_args[0] = NULL;
+			if (v_args[1]) {
+				free(v_args[1]);
+				v_args[1] = NULL;
+			}
+
+			/* Then, write records for each argument variable. */
+			ds_write_execve_records(tcp, tcp->u_arg[1],
+						"arg", &continuation_number,
+						common_fields, v_args);
+
+			/*
+			 * Lastly, write records for each environment
+			 * variable.
+			 */
+			ds_write_execve_records(tcp, tcp->u_arg[2],
+						"env", &continuation_number,
+						common_fields, v_args);
 			break;
 		}
 	}
@@ -951,7 +997,16 @@ trace_syscall_exiting(struct tcb *tcp)
 	long u_error;
 
 #ifdef ENABLE_DATASERIES
-	int i, iov_number;
+	/*
+	 * Arguments such as pathname or read/write buffer passed to
+	 * system calls cannot be referenced directly from tcp->u_args.
+	 * These arguments are copied from the address space of actual
+	 * process being traced and stored in an array of pointers
+	 * named as v_args.
+	 */
+	void *v_args[DS_MAX_ARGS];
+	void *common_fields[DS_NUM_COMMON_FIELDS];
+	int i, iov_number, continuation_number;
 
 	/* Get a time stamp for time_returned and store as in a timeval tv. */
 	if (ds_module) {
@@ -1199,9 +1254,11 @@ trace_syscall_exiting(struct tcb *tcp)
 	/*
 	 * Write record in dataseries file for the system call which
 	 * is being traced.  -Shubhi @ FSL
-	 * First, initialize v_args with null arguments.
 	 */
+
+	// First, initialize v_args and common_fields with NULL arguments.
 	memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
+	memset(common_fields, 0, sizeof(void *) * DS_NUM_COMMON_FIELDS);
 
 	/* Then, store the common field values */
 	common_fields[DS_COMMON_FIELD_TIME_CALLED] = &tcp->etime;
@@ -1398,6 +1455,18 @@ trace_syscall_exiting(struct tcb *tcp)
 		case SEN_dup2: /* Dup2 system call */
 			ds_write_record(ds_module, "dup2", tcp->u_arg,
 					common_fields, NULL);
+			break;
+		case SEN_execve: /* Execve system call */
+			/*
+			 * continuation number equal to '-1' denotes the
+			 * extra record which stores the common fields of
+			 * execve system call.
+			 */
+			continuation_number = -1;
+			v_args[0] = &continuation_number;
+			ds_write_record(ds_module, "execve", tcp->u_arg,
+					common_fields, v_args);
+			v_args[0] = NULL;
 			break;
 		default:
 			ds_print_warning(tcp->s_ent->sys_name,
