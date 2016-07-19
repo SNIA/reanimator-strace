@@ -1268,6 +1268,11 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "unlink", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_unlinkat: /* Unlinkat system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+			ds_write_record(ds_module, "unlinkat", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		case SEN_truncate: /* Truncate system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
 			ds_write_record(ds_module, "truncate", tcp->u_arg,
