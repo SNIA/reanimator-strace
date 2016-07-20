@@ -1713,9 +1713,9 @@ out:
 }
 
 /*
- * This function iteratievly copies the elements of argument
- * and environment strings array passed as an argument to
- * execv system call. Each copied element is written as a new
+ * This function iteratively copies the elements of argument
+ * and environment strings array passed as an argument to the
+ * execve system call.  Each copied element is written as a new
  * record in dataseries file.
  */
 void

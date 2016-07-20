@@ -902,7 +902,7 @@ trace_syscall_entering(struct tcb *tcp)
 		case SEN_exit: /* Exit	system call */
 			/*
 			 * For _exit(2) system call, trace_syscall_exiting()
-			 * function is not called. So, to capture traces for
+			 * function is not called.  So, to capture traces for
 			 * _exit(2) system call, we should do this in
 			 * trace_syscall_entering() function.
 			 */
@@ -914,9 +914,9 @@ trace_syscall_entering(struct tcb *tcp)
 
 			/*
 			 * Then, store the common field values.
-			 * Since exit(2) system calls do not return,
+			 * Since _exit(2) system calls do not return,
 			 * we are not setting time_returned, return value
-			 * and error numbers in our replayer. We are only
+			 * and error numbers in our replayer.  We are only
 			 * setting time_called and executing pid fields.
 			 */
 			common_fields[DS_COMMON_FIELD_TIME_CALLED] =
@@ -932,10 +932,10 @@ trace_syscall_entering(struct tcb *tcp)
 			break;
 		case SEN_execve: /* Execve system call */
 			/*
-			 * _execve(2) system call does not return on success
+			 * execve(2) system call does not return on success
 			 * and the memory segments of calling process is
-			 * overwritten by that of program loaded. So we should
-			 * capture traces in tarce_syscall_entering() function.
+			 * overwritten by that of program loaded.  So we should
+			 * capture traces in trace_syscall_entering() function.
 			 */
 
 			/* Initialize v_args and common fields with NULL */
@@ -944,10 +944,10 @@ trace_syscall_entering(struct tcb *tcp)
 						 * DS_NUM_COMMON_FIELDS);
 
 			/*
-			 * Execve system call can accept arbitrary number
-			 * of arguments. Continuation numbers are used to
-			 * record all the arguments. First record has a
-			 * zero continuation number. Each subsequent records
+			 * The execve system call can accept arbitrary number
+			 * of arguments.  Continuation numbers are used to
+			 * record all the arguments.  First record has a
+			 * zero continuation number.  Each subsequent records
 			 * have an incrementing continuation number.
 			 */
 			continuation_number = 0;
