@@ -1220,6 +1220,11 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "open", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_openat: /* Openat system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+			ds_write_record(ds_module, "openat", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		case SEN_close: /* Close system call */
 			ds_write_record(ds_module, "close", tcp->u_arg,
 					common_fields, NULL);
