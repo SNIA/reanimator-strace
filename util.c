@@ -1447,7 +1447,7 @@ out:
 }
 
 /*
- * This function retrieves the read or write buffer passed as an
+ * This function retrieves a buffer passed as an
  * argument to system call.  It internally calls umoven()
  * function which copies len bytes from one address space
  * to another.
@@ -1455,7 +1455,7 @@ out:
 void *
 ds_get_buffer(struct tcb *tcp, long addr, long len)
 {
-	char *buf = NULL;
+	void *buf = NULL;
 
 	if (!addr || len < 0)
 		goto out;
