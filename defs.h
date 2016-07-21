@@ -871,4 +871,5 @@ extern void ds_write_execve_records(struct tcb *tcp,
 				    int *continuation_number,
 				    void **common_fields,
 				    void **v_args);
+extern struct flock *ds_get_flock(struct tcb *tcp, const long addr);
 #endif

@@ -36,6 +36,10 @@
 #include <sys/param.h>
 #include <signal.h>
 
+#ifdef ENABLE_DATASERIES
+# include <fcntl.h>
+#endif
+
 /* for struct iovec */
 #include <sys/uio.h>
 
@@ -1273,6 +1277,11 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "open", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_openat: /* Openat system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+			ds_write_record(ds_module, "openat", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		case SEN_close: /* Close system call */
 			ds_write_record(ds_module, "close", tcp->u_arg,
 					common_fields, NULL);
@@ -1319,6 +1328,11 @@ trace_syscall_exiting(struct tcb *tcp)
 		case SEN_unlink: /* Unlink system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
 			ds_write_record(ds_module, "unlink", tcp->u_arg,
+					common_fields, v_args);
+			break;
+		case SEN_unlinkat: /* Unlinkat system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+			ds_write_record(ds_module, "unlinkat", tcp->u_arg,
 					common_fields, v_args);
 			break;
 		case SEN_truncate: /* Truncate system call */
@@ -1467,6 +1481,21 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "execve", tcp->u_arg,
 					common_fields, v_args);
 			v_args[0] = NULL;
+			break;
+		case SEN_fcntl: /* Fcntl system call */
+			if ((tcp->u_arg[1] == F_SETLK) ||
+			    (tcp->u_arg[1] == F_SETLKW) ||
+			    (tcp->u_arg[1] == F_GETLK)) {
+				v_args[0] = ds_get_flock(tcp, tcp->u_arg[2]);
+			}
+			ds_write_record(ds_module, "fcntl", tcp->u_arg,
+					common_fields, v_args);
+			break;
+		case SEN_getdents: /* Getdents system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  tcp->u_rval);
+			ds_write_record(ds_module, "getdents", tcp->u_arg,
+					common_fields, v_args);
 			break;
 		default:
 			ds_print_warning(tcp->s_ent->sys_name,
