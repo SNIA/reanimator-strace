@@ -1498,8 +1498,13 @@ trace_syscall_exiting(struct tcb *tcp)
 					common_fields, v_args);
 			break;
 		case SEN_ioctl: /* Ioctl system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[2],
-						  ds_get_ioctl_size(ds_module));
+			if (ds_get_ioctl_size(ds_module) > 0) {
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[2],
+							  ds_get_ioctl_size(
+							     ds_module));
+			} else {
+			  v_args[0] = NULL;
+			}
 			ds_write_record(ds_module, "ioctl", tcp->u_arg,
 					common_fields, v_args);
 			break;
