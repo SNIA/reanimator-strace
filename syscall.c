@@ -1486,6 +1486,10 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "mmap", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_munmap: /* Munmap system call */
+			ds_write_record(ds_module, "munmap", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		case SEN_fcntl: /* Fcntl system call */
 			if ((tcp->u_arg[1] == F_SETLK) ||
 			    (tcp->u_arg[1] == F_SETLKW) ||
