@@ -188,6 +188,10 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case TCSETSF2:
 #endif
 	case TIOCSLCKTRMIOS:
+#ifdef ENABLE_DATASERIES
+	        if (ds_module)
+		        ds_set_ioctl_size(ds_module, sizeof(struct termios));
+#endif
 		decode_termios(tcp, arg);
 		break;
 
@@ -198,6 +202,10 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case TCSETA:
 	case TCSETAW:
 	case TCSETAF:
+#ifdef ENABLE_DATASERIES
+	        if (ds_module)
+		        ds_set_ioctl_size(ds_module, sizeof(struct termio));
+#endif
 		decode_termio(tcp, arg);
 		break;
 
@@ -206,6 +214,10 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (entering(tcp))
 			return 0;
 	case TIOCSWINSZ:
+#ifdef ENABLE_DATASERIES
+	        if (ds_module)
+		        ds_set_ioctl_size(ds_module, sizeof(struct winsize));
+#endif
 		decode_winsize(tcp, arg);
 		break;
 
@@ -267,6 +279,10 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case TIOCPKT:
 	case TIOCSSOFTCAR:
 	case TIOCSPTLCK:
+#ifdef ENABLE_DATASERIES
+	        if (ds_module)
+		        ds_set_ioctl_size(ds_module, sizeof(int));
+#endif
 		tprints(", ");
 		printnum_int(tcp, arg, "%d");
 		break;

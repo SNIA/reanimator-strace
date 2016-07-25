@@ -1497,6 +1497,12 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "getdents", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_ioctl: /* Ioctl system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[2],
+						  ds_get_ioctl_size(ds_module));
+			ds_write_record(ds_module, "ioctl", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		default:
 			ds_print_warning(tcp->s_ent->sys_name,
 					 tcp->scno);
