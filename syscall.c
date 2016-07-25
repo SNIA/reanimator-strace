@@ -1503,10 +1503,11 @@ trace_syscall_exiting(struct tcb *tcp)
 							  ds_get_ioctl_size(
 							     ds_module));
 			} else {
-			  v_args[0] = NULL;
+				v_args[0] = NULL;
 			}
 			ds_write_record(ds_module, "ioctl", tcp->u_arg,
 					common_fields, v_args);
+			ds_set_ioctl_size(ds_module, 0);
 			break;
 		default:
 			ds_print_warning(tcp->s_ent->sys_name,
