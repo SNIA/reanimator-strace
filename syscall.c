@@ -1499,7 +1499,7 @@ trace_syscall_exiting(struct tcb *tcp)
 			break;
 		case SEN_ioctl: /* Ioctl system call */ {
 			u_int ioctl_size = ds_get_ioctl_size(ds_module);
-			if (ioctl_size) {
+			if (ioctl_size > 0) {
 				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[2],
 							  ioctl_size);
 			} else {
