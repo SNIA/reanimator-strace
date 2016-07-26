@@ -52,14 +52,11 @@ int
 mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 {
 #ifdef ENABLE_DATASERIES
-	if (!ds_module) {
+	if (!ds_module)
 #endif
 	if (!verbose(tcp))
 		return RVAL_DECODED;
 
-#ifdef ENABLE_DATASERIES
-	}
-#endif
 	switch (code) {
 	case MEMERASE:
 	case MEMLOCK:
@@ -418,14 +415,10 @@ int
 ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 {
 #ifdef ENABLE_DATASERIES
-	if (!ds_module) {
+	if (!ds_module)
 #endif
 	if (!verbose(tcp))
 		return RVAL_DECODED;
-
-#ifdef ENABLE_DATASERIES
-	}
-#endif
 
 	switch (code) {
 	case UBI_IOCMKVOL:

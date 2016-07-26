@@ -233,13 +233,10 @@ decode_bitset(struct tcb *tcp, long arg, const struct xlat decode_nr[],
 	      const unsigned int max_nr, const char *dflt)
 {
 #ifdef ENABLE_DATASERIES
-        if (!ds_module) {
+        if (!ds_module)
 #endif
 	if (!verbose(tcp))
 		return 0;
-#ifdef ENABLE_DATASERIES
-	}
-#endif
 
 	unsigned int size;
 	if ((unsigned long) tcp->u_rval > max_nr)
