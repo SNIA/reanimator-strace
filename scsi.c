@@ -227,8 +227,16 @@ print_sg_io_req(struct tcb *tcp, uint32_t iid, const long arg)
 
 	switch (iid) {
 	case 'S':
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(struct sg_io_hdr));
+#endif
 		return print_sg_io_v3_req(tcp, arg);
 	case 'Q':
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(struct sg_io_v4));
+#endif
 		return print_sg_io_v4_req(tcp, arg);
 	default:
 		tprints("...}");
@@ -242,9 +250,17 @@ print_sg_io_res(struct tcb *tcp, uint32_t iid, const long arg)
 {
 	switch (iid) {
 	case 'S':
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(struct sg_io_hdr));
+#endif
 		print_sg_io_v3_res(tcp, arg);
 		break;
 	case 'Q':
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(struct sg_io_v4));
+#endif
 		print_sg_io_v4_res(tcp, arg);
 		break;
 	}

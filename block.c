@@ -125,6 +125,10 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case BLKROSET:
 	case BLKBSZSET:
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(int));
+#endif
 		printnum_int(tcp, arg, "%d");
 		break;
 
@@ -134,6 +138,10 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (entering(tcp))
 			return 0;
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(unsigned short));
+#endif
 		printnum_short(tcp, arg, "%hu");
 		break;
 
@@ -145,6 +153,10 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (entering(tcp))
 			return 0;
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(int));
+#endif
 		printnum_int(tcp, arg, "%d");
 		break;
 
@@ -156,6 +168,10 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (entering(tcp))
 			return 0;
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(unsigned int));
+#endif
 		printnum_int(tcp, arg, "%u");
 		break;
 
@@ -165,6 +181,10 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (entering(tcp))
 			return 0;
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+		  ds_set_ioctl_size(ds_module, sizeof(long));
+#endif
 		printnum_slong(tcp, arg);
 		break;
 
@@ -173,6 +193,10 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (entering(tcp))
 			return 0;
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(unsigned long));
+#endif
 		printnum_ulong(tcp, arg);
 		break;
 
@@ -182,6 +206,10 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (entering(tcp))
 			return 0;
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(uint64_t));
+#endif
 		printnum_int64(tcp, arg, "%" PRIu64);
 		break;
 #endif
@@ -191,6 +219,10 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case BLKSECDISCARD:
 	case BLKZEROOUT:
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, 2 * sizeof(uint64_t));
+#endif
 		printpair_int64(tcp, arg, "%" PRIx64);
 		break;
 
@@ -202,6 +234,10 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			struct hd_geometry geo;
 
 			tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(struct hd_geometry));
+#endif
 			if (!umove_or_printaddr(tcp, arg, &geo))
 				tprintf("{heads=%u, sectors=%u, "
 					"cylinders=%u, start=%lu}",
@@ -216,12 +252,22 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		struct blkpg_ioctl_arg blkpg;
 
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(
+				    struct blkpg_ioctl_arg));
+#endif
 		if (!umove_or_printaddr(tcp, arg, &blkpg))
 			print_blkpg_req(tcp, &blkpg);
 		break;
 	}
 
 	case BLKTRACESETUP:
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(
+				    struct blk_user_trace_setup));
+#endif
 		if (entering(tcp)) {
 			struct blk_user_trace_setup buts;
 
@@ -260,6 +306,11 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		struct fstrim_range fstrim;
 
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(
+				    struct fstrim_range));
+#endif
 		if (!umove_or_printaddr(tcp, arg, &fstrim))
 			tprintf("{start=%#" PRIx64 ", "
 				"len=%#" PRIx64 ", "

@@ -223,12 +223,35 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 
 	switch (code) {
 	case SIOCGIFCONF:
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(struct ifconf));
+#endif
 		return decode_ifconf(tcp, arg);
 
 #ifdef SIOCBRADDBR
 	case SIOCBRADDBR:
 	case SIOCBRDELBR:
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module) {
+		        /*
+			 * XXX: Hack.  All we need here is the length of the
+			 * string pointed to by arg.  Since the string data
+			 * is located in another process's address space, we
+			 * use umovestr(...) to retrieve the data, get its
+			 * length, set the ioctl buffer size, then free the
+			 * temporary buffer holding the data.  This isn't
+			 * optimal, as we also retrieve the string data later.
+			 * - Nina @ FSL
+			 */
+			char *str = xmalloc(max_strlen + 1);
+			umovestr(tcp, arg, max_strlen + 1, str);
+			u_int len = strlen(str) + 1;
+			ds_set_ioctl_size(ds_module, len);
+			free(str);
+		}
+#endif
 		printstr(tcp, arg, -1);
 		break;
 #endif
@@ -240,6 +263,10 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case SIOCSPGRP:
 #endif
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(int));
+#endif
 		printnum_int(tcp, arg, "%d");
 		break;
 
@@ -255,6 +282,10 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (entering(tcp))
 			return 0;
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(int));
+#endif
 		printnum_int(tcp, arg, "%d");
 		break;
 
@@ -279,6 +310,10 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case SIOCSIFHWADDR:
 	case SIOCSIFTXQLEN:
 	case SIOCSIFMAP:
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(struct ifreq));
+#endif
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &ifr))
 			break;
@@ -308,6 +343,10 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case SIOCGIFHWADDR:
 	case SIOCGIFTXQLEN:
 	case SIOCGIFMAP:
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(struct ifreq));
+#endif
 		if (entering(tcp)) {
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &ifr))

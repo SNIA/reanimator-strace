@@ -142,27 +142,51 @@ decode_loop_info64(struct tcb *tcp, const long addr)
 int
 loop_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 {
+#ifdef ENABLE_DATASERIES
+	if (!ds_module) {
+#endif
 	if (!verbose(tcp))
 		return RVAL_DECODED;
+#ifdef ENABLE_DATASERIES
+	}
+#endif
 
 	switch (code) {
 	case LOOP_SET_STATUS:
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(struct loop_info));
+#endif
 		decode_loop_info(tcp, arg);
 		break;
 
 	case LOOP_GET_STATUS:
 		if (entering(tcp))
 			return 0;
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(struct loop_info));
+#endif
 		decode_loop_info(tcp, arg);
 		break;
 
 	case LOOP_SET_STATUS64:
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(
+						     struct loop_info64));
+#endif
 		decode_loop_info64(tcp, arg);
 		break;
 
 	case LOOP_GET_STATUS64:
 		if (entering(tcp))
 			return 0;
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, sizeof(
+						     struct loop_info64));
+#endif
 		decode_loop_info64(tcp, arg);
 		break;
 

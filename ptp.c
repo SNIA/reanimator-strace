@@ -35,14 +35,25 @@
 int
 ptp_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 {
+#ifdef ENABLE_DATASERIES
+	if (!ds_module) {
+#endif
 	if (!verbose(tcp))
 		return RVAL_DECODED;
+#ifdef ENABLE_DATASERIES
+	}
+#endif
 
 	switch (code) {
 	case PTP_EXTTS_REQUEST: {
 		struct ptp_extts_request extts;
 
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+		  ds_set_ioctl_size(ds_module, sizeof(
+				       struct ptp_extts_request));
+#endif
 		if (umove_or_printaddr(tcp, arg, &extts))
 			break;
 
@@ -56,6 +67,11 @@ ptp_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		struct ptp_perout_request perout;
 
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+		  ds_set_ioctl_size(ds_module, sizeof(
+				       struct ptp_perout_request));
+#endif
 		if (umove_or_printaddr(tcp, arg, &perout))
 			break;
 
@@ -77,6 +93,11 @@ ptp_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case PTP_SYS_OFFSET: {
 		struct ptp_sys_offset sysoff;
 
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+		  ds_set_ioctl_size(ds_module, sizeof(
+				       struct ptp_sys_offset));
+#endif
 		if (entering(tcp)) {
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &sysoff))
@@ -121,6 +142,11 @@ ptp_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			return 0;
 
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+		  ds_set_ioctl_size(ds_module, sizeof(
+				       struct ptp_clock_caps));
+#endif
 		if (umove_or_printaddr(tcp, arg, &caps))
 			break;
 

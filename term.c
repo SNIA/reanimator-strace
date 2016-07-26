@@ -227,6 +227,10 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (entering(tcp))
 			return 0;
 	case TIOCSSIZE:
+#ifdef ENABLE_DATASERIES
+	        if (ds_module)
+		        ds_set_ioctl_size(ds_module, sizeof(struct ttysize));
+#endif
 		decode_ttysize(tcp, arg);
 		break;
 #endif
@@ -253,6 +257,10 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case TIOCMBIS:
 	case TIOCMBIC:
 	case TIOCMSET:
+#ifdef ENABLE_DATASERIES
+	        if (ds_module)
+		        ds_set_ioctl_size(ds_module, sizeof(int));
+#endif
 		decode_modem_flags(tcp, arg);
 		break;
 
@@ -290,6 +298,10 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	/* ioctls with an indirect parameter displayed as a char */
 	case TIOCSTI:
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+	        if (ds_module)
+		        ds_set_ioctl_size(ds_module, 1);
+#endif
 		printstr(tcp, arg, 1);
 		break;
 

@@ -60,6 +60,11 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	switch (code) {
 	case UFFDIO_API: {
 		struct uffdio_api ua;
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module,
+					  sizeof(struct uffdio_api));
+#endif
 		if (entering(tcp)) {
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &ua))
@@ -84,6 +89,11 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 
 	case UFFDIO_COPY: {
 		struct uffdio_copy uc;
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module,
+					  sizeof(struct uffdio_copy));
+#endif
 		if (entering(tcp)) {
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &uc))
@@ -103,6 +113,11 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 
 	case UFFDIO_REGISTER: {
 		struct uffdio_register ur;
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module,
+					  sizeof(struct uffdio_register));
+#endif
 		if (entering(tcp)) {
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &ur))
@@ -126,6 +141,11 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case UFFDIO_UNREGISTER:
 	case UFFDIO_WAKE: {
 		struct uffdio_range ura;
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module,
+					  sizeof(struct uffdio_range));
+#endif
 		tprints(", ");
 		if (!umove_or_printaddr(tcp, arg, &ura))
 			tprintf_uffdio_range(&ura);
@@ -134,6 +154,11 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 
 	case UFFDIO_ZEROPAGE: {
 		struct uffdio_zeropage uz;
+#ifdef ENABLE_DATASERIES
+		if (ds_module)
+			ds_set_ioctl_size(ds_module,
+					  sizeof(struct uffdio_zeropage));
+#endif
 		if (entering(tcp)) {
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &uz))
