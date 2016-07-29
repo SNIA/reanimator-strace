@@ -1383,7 +1383,8 @@ trace_syscall_exiting(struct tcb *tcp)
 			break;
 		case SEN_stat: /* Stat system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_stat_buffer(tcp, tcp->u_arg[1]);
+			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  sizeof(struct stat));
 			ds_write_record(ds_module, "stat", tcp->u_arg,
 					common_fields, v_args);
 			break;
@@ -1431,24 +1432,28 @@ trace_syscall_exiting(struct tcb *tcp)
 			break;
 		case SEN_utime: /* Utime system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_utimbuf(tcp, tcp->u_arg[1]);
+			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  sizeof(struct utimbuf));
 			ds_write_record(ds_module, "utime", tcp->u_arg,
 					common_fields, v_args);
 			break;
 		case SEN_lstat: /* LStat system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_stat_buffer(tcp, tcp->u_arg[1]);
+			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  sizeof(struct stat));
 			ds_write_record(ds_module, "lstat", tcp->u_arg,
 					common_fields, v_args);
 			break;
 		case SEN_fstat: /* FStat system call */
-			v_args[0] = ds_get_stat_buffer(tcp, tcp->u_arg[1]);
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  sizeof(struct stat));
 			ds_write_record(ds_module, "fstat", tcp->u_arg,
 					common_fields, v_args);
 			break;
 		case SEN_utimes: /* Utimes system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_timeval_pair(tcp, tcp->u_arg[1]);
+			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  2 * sizeof(struct timeval));
 			ds_write_record(ds_module, "utimes", tcp->u_arg,
 					common_fields, v_args);
 			break;
@@ -1475,7 +1480,8 @@ trace_syscall_exiting(struct tcb *tcp)
 					common_fields, v_args);
 			break;
 		case SEN_pipe: /* Pipe system call */
-			v_args[0] = ds_get_fd_pair(tcp, tcp->u_arg[0]);
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[0],
+						  2 * sizeof(int));
 			ds_write_record(ds_module, "pipe", tcp->u_arg,
 					common_fields, v_args);
 			break;
@@ -1511,7 +1517,8 @@ trace_syscall_exiting(struct tcb *tcp)
 			if ((tcp->u_arg[1] == F_SETLK) ||
 			    (tcp->u_arg[1] == F_SETLKW) ||
 			    (tcp->u_arg[1] == F_GETLK)) {
-				v_args[0] = ds_get_flock(tcp, tcp->u_arg[2]);
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[2],
+							 sizeof(struct flock));
 			}
 			ds_write_record(ds_module, "fcntl", tcp->u_arg,
 					common_fields, v_args);

@@ -1478,129 +1478,6 @@ out:
 }
 
 /*
- * This function retrieves the utimbuf structure passed as an argument
- * to the system call utime. It internally calls umoven(), which copies
- * the utimbuf from one address space to another.
- */
-struct utimbuf *
-ds_get_utimbuf(struct tcb *tcp, long addr)
-{
-	struct utimbuf *ds_utimbuf = NULL;
-
-	if (!addr)
-		goto out;
-
-	/*
-	 * Note: xmalloc succeeds always or aborts the trace process
-	 * with an error message to stderr.
-	 */
-	ds_utimbuf = xmalloc(sizeof(struct utimbuf));
-
-	if (umoven(tcp, addr, sizeof(struct utimbuf), ds_utimbuf) >= 0)
-		goto out; /* Success condition */
-
-	if (ds_utimbuf) {
-		free(ds_utimbuf);
-		ds_utimbuf = NULL;
-	}
-out:
-	return ds_utimbuf;
-}
-
-/*
- * This function retrieves the struct timeval array passed as an argument
- * to the system call utimes. It internally calls umoven(), which copies
- * the timeval array from one address space to another.
- * the utimbuf from one address space to another.
- */
-struct timeval *
-ds_get_timeval_pair(struct tcb *tcp, const long addr)
-{
-	struct timeval *ds_tv = NULL;
-
-	if (!addr)
-		goto out;
-
-	/*
-	 * Note: xmalloc succeeds always or aborts the trace process
-	 * with an error message to stderr.
-	 */
-	ds_tv = xmalloc(2 * sizeof(struct timeval));
-
-	if (umoven(tcp, addr, 2 * sizeof(struct timeval), ds_tv) >= 0)
-		goto out; /* Success condition */
-
-	if (ds_tv) {
-		free(ds_tv);
-		ds_tv = NULL;
-	}
-out:
-	return ds_tv;
-}
-
-/*
- * This function retrieves the struct stat buffer passed as an
- * argument to stat/lstat/fstat system call.  It internally
- * calls umoven which copies the struct stat from the address
- * space of process being traced.
- */
-struct stat *
-ds_get_stat_buffer(struct tcb *tcp, const long addr)
-{
-	struct stat *ds_statbuf = NULL;
-
-	if (!addr)
-		goto out;
-
-	/*
-	 * Note: xmalloc succeeds always or aborts the trace process
-	 * with an error message to stderr.
-	 */
-	ds_statbuf = xmalloc(sizeof(struct stat));
-
-	if (umoven(tcp, addr, sizeof(struct stat), ds_statbuf) >= 0)
-		goto out; /* Success condition */
-
-	if (ds_statbuf) {
-		free(ds_statbuf);
-		ds_statbuf = NULL;
-	}
-out:
-	return ds_statbuf;
-}
-
-/*
- * This function retrieves the struct iovec buffer passed as an
- * argument to readv/writev/ system call.  It internally
- * calls umoven which copies the struct iovec from the address
- * space of process being traced.
- */
-struct iovec *
-ds_get_iov_args(struct tcb *tcp, const long addr)
-{
-	struct iovec *iov_buf = NULL;
-
-	if (!addr)
-		goto out;
-
-	/*
-	 * Note: xmalloc succeeds always or aborts the trace process
-	 * with an error message to stderr.
-	 */
-	iov_buf = xmalloc(sizeof(struct iovec));
-
-	if (umoven(tcp, addr, sizeof(struct iovec), iov_buf) >= 0)
-		goto out; /* Success condition */
-
-	if (iov_buf) {
-		free(iov_buf);
-		iov_buf = NULL;
-	}
-out:
-	return iov_buf;
-}
-
-/*
  * This function iteratievly copies the each buffer of single
  * readv system call and then calls the ds_write_record() to
  * write each record in dataseries file.
@@ -1640,7 +1517,8 @@ ds_write_iov_records(struct tcb *tcp, const long start_addr,
 	 * dataseries file.
 	 */
 	for (cur = start_addr; cur < end_addr; cur += elem_size) {
-		iov_buf = ds_get_iov_args(tcp, cur);
+		iov_buf = (struct iovec *) ds_get_buffer(tcp, cur,
+							 sizeof(struct iovec));
 
 		if (iov_buf == NULL)
 			continue;
@@ -1680,36 +1558,6 @@ out:
 	v_args[0] = NULL;
 	v_args[1] = NULL;
 	return;
-}
-
-/*
- * This function retrieves the file descriptor array passed as an argument
- * to the system call pipe. It internally calls umoven(), which copies
- * the array from one address space to another.
- */
-int *
-ds_get_fd_pair(struct tcb *tcp, const long addr)
-{
-	int *ds_fd = NULL;
-
-	if (!addr)
-		goto out;
-
-	/*
-	 * Note: xmalloc succeeds always or aborts the trace process
-	 * with an error message to stderr.
-	 */
-	ds_fd = xmalloc(2 * sizeof(int));
-
-	if (umoven(tcp, addr, 2 * sizeof(int), ds_fd) >= 0)
-		goto out; /* Success condition */
-
-	if (ds_fd) {
-		free(ds_fd);
-		ds_fd = NULL;
-	}
-out:
-	return ds_fd;
 }
 
 /*
@@ -1782,36 +1630,5 @@ out:
 	v_args[1] = NULL;
 	v_args[2] = NULL;
 	return;
-}
-
-/*
- * This function retrieves the struct flock passed as an argument
- * to the system call fcntl with the commands F_SETLK, F_SETLKW,
- * and F_GETLK.  It internally calls umoven(), which copies the
- * flock from one address space to another.
- */
-struct flock *
-ds_get_flock(struct tcb *tcp, const long addr)
-{
-	struct flock *ds_flock = NULL;
-
-	if (!addr)
-		goto out;
-
-	/*
-	 * Note: xmalloc succeeds always or aborts the trace process
-	 * with an error message to stderr.
-	 */
-	ds_flock = xmalloc(sizeof(struct flock));
-
-	if (umoven(tcp, addr, sizeof(struct flock), ds_flock) >= 0)
-		goto out; /* Success condition */
-
-	if (ds_flock) {
-		free(ds_flock);
-		ds_flock = NULL;
-	}
-out:
-	return ds_flock;
 }
 #endif
