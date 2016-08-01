@@ -38,6 +38,7 @@
 
 #ifdef ENABLE_DATASERIES
 # include <fcntl.h>
+# include <sys/statfs.h>
 #endif
 
 /* for struct iovec */
@@ -1312,6 +1313,7 @@ trace_syscall_exiting(struct tcb *tcp)
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
 			ds_write_record(ds_module, "mkdirat", tcp->u_arg,
 					common_fields, v_args);
+			break;
 		case SEN_rmdir: /* Rmdir system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
 			ds_write_record(ds_module, "rmdir", tcp->u_arg,
@@ -1390,6 +1392,13 @@ trace_syscall_exiting(struct tcb *tcp)
 			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
 						  sizeof(struct stat));
 			ds_write_record(ds_module, "stat", tcp->u_arg,
+					common_fields, v_args);
+			break;
+		case SEN_statfs: /* Statfs system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  sizeof(struct statfs));
+			ds_write_record(ds_module, "statfs", tcp->u_arg,
 					common_fields, v_args);
 			break;
 		case SEN_chown: /* Chown system call */
