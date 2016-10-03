@@ -4,8 +4,8 @@
  * Copyright (c) 1993, 1994, 1995, 1996 Rick Sladkey <jrs@world.std.com>
  * Copyright (c) 1996-1999 Wichert Akkerman <wichert@cistron.nl>
  * Copyright (c) 1999 IBM Deutschland Entwicklung GmbH, IBM Corporation
- *                     Linux for s390 port by D.J. Barrow
- *                    <barrow_dj@mail.yahoo.com,djbarrow@de.ibm.com>
+ *			Linux for s390 port by D.J. Barrow
+ *		       <barrow_dj@mail.yahoo.com,djbarrow@de.ibm.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -1479,7 +1479,7 @@ trace_syscall_exiting(struct tcb *tcp)
 		case SEN_utimensat: /* Utimensat system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
 			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[2],
-					        2 * sizeof(struct timespec));
+						2 * sizeof(struct timespec));
 			ds_write_record(ds_module, "utimensat", tcp->u_arg,
 					common_fields, v_args);
 			break;
@@ -1561,6 +1561,16 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_set_ioctl_size(ds_module, 0);
 			break;
 		}
+		case SEN_clone: /* Clone system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[2],
+						  sizeof(pid_t));
+			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[3],
+						  sizeof(pid_t));
+			v_args[2] = ds_get_buffer(tcp, tcp->u_arg[4],
+						  sizeof(struct pt_regs));
+			ds_write_record(ds_module, "clone", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		default:
 			ds_print_warning(tcp->s_ent->sys_name,
 					 tcp->scno);
