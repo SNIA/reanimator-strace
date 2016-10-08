@@ -1566,8 +1566,6 @@ trace_syscall_exiting(struct tcb *tcp)
 						  sizeof(pid_t));
 			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[3],
 						  sizeof(pid_t));
-			v_args[2] = ds_get_buffer(tcp, tcp->u_arg[4],
-						  sizeof(struct pt_regs));
 			ds_write_record(ds_module, "clone", tcp->u_arg,
 					common_fields, v_args);
 			break;
