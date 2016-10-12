@@ -1563,9 +1563,9 @@ trace_syscall_exiting(struct tcb *tcp)
 		}
 		case SEN_clone: /* Clone system call */
 			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[2],
-						  sizeof(pid_t));
+						  sizeof(int));
 			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[3],
-						  sizeof(pid_t));
+						  sizeof(int));
 			ds_write_record(ds_module, "clone", tcp->u_arg,
 					common_fields, v_args);
 			break;
