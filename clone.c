@@ -79,6 +79,9 @@ extern void print_user_desc(struct tcb *, long);
 
 SYS_FUNC(clone)
 {
+#ifdef ENABLE_DATASERIES
+	ds_set_clone_ctid_index(ds_module, ARG_CTID);
+#endif
 	if (exiting(tcp)) {
 		const char *sep = "|";
 		unsigned long flags = tcp->u_arg[ARG_FLAGS];

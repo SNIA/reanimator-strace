@@ -1561,14 +1561,16 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_set_ioctl_size(ds_module, 0);
 			break;
 		}
-		case SEN_clone: /* Clone system call */
+		case SEN_clone: /* Clone system call */ {
+			int ctid_index = ds_get_clone_ctid_index(ds_module);
 			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[2],
 						  sizeof(int));
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[3],
+			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[ctid_index],
 						  sizeof(int));
 			ds_write_record(ds_module, "clone", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		}
 		default:
 			ds_print_warning(tcp->s_ent->sys_name,
 					 tcp->scno);
