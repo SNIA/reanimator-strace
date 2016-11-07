@@ -1571,6 +1571,10 @@ trace_syscall_exiting(struct tcb *tcp)
 					common_fields, v_args);
 			break;
 		}
+		case SEN_vfork: /* VFork system call */
+			ds_write_record(ds_module, "vfork", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		default:
 			ds_print_warning(tcp->s_ent->sys_name,
 					 tcp->scno);
