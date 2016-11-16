@@ -1561,8 +1561,44 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_set_ioctl_size(ds_module, 0);
 			break;
 		}
+		/*
+		 * These system calls are chosen not be traced by
+		 * fsl-strace.
+		 */
+		case SEN_brk:
+		case SEN_mprotect:
+		case SEN_arch_prctl:
+		case SEN_rt_sigaction:
+		case SEN_getpid:
+		case SEN_wait4:
+		case SEN_getrusage:
+		case SEN_getcwd:
+		case SEN_rt_sigprocmask:
+		case SEN_mremap:
+		case SEN_madvise:
+		case SEN_rt_sigreturn:
+		case SEN_getuid:
+		case SEN_getgid:
+		case SEN_geteuid:
+		case SEN_getegid:
+		case SEN_uname:
+		case SEN_getppid:
+		case SEN_getpgrp:
+		case SEN_nanosleep:
+		case SEN_set_tid_address:
+		case SEN_set_robust_list:
+		case SEN_futex:
+		case SEN_getgroups:
+		case SEN_fadvise64:
+		case SEN_sched_getaffinity:
+		case SEN_sigaltstack:
+			ds_add_to_untraced_set(ds_module,
+					       tcp->s_ent->sys_name,
+					       tcp->scno);
+			break;
 		default:
-			ds_print_warning(tcp->s_ent->sys_name,
+			ds_print_warning(ds_module,
+					 tcp->s_ent->sys_name,
 					 tcp->scno);
 	}
 	/* Free memory allocated to v_args. */
