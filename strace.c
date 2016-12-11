@@ -2440,7 +2440,6 @@ main(int argc, char *argv[])
 	 * Free up memory that are used by DataSeriesOutputModule.
 	 * Destructor will be called and extents are flushed to the
 	 * output file.
-	 * - Leixiang @ FSL
 	 */
 	if (ds_module)
 		ds_destroy_module(ds_module);

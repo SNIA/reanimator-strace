@@ -4,8 +4,8 @@
  * Copyright (c) 1993, 1994, 1995, 1996 Rick Sladkey <jrs@world.std.com>
  * Copyright (c) 1996-1999 Wichert Akkerman <wichert@cistron.nl>
  * Copyright (c) 1999 IBM Deutschland Entwicklung GmbH, IBM Corporation
- *                      Linux for s390 port by D.J. Barrow
- *                     <barrow_dj@mail.yahoo.com,djbarrow@de.ibm.com>
+ *                     Linux for s390 port by D.J. Barrow
+ *                    <barrow_dj@mail.yahoo.com,djbarrow@de.ibm.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
