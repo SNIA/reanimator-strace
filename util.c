@@ -1409,7 +1409,7 @@ print_array(struct tcb *tcp,
 /*
  * This function retrieves the path string passed as an argument to
  * system call.  It internally calls umovestr() function which
- * copies data from one address space to another.  -Shubhi
+ * copies data from one address space to another.
  */
 char *
 ds_get_path(struct tcb *tcp, long addr)

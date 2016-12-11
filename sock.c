@@ -243,7 +243,6 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			 * length, set the ioctl buffer size, then free the
 			 * temporary buffer holding the data.  This isn't
 			 * optimal, as we also retrieve the string data later.
-			 * - Nina @ FSL
 			 */
 			char *str = xmalloc(max_strlen + 1);
 			umovestr(tcp, arg, max_strlen + 1, str);

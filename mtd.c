@@ -133,6 +133,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 
 	case MEMGETREGIONINFO: {
 		struct region_info_user rinfo;
+
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
