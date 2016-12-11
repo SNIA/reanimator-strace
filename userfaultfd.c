@@ -64,7 +64,7 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module,
 					  sizeof(struct uffdio_api));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (entering(tcp)) {
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &ua))
@@ -93,7 +93,7 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module,
 					  sizeof(struct uffdio_copy));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (entering(tcp)) {
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &uc))
@@ -117,7 +117,7 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module,
 					  sizeof(struct uffdio_register));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (entering(tcp)) {
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &ur))
@@ -145,7 +145,7 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module,
 					  sizeof(struct uffdio_range));
-#endif
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (!umove_or_printaddr(tcp, arg, &ura))
 			tprintf_uffdio_range(&ura);
@@ -158,7 +158,7 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module,
 					  sizeof(struct uffdio_zeropage));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (entering(tcp)) {
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &uz))

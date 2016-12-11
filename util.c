@@ -1631,4 +1631,4 @@ out:
 	v_args[2] = NULL;
 	return;
 }
-#endif
+#endif /* ENABLE_DATASERIES */

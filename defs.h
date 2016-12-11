@@ -34,7 +34,7 @@
 #ifdef ENABLE_DATASERIES
 # include <strace2ds.h>
 # include <utime.h>
-#endif
+#endif /* ENABLE_DATASERIES */
 
 #include <features.h>
 #ifdef HAVE_STDBOOL_H
@@ -467,7 +467,7 @@ extern unsigned os_release;
 
 #ifdef ENABLE_DATASERIES
 extern DataSeriesOutputModule *ds_module;
-#endif
+#endif /* ENABLE_DATASERIES */
 
 void error_msg(const char *fmt, ...) ATTRIBUTE_FORMAT((printf, 1, 2));
 void perror_msg(const char *fmt, ...) ATTRIBUTE_FORMAT((printf, 1, 2));
@@ -872,4 +872,4 @@ extern void ds_write_execve_records(struct tcb *tcp,
 				    void **common_fields,
 				    void **v_args);
 extern struct flock *ds_get_flock(struct tcb *tcp, const long addr);
-#endif
+#endif /* ENABLE_DATASERIES */

@@ -53,7 +53,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 {
 #ifdef ENABLE_DATASERIES
 	if (!ds_module)
-#endif
+#endif /* ENABLE_DATASERIES */
 	if (!verbose(tcp))
 		return RVAL_DECODED;
 
@@ -69,7 +69,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 				    struct erase_info_user));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &einfo))
 			break;
 
@@ -86,7 +86,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 				    struct erase_info_user64));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &einfo64))
 			break;
 
@@ -104,7 +104,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 				    struct mtd_oob_buf));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &mbuf))
 			break;
 
@@ -122,7 +122,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 				    struct mtd_oob_buf64));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &mbuf64))
 			break;
 
@@ -138,7 +138,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 				    struct region_info_user));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (entering(tcp)) {
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &rinfo))
@@ -167,7 +167,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(struct otp_info));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &oinfo))
 			break;
 
@@ -184,7 +184,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 				    struct mtd_write_req));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &mreq))
 			break;
 
@@ -206,7 +206,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(unsigned int));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &i))
 			break;
 
@@ -227,7 +227,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 		        ds_set_ioctl_size(ds_module, sizeof(uint64_t));
-#endif
+#endif /* ENABLE_DATASERIES */
 		printnum_int64(tcp, arg, "%" PRIu64);
 		break;
 
@@ -237,7 +237,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 				    struct mtd_info_user));
-#endif
+#endif /* ENABLE_DATASERIES */
 
 		if (entering(tcp))
 			return 0;
@@ -271,7 +271,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 				    struct nand_oobinfo));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &ninfo))
 			break;
 
@@ -314,7 +314,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(struct otp_info));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &oinfo))
 			break;
 
@@ -335,7 +335,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 				    struct nand_ecclayout_user));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &nlay))
 			break;
 
@@ -367,7 +367,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 				    struct mtd_ecc_stats));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &estat))
 			break;
 
@@ -386,7 +386,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(unsigned int));
-#endif
+#endif /* ENABLE_DATASERIES */
 		printnum_int(tcp, arg, "%u");
 		break;
 
@@ -398,7 +398,7 @@ mtd_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(int));
-#endif
+#endif /* ENABLE_DATASERIES */
 		printnum_int(tcp, arg, "%d");
 		break;
 
@@ -417,7 +417,7 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 {
 #ifdef ENABLE_DATASERIES
 	if (!ds_module)
-#endif
+#endif /* ENABLE_DATASERIES */
 	if (!verbose(tcp))
 		return RVAL_DECODED;
 
@@ -431,7 +431,7 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 						     struct ubi_mkvol_req));
-#endif
+#endif /* ENABLE_DATASERIES */
 			if (umove_or_printaddr(tcp, arg, &mkvol))
 				break;
 
@@ -462,7 +462,7 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 						     struct ubi_rsvol_req));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &rsvol))
 			break;
 
@@ -480,7 +480,7 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 						     struct ubi_rnvol_req));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &rnvol))
 			break;
 
@@ -510,7 +510,7 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 					     struct ubi_leb_change_req));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &leb))
 			break;
 
@@ -527,7 +527,7 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 						     struct ubi_attach_req));
-#endif
+#endif /* ENABLE_DATASERIES */
 			if (umove_or_printaddr(tcp, arg, &attach))
 				break;
 
@@ -552,7 +552,7 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 						     struct ubi_map_req));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &map))
 			break;
 
@@ -569,7 +569,7 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 					     struct ubi_set_vol_prop_req));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &prop))
 			break;
 
@@ -585,7 +585,7 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(int64_t));
-#endif
+#endif /* ENABLE_DATASERIES */
 		printnum_int64(tcp, arg, "%" PRIi64);
 		break;
 
@@ -598,7 +598,7 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(int));
-#endif
+#endif /* ENABLE_DATASERIES */
 		printnum_int(tcp, arg, "%d");
 		break;
 

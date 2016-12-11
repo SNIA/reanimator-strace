@@ -155,7 +155,7 @@ static char *outfname = NULL;
 static FILE *shared_log;
 #ifdef ENABLE_DATASERIES
 DataSeriesOutputModule *ds_module = NULL;
-#endif
+#endif /* ENABLE_DATASERIES */
 
 struct tcb *printing_tcp = NULL;
 static struct tcb *current_tcp;
@@ -266,7 +266,7 @@ Miscellaneous:\n\
 #ifdef ENABLE_DATASERIES
 "  -X DSFILE      write DataSeries output to DSFILE instead of human readable to stderr (experimental)\n\
 "
-#endif
+#endif /* ENABLE_DATASERIES */
 /* ancient, no one should use it
 -F -- attempt to follow vforks (deprecated, use -f)\n\
  */
@@ -572,7 +572,7 @@ tprintf(const char *fmt, ...)
 	 */
 	if (ds_module)
 		return;
-#endif
+#endif /* ENABLE_DATASERIES */
 	va_list args;
 
 	va_start(args, fmt);
@@ -601,7 +601,7 @@ tprints(const char *str)
 	 */
 	if (ds_module)
 		return;
-#endif
+#endif /* ENABLE_DATASERIES */
 	if (current_tcp) {
 		int n = fputs_unlocked(str, current_tcp->outf);
 		if (n >= 0) {
@@ -1518,7 +1518,7 @@ init(int argc, char *argv[])
 	struct sigaction sa;
 #ifdef ENABLE_DATASERIES
 	char *ds_fname = NULL;
-#endif
+#endif /* ENABLE_DATASERIES */
 
 	progname = argv[0] ? argv[0] : "strace";
 
@@ -1550,7 +1550,7 @@ init(int argc, char *argv[])
 #endif
 #ifdef ENABLE_DATASERIES
 		"X:"
-#endif
+#endif /* ENABLE_DATASERIES */
 		"D"
 		"a:e:o:O:p:s:S:u:E:P:I:")) != EOF) {
 		switch (c) {
@@ -1667,7 +1667,7 @@ init(int argc, char *argv[])
 			if (!ds_fname)
 				error_msg_and_die("empty dataseries filename");
 			break;
-#endif
+#endif /* ENABLE_DATASERIES */
 		case 'E':
 			if (putenv(optarg) < 0)
 				die_out_of_memory();
@@ -1742,7 +1742,7 @@ init(int argc, char *argv[])
 					   "xml_path=\"%s\" ",
 					   ds_fname, tab_path, xml_path);
 	}
-#endif
+#endif /* ENABLE_DATASERIES */
 
 #ifdef USE_LIBUNWIND
 	if (stack_trace_enabled)
@@ -2443,7 +2443,7 @@ main(int argc, char *argv[])
 	 */
 	if (ds_module)
 		ds_destroy_module(ds_module);
-#endif
+#endif /* ENABLE_DATASERIES */
 
 	return exit_code;
 }

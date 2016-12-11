@@ -234,7 +234,7 @@ decode_bitset(struct tcb *tcp, long arg, const struct xlat decode_nr[],
 {
 #ifdef ENABLE_DATASERIES
         if (!ds_module)
-#endif
+#endif /* ENABLE_DATASERIES */
 	if (!verbose(tcp))
 		return 0;
 
@@ -246,7 +246,7 @@ decode_bitset(struct tcb *tcp, long arg, const struct xlat decode_nr[],
 #ifdef ENABLE_DATASERIES
 	if (ds_module)
 		ds_set_ioctl_size(ds_module, size);
-#endif
+#endif /* ENABLE_DATASERIES */
 	char decoded_arg[size];
 
 	if (umoven(tcp, arg, size, decoded_arg) < 0)
@@ -362,7 +362,7 @@ evdev_read_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 				if (ds_module)
 					ds_set_ioctl_size(ds_module,
 							  sizeof(int));
-#endif
+#endif /* ENABLE_DATASERIES */
 				printnum_int(tcp, arg, "%d");
 				return 1;
 			case EV_FF_STATUS:
@@ -378,7 +378,7 @@ evdev_read_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module,
 					  sizeof(struct input_absinfo));
-#endif
+#endif /* ENABLE_DATASERIES */
 		return abs_ioctl(tcp, arg);
 
 	switch (code) {
@@ -388,7 +388,7 @@ evdev_read_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 				if (ds_module)
 					ds_set_ioctl_size(ds_module,
 							  sizeof(int));
-#endif
+#endif /* ENABLE_DATASERIES */
 			printnum_int(tcp, arg, "%" PRIx32);
 			return 1;
 		case EVIOCGEFFECTS:
@@ -397,7 +397,7 @@ evdev_read_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 				if (ds_module)
 					ds_set_ioctl_size(ds_module, sizeof(
 						    unsigned int));
-#endif
+#endif /* ENABLE_DATASERIES */
 			printnum_int(tcp, arg, "%" PRIu32);
 			return 1;
 		case EVIOCGID:
@@ -405,7 +405,7 @@ evdev_read_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 			if (ds_module)
 				ds_set_ioctl_size(ds_module,
 						  sizeof(struct input_id));
-#endif
+#endif /* ENABLE_DATASERIES */
 			return getid_ioctl(tcp, arg);
 #ifdef EVIOCGREP
 		case EVIOCGREP:
@@ -413,7 +413,7 @@ evdev_read_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 			if (ds_module)
 				ds_set_ioctl_size(ds_module,
 						  2 * sizeof(unsigned int));
-#endif
+#endif /* ENABLE_DATASERIES */
 			return repeat_ioctl(tcp, arg);;
 #endif
 		case EVIOCGKEYCODE:
@@ -421,7 +421,7 @@ evdev_read_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 			if (ds_module)
 				ds_set_ioctl_size(ds_module,
 						  2 * sizeof(unsigned int));
-#endif
+#endif /* ENABLE_DATASERIES */
 			return keycode_ioctl(tcp, arg);
 #ifdef EVIOCGKEYCODE_V2
 		case EVIOCGKEYCODE_V2:
@@ -429,7 +429,7 @@ evdev_read_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 			if (ds_module)
 				ds_set_ioctl_size(ds_module, sizeof(
 					    struct input_keymap_entry));
-#endif
+#endif /* ENABLE_DATASERIES */
 			return keycode_V2_ioctl(tcp, arg);
 #endif
 	}
@@ -440,7 +440,7 @@ evdev_read_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 #ifdef ENABLE_DATASERIES
 			if (ds_module)
 				ds_set_ioctl_size(ds_module, _IOC_SIZE(code));
-#endif
+#endif /* ENABLE_DATASERIES */
 			return mtslots_ioctl(tcp, code, arg);
 #endif
 		case _IOC_NR(EVIOCGNAME(0)):
@@ -451,7 +451,7 @@ evdev_read_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 				if (ds_module)
 					ds_set_ioctl_size(ds_module,
 							  tcp->u_rval - 1);
-#endif
+#endif /* ENABLE_DATASERIES */
 			printstr(tcp, arg, tcp->u_rval - 1);
 			return 1;
 #ifdef EVIOCGPROP
@@ -489,7 +489,7 @@ evdev_write_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module,
 					  sizeof(struct input_absinfo));
-#endif
+#endif /* ENABLE_DATASERIES */
 		return abs_ioctl(tcp, arg);
 
 	switch (code) {
@@ -499,7 +499,7 @@ evdev_write_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 			if (ds_module)
 				ds_set_ioctl_size(ds_module,
 						  2 * sizeof(unsigned int));
-#endif
+#endif /* ENABLE_DATASERIES */
 			return repeat_ioctl(tcp, arg);
 #endif
 		case EVIOCSKEYCODE:
@@ -507,7 +507,7 @@ evdev_write_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 			if (ds_module)
 				ds_set_ioctl_size(ds_module,
 						  2 * sizeof(unsigned int));
-#endif
+#endif /* ENABLE_DATASERIES */
 			return keycode_ioctl(tcp, arg);
 #ifdef EVIOCSKEYCODE_V2
 		case EVIOCSKEYCODE_V2:
@@ -515,7 +515,7 @@ evdev_write_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 			if (ds_module)
 				ds_set_ioctl_size(ds_module, sizeof(
 					    struct input_keymap_entry));
-#endif
+#endif /* ENABLE_DATASERIES */
 			return keycode_V2_ioctl(tcp, arg);
 #endif
 		case EVIOCSFF:
@@ -523,7 +523,7 @@ evdev_write_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 			if (ds_module)
 				ds_set_ioctl_size(ds_module,
 						  sizeof(struct ff_effect));
-#endif
+#endif /* ENABLE_DATASERIES */
 			return ff_effect_ioctl(tcp, arg);
 		case EVIOCRMFF:
 #ifdef EVIOCSCLOCKID
@@ -538,7 +538,7 @@ evdev_write_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 			if (ds_module)
 				ds_set_ioctl_size(ds_module,
 						  sizeof(unsigned int));
-#endif
+#endif /* ENABLE_DATASERIES */
 			printnum_int(tcp, arg, "%u");
 			return 1;
 		default:
