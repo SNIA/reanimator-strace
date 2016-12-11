@@ -335,7 +335,7 @@ mtslots_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 	int buffer[size];
 
 #ifdef ENABLE_DATASERIES
-       DS_SET_IOCTL_SIZE(struct buffer);
+       DS_SET_IOCTL_SIZE(buffer);
 #endif /* ENABLE_DATASERIES */
 	if (umove_or_printaddr(tcp, arg, &buffer))
 		return 1;

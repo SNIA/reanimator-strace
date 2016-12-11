@@ -134,7 +134,7 @@ ptp_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		DS_SET_IOCTL_SIZE(struct ptp_clock_caps));
+		DS_SET_IOCTL_SIZE(struct ptp_clock_caps);
 #endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &caps))
 			break;

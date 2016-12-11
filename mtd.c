@@ -56,7 +56,7 @@ decode_erase_info_user(struct tcb *tcp, const long addr)
 
 	tprints(", ");
 #ifdef ENABLE_DATASERIES
-	DS_SET_IOCTL_SIZE(struct erase_user_info);
+	DS_SET_IOCTL_SIZE(struct erase_info_user);
 #endif /* ENABLE_DATASERIES */
 	if (umove_or_printaddr(tcp, addr, &einfo))
 		return;
@@ -325,7 +325,7 @@ MPERS_PRINTER_DECL(int, mtd_ioctl, struct tcb *tcp,
 	case MEMSETBADBLOCK:
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		DS_SET_IOCTL_SIZE(unit64_t);
+		DS_SET_IOCTL_SIZE(uint64_t);
 #endif /* ENABLE_DATASERIES */
 		printnum_int64(tcp, arg, "%" PRIu64);
 		break;

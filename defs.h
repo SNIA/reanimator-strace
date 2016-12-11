@@ -930,10 +930,10 @@ extern struct fault_opts *fault_vec[SUPPORTED_PERSONALITIES];
 #ifdef ENABLE_DATASERIES
 # define DS_SET_IOCTL_SIZE(x)	do { \
   if (ds_module)				\
-    ds_set_ioctl_size(ds_module, sizeof((x))) } while (0)
+    ds_set_ioctl_size(ds_module, sizeof(x)); } while (0)
 # define DS_SET_IOCTL_SIZEN(x,n)	do {		\
   if (ds_module)				\
-    ds_set_ioctl_size(ds_module, (n) * sizeof((x))) } while (0)
+    ds_set_ioctl_size(ds_module, (n) * sizeof(x)); } while (0)
 
 # define DS_MAX_ARGS 3 /* Maximum number of v_args defined for dataseries */
 extern char *ds_get_path(struct tcb *tcp, long addr);
