@@ -26,7 +26,6 @@
  */
 
 #include "tests.h"
-#include <endian.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -48,19 +47,25 @@ init_magic(void *addr, const unsigned int size)
 int
 main(void )
 {
-	(void) tail_alloc(1);
 	const unsigned int size = get_page_size();
-	(void) tail_alloc(1);
 	void *const page = tail_alloc(size);
-	(void) tail_alloc(1);
 	init_magic(page, size);
 
 	const union u_pixel_format {
 		unsigned int pixelformat;
 		unsigned char cc[sizeof(int)];
-	} u = { .pixelformat = htole32(magic) };
-	unsigned int i;
-
+	} u = {
+#if WORDS_BIGENDIAN
+		.cc = {
+			(unsigned char) (magic >> 24),
+			(unsigned char) (magic >> 16),
+			(unsigned char) (magic >> 8),
+			(unsigned char) magic
+		}
+#else
+		.pixelformat = magic
+#endif
+	};
 
 	/* VIDIOC_QUERYCAP */
 	ioctl(-1, VIDIOC_QUERYCAP, 0);
@@ -119,7 +124,7 @@ main(void )
 	ioctl(-1, VIDIOC_TRY_FMT, 0);
 	printf("ioctl(-1, VIDIOC_TRY_FMT, NULL) = -1 EBADF (%m)\n");
 
-# if HAVE_DECL_V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
+#if HAVE_DECL_V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
 	memset(p_format, -1, sizeof(*p_format));
 	p_format->type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 	p_format->fmt.pix_mp.width = 0xdad1beaf;
@@ -127,6 +132,7 @@ main(void )
 	p_format->fmt.pix_mp.pixelformat = 0xdeadbeef;
 	p_format->fmt.pix_mp.field = V4L2_FIELD_NONE;
 	p_format->fmt.pix_mp.colorspace = V4L2_COLORSPACE_JPEG;
+	unsigned int i;
 	for (i = 0; i < ARRAY_SIZE(p_format->fmt.pix_mp.plane_fmt); ++i) {
 		p_format->fmt.pix_mp.plane_fmt[i].sizeimage = 0xbadc0de0 | i;
 		p_format->fmt.pix_mp.plane_fmt[i].bytesperline = 0xdadbeaf0 | i;
@@ -149,11 +155,11 @@ main(void )
 	}
 	printf("], num_planes=%u}}) = -1 EBADF (%m)\n",
 	       p_format->fmt.pix_mp.num_planes);
-# else
+#else
 	ioctl(-1, VIDIOC_TRY_FMT, page);
 	printf("ioctl(-1, VIDIOC_TRY_FMT, {type=%#x /* V4L2_BUF_TYPE_??? */})"
-	       "= -1 EBADF (%m)\n", magic);
-# endif
+	       " = -1 EBADF (%m)\n", magic);
+#endif
 
 	/* VIDIOC_REQBUFS */
 	ioctl(-1, VIDIOC_REQBUFS, 0);
@@ -394,12 +400,13 @@ main(void )
 	       ", count=%u, controls=%p}) = -1 EBADF (%m)\n",
 	       p_ext_controls->count, p_ext_controls->controls);
 
+# if HAVE_DECL_V4L2_CTRL_TYPE_STRING
 	p_ext_controls->count = 2;
 	p_ext_controls->controls =
 		tail_alloc(sizeof(*p_ext_controls->controls) * p_ext_controls->count);
 	p_ext_controls->controls[0].id = V4L2_CID_BRIGHTNESS;
 	p_ext_controls->controls[0].size = 0;
-	p_ext_controls->controls[0].value64 = 0xfacefeeddeadbeef;
+	p_ext_controls->controls[0].value64 = 0xfacefeeddeadbeefULL;
 	p_ext_controls->controls[1].id = V4L2_CID_CONTRAST;
 	p_ext_controls->controls[1].size = 2;
 	p_ext_controls->controls[1].string =
@@ -432,17 +439,18 @@ main(void )
 	       p_ext_controls->controls[0].value,
 	       (long long) p_ext_controls->controls[0].value64,
 	       p_ext_controls->controls + 2);
+# endif /* HAVE_DECL_V4L2_CTRL_TYPE_STRING */
 
 	/* VIDIOC_TRY_EXT_CTRLS */
 	ioctl(-1, VIDIOC_TRY_EXT_CTRLS, 0);
 	printf("ioctl(-1, VIDIOC_TRY_EXT_CTRLS, NULL) = -1 EBADF (%m)\n");
 
-	p_ext_controls->ctrl_class = V4L2_CTRL_CLASS_CAMERA;
+	p_ext_controls->ctrl_class = V4L2_CTRL_CLASS_USER;
 	p_ext_controls->count = magic;
 	p_ext_controls->controls = (void *) -2UL;
 	ioctl(-1, VIDIOC_TRY_EXT_CTRLS, p_ext_controls);
 	printf("ioctl(-1, VIDIOC_TRY_EXT_CTRLS"
-	       ", {ctrl_class=V4L2_CTRL_CLASS_CAMERA, count=%u, controls=%p})"
+	       ", {ctrl_class=V4L2_CTRL_CLASS_USER, count=%u, controls=%p})"
 	       " = -1 EBADF (%m)\n",
 	       p_ext_controls->count, p_ext_controls->controls);
 
@@ -452,7 +460,7 @@ main(void )
 
 	ioctl(-1, VIDIOC_G_EXT_CTRLS, p_ext_controls);
 	printf("ioctl(-1, VIDIOC_G_EXT_CTRLS"
-	       ", {ctrl_class=V4L2_CTRL_CLASS_CAMERA, count=%u, controls=%p"
+	       ", {ctrl_class=V4L2_CTRL_CLASS_USER, count=%u, controls=%p"
 	       ", error_idx=%u}) = -1 EBADF (%m)\n",
 	       p_ext_controls->count, p_ext_controls->controls,
 	       p_ext_controls->error_idx);
@@ -465,10 +473,19 @@ main(void )
 	struct v4l2_frmsizeenum *const p_frmsizeenum =
 		tail_alloc(sizeof(*p_frmsizeenum));
 	p_frmsizeenum->index = magic;
-	p_frmsizeenum->pixel_format = 0xfa5c2741;
 	const union u_pixel_format u_frmsizeenum = {
-		.pixelformat = htole32(p_frmsizeenum->pixel_format)
+		.cc = { 'A', '\'', '\\', '\xfa' }
 	};
+#if WORDS_BIGENDIAN
+	p_frmsizeenum->pixel_format =
+		(unsigned) u_frmsizeenum.cc[0] << 24 |
+		(unsigned) u_frmsizeenum.cc[1] << 16 |
+		(unsigned) u_frmsizeenum.cc[2] << 8 |
+		(unsigned) u_frmsizeenum.cc[3];
+#else
+	p_frmsizeenum->pixel_format = u_frmsizeenum.pixelformat;
+#endif
+
 	ioctl(-1, VIDIOC_ENUM_FRAMESIZES, p_frmsizeenum);
 	printf("ioctl(-1, VIDIOC_ENUM_FRAMESIZES, {index=%u"
 	       ", pixel_format=v4l2_fourcc('%c', '\\%c', '\\%c', '\\x%x')})"

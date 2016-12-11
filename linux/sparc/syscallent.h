@@ -266,8 +266,8 @@
 [265] = { 1,	0,		SEN(timer_delete),		"timer_delete"		},
 [266] = { 3,	0,		SEN(timer_create),		"timer_create"		},
 [267] = { },
-[268] = { 2,	0,		SEN(io_setup),			"io_setup"		},
-[269] = { 1,	0,		SEN(io_destroy),		"io_destroy"		},
+[268] = { 2,	TM,		SEN(io_setup),			"io_setup"		},
+[269] = { 1,	TM,		SEN(io_destroy),		"io_destroy"		},
 [270] = { 3,	0,		SEN(io_submit),			"io_submit"		},
 [271] = { 3,	0,		SEN(io_cancel),			"io_cancel"		},
 [272] = { 5,	0,		SEN(io_getevents),		"io_getevents"		},
@@ -287,7 +287,7 @@
 [286] = { 4,	TD|TF,		SEN(mknodat),			"mknodat"		},
 [287] = { 5,	TD|TF,		SEN(fchownat),			"fchownat"		},
 [288] = { 3,	TD|TF,		SEN(futimesat),			"futimesat"		},
-[289] = { 4,	TD|TF,		SEN(newfstatat),		"fstatat64"		},
+[289] = { 4,	TD|TF,		SEN(fstatat64),			"fstatat64"		},
 [290] = { 3,	TD|TF,		SEN(unlinkat),			"unlinkat"		},
 [291] = { 4,	TD|TF,		SEN(renameat),			"renameat"		},
 [292] = { 5,	TD|TF,		SEN(linkat),			"linkat"		},
@@ -356,6 +356,8 @@
 [355] = { 5,	TN,		SEN(setsockopt),		"setsockopt"		},
 [356] = { 3,	TM,		SEN(mlock2),			"mlock2"		},
 [357] = { 6,	TD,		SEN(copy_file_range),		"copy_file_range"	},
+[358] = { 6,	TD,		SEN(preadv2),			"preadv2"		},
+[359] = { 6,	TD,		SEN(pwritev2),			"pwritev2"		},
 
 #define SYS_socket_subcall	400
 #include "subcall.h"

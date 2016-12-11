@@ -81,7 +81,7 @@ print_statfs(const char *const sample, const char *magic_str)
 	PRINT_NUM(f_files);
 	PRINT_NUM(f_ffree);
 #ifdef PRINT_F_FSID
-	printf(", f_fsid={%u, %u}",
+	printf(", f_fsid={val=[%u, %u]}",
 	       (unsigned) b->PRINT_F_FSID[0], (unsigned) b->PRINT_F_FSID[1]);
 #endif
 	PRINT_NUM(f_namelen);
@@ -105,14 +105,16 @@ main(void)
 	print_statfs(".", NULL);
 
 	long rc = SYSCALL_INVOKE("", -1, 0, sizeof(STRUCT_STATFS));
+	const char *errstr = sprintrc(rc);
 	PRINT_SYSCALL_HEADER("", -1, sizeof(STRUCT_STATFS));
-	printf("NULL) = %ld %s (%m)\n", rc, errno2name());
+	printf("NULL) = %s\n", errstr);
 
 #ifdef CHECK_ODD_SIZE
-	const unsigned long addr = (unsigned long) 0xfacefeeddeadbeef;
+	const unsigned long addr = (unsigned long) 0xfacefeeddeadbeefULL;
 	rc = SYSCALL_INVOKE("", -1, addr, sizeof(STRUCT_STATFS) + 1);
+	errstr = sprintrc(rc);
 	PRINT_SYSCALL_HEADER("", -1, sizeof(STRUCT_STATFS) + 1);
-	printf("%#lx) = %ld %s (%m)\n", addr, rc, errno2name());
+	printf("%#lx) = %s\n", addr, errstr);
 #endif
 
 	puts("+++ exited with 0 +++");

@@ -26,7 +26,7 @@
  */
 
 #include "tests.h"
-#include <sys/syscall.h>
+#include <asm/unistd.h>
 
 #ifdef __NR_fcntl
 
@@ -41,10 +41,10 @@ test_flock64_einval(const int cmd, const char *name)
 {
 	struct_kernel_flock64 fl = {
 		.l_type = F_RDLCK,
-		.l_start = 0xdefaced1facefeed,
-		.l_len = 0xdefaced2cafef00d
+		.l_start = 0xdefaced1facefeedULL,
+		.l_len = 0xdefaced2cafef00dULL
 	};
-	syscall(TEST_SYSCALL_NR, 0, cmd, &fl);
+	invoke_test_syscall(cmd, &fl);
 	printf("%s(0, %s, %p) = %s\n",
 	       TEST_SYSCALL_STR, name, &fl, EINVAL_STR);
 }
@@ -59,7 +59,10 @@ test_flock64(void)
 #if !defined(F_GETOWN_EX) || F_GETOWN_EX != F_SETLK64
 	TEST_FLOCK64_EINVAL(F_SETLK64);
 #endif
+/* F_GETLK and F_SETLKW64 have conflicting values on mips64 */
+#if !defined(__mips64) || F_GETLK != F_SETLKW64
 	TEST_FLOCK64_EINVAL(F_SETLKW64);
+#endif
 #if !defined(F_SETOWN_EX) || F_SETOWN_EX != F_GETLK64
 	TEST_FLOCK64_EINVAL(F_GETLK64);
 #endif

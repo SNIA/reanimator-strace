@@ -33,14 +33,6 @@
 
 #include "xlat/delete_module_flags.h"
 
-SYS_FUNC(create_module)
-{
-	printpath(tcp, tcp->u_arg[0]);
-	tprintf(", %lu", tcp->u_arg[1]);
-
-	return RVAL_DECODED | RVAL_HEX;
-}
-
 SYS_FUNC(delete_module)
 {
 	printstr(tcp, tcp->u_arg[0], -1);
@@ -52,14 +44,12 @@ SYS_FUNC(delete_module)
 
 SYS_FUNC(init_module)
 {
-	tprintf("%#lx, %lu, ", tcp->u_arg[0], tcp->u_arg[1]);
+	printaddr_ull(getarg_ull(tcp, 0));
+	tprintf(", %llu, ", getarg_ull(tcp, 1));
 	printstr(tcp, tcp->u_arg[2], -1);
 
 	return RVAL_DECODED;
 }
-
-#define MODULE_INIT_IGNORE_MODVERSIONS  1
-#define MODULE_INIT_IGNORE_VERMAGIC     2
 
 #include "xlat/module_init_flags.h"
 

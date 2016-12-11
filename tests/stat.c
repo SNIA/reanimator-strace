@@ -26,13 +26,13 @@
  */
 
 #include "tests.h"
-#include <sys/syscall.h>
+#include <asm/unistd.h>
 
 #ifdef __NR_stat
 
 # define TEST_SYSCALL_NR __NR_stat
 # define TEST_SYSCALL_STR "stat"
-# define SAMPLE_SIZE ((kernel_ulong_t) 43147718418)
+# define SAMPLE_SIZE ((kernel_ulong_t) 43147718418ULL)
 # include "lstatx.c"
 
 #else

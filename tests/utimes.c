@@ -28,18 +28,14 @@
  */
 
 #include "tests.h"
-#include <sys/syscall.h>
+#include <asm/unistd.h>
 
 #ifdef __NR_utimes
 
+# include <stdint.h>
 # include <stdio.h>
 # include <sys/time.h>
 # include <unistd.h>
-
-#define CAST_NUM(n)						\
-	(sizeof(n) == sizeof(long) ?				\
-		(unsigned long long) (unsigned long) (n) :	\
-		(unsigned long long) (n))
 
 int
 main(void)
@@ -55,22 +51,26 @@ main(void)
 	       sample, rc, errno2name());
 
 	struct timeval *const ts = tail_alloc(sizeof(*ts) * 2);
-	(void) tail_alloc(1);
-
-	rc = syscall(__NR_utimes, 0, ts + 1);
-	printf("utimes(NULL, %p) = %ld %s (%m)\n",
-	       ts + 1, rc, errno2name());
 
 	ts[0].tv_sec = tv.tv_sec;
 	ts[0].tv_usec = tv.tv_usec;
 	ts[1].tv_sec = tv.tv_sec - 1;
 	ts[1].tv_usec = tv.tv_usec + 1;
 
+	rc = syscall(__NR_utimes, 0, ts + 2);
+	printf("utimes(NULL, %p) = %ld %s (%m)\n", ts + 2, rc, errno2name());
+
+	rc = syscall(__NR_utimes, 0, ts + 1);
+	printf("utimes(NULL, [{tv_sec=%jd, tv_usec=%jd}, %p]) = "
+	       "%ld %s (%m)\n",
+	       (intmax_t) ts[1].tv_sec, (intmax_t) ts[1].tv_usec,
+	       ts + 2, rc, errno2name());
+
 	rc = syscall(__NR_utimes, "", ts);
-	printf("utimes(\"\", [{%llu, %llu}, {%llu, %llu}])"
-	       " = %ld %s (%m)\n",
-	       CAST_NUM(ts[0].tv_sec), CAST_NUM(ts[0].tv_usec),
-	       CAST_NUM(ts[1].tv_sec), CAST_NUM(ts[1].tv_usec),
+	printf("utimes(\"\", [{tv_sec=%jd, tv_usec=%jd}, "
+	       "{tv_sec=%jd, tv_usec=%jd}]) = %ld %s (%m)\n",
+	       (intmax_t) ts[0].tv_sec, (intmax_t) ts[0].tv_usec,
+	       (intmax_t) ts[1].tv_sec, (intmax_t) ts[1].tv_usec,
 	       rc, errno2name());
 
 	puts("+++ exited with 0 +++");

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2004 Ulrich Drepper <drepper@redhat.com>
- * Copyright (c) 2004 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2004-2016 Dmitry V. Levin <ldv@altlinux.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,8 +27,15 @@
  */
 
 #include "defs.h"
+
+#include DEF_MPERS_TYPE(struct_rtc_pll_info)
+
 #include <linux/ioctl.h>
 #include <linux/rtc.h>
+
+typedef struct rtc_pll_info struct_rtc_pll_info;
+
+#include MPERS_DEFS
 
 static void
 print_rtc_time(struct tcb *tcp, const struct rtc_time *rt)
@@ -49,7 +56,6 @@ decode_rtc_time(struct tcb *tcp, const long addr)
 {
 	struct rtc_time rt;
 
-	tprints(", ");
 	if (!umove_or_printaddr(tcp, addr, &rt))
 		print_rtc_time(tcp, &rt);
 }
@@ -59,33 +65,39 @@ decode_rtc_wkalrm(struct tcb *tcp, const long addr)
 {
 	struct rtc_wkalrm wk;
 
-	tprints(", ");
 	if (!umove_or_printaddr(tcp, addr, &wk)) {
-		tprintf("{enabled=%d, pending=%d, ", wk.enabled, wk.pending);
+		tprintf("{enabled=%d, pending=%d, time=", wk.enabled, wk.pending);
 		print_rtc_time(tcp, &wk.time);
 		tprints("}");
 	}
 }
 
-int
-rtc_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
+static void
+decode_rtc_pll_info(struct tcb *tcp, const long addr)
+{
+	struct_rtc_pll_info pll;
+
+	if (!umove_or_printaddr(tcp, addr, &pll))
+		tprintf("{pll_ctrl=%d, pll_value=%d, pll_max=%d, pll_min=%d"
+			", pll_posmult=%d, pll_negmult=%d, pll_clock=%ld}",
+			pll.pll_ctrl, pll.pll_value, pll.pll_max, pll.pll_min,
+			pll.pll_posmult, pll.pll_negmult, (long) pll.pll_clock);
+}
+
+MPERS_PRINTER_DECL(int, rtc_ioctl, struct tcb *tcp,
+		   const unsigned int code, const long arg)
 {
 	switch (code) {
-	case RTC_ALM_SET:
-	case RTC_SET_TIME:
-#ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(struct rtc_time));
-#endif /* ENABLE_DATASERIES */
-		decode_rtc_time(tcp, arg);
-		break;
 	case RTC_ALM_READ:
 	case RTC_RD_TIME:
 		if (entering(tcp))
 			return 0;
+		/* fall through */
+	case RTC_ALM_SET:
+	case RTC_SET_TIME:
+		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(struct rtc_time));
+		DS_SET_IOCTL_SIZE(struct rtc_time);
 #endif /* ENABLE_DATASERIES */
 		decode_rtc_time(tcp, arg);
 		break;
@@ -99,28 +111,31 @@ rtc_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			return 0;
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(unsigned long));
+		DS_SET_IOCTL_SIZE(unsigned long);
 #endif /* ENABLE_DATASERIES */
 		printnum_ulong(tcp, arg);
-		break;
-	case RTC_WKALM_SET:
-#ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-				    struct rtc_wkalrm));
-#endif /* ENABLE_DATASERIES */
-		decode_rtc_wkalrm(tcp, arg);
 		break;
 	case RTC_WKALM_RD:
 		if (entering(tcp))
 			return 0;
+		/* fall through */
+	case RTC_WKALM_SET:
+		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-				    struct rtc_wkalrm));
+		DS_SET_IOCTL_SIZE(struct rtc_wkalrm);
 #endif /* ENABLE_DATASERIES */
 		decode_rtc_wkalrm(tcp, arg);
+		break;
+	case RTC_PLL_GET:
+		if (entering(tcp))
+			return 0;
+		/* fall through */
+	case RTC_PLL_SET:
+		tprints(", ");
+#ifdef ENABLE_DATASERIES
+		DS_SET_IOCTL_SIZE(struct_rtc_pll_info);
+#endif /* ENABLE_DATASERIES */
+		decode_rtc_pll_info(tcp, arg);
 		break;
 #ifdef RTC_VL_READ
 	case RTC_VL_READ:
@@ -128,12 +143,24 @@ rtc_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			return 0;
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(int));
+		DS_SET_IOCTL_SIZE(int);
 #endif /* ENABLE_DATASERIES */
 		printnum_int(tcp, arg, "%d");
 		break;
 #endif
+	case RTC_AIE_ON:
+	case RTC_AIE_OFF:
+	case RTC_UIE_ON:
+	case RTC_UIE_OFF:
+	case RTC_PIE_ON:
+	case RTC_PIE_OFF:
+	case RTC_WIE_ON:
+	case RTC_WIE_OFF:
+#ifdef RTC_VL_CLR
+	case RTC_VL_CLR:
+#endif
+		/* no args */
+		break;
 	default:
 		return RVAL_DECODED;
 	}

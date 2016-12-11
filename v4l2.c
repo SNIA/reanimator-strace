@@ -39,7 +39,7 @@
 #include DEF_MPERS_TYPE(struct_v4l2_standard)
 
 #include <stdint.h>
-#include <sys/ioctl.h>
+#include <linux/ioctl.h>
 #include <linux/types.h>
 #include <linux/videodev2.h>
 
@@ -77,7 +77,18 @@ print_pixelformat(uint32_t fourcc)
 	const union {
 		uint32_t pixelformat;
 		unsigned char cc[sizeof(uint32_t)];
-	} u = { .pixelformat = htole32(fourcc) };
+	} u = {
+#if WORDS_BIGENDIAN
+		.cc = {
+			(unsigned char) (fourcc >> 24),
+			(unsigned char) (fourcc >> 16),
+			(unsigned char) (fourcc >> 8),
+			(unsigned char) fourcc
+		}
+#else
+		.pixelformat = fourcc
+#endif
+	};
 	unsigned int i;
 
 	tprints("v4l2_fourcc(");
@@ -348,17 +359,17 @@ print_v4l2_buffer(struct tcb *tcp, const unsigned int code, const long arg)
 			if (b.memory == V4L2_MEMORY_MMAP) {
 				tprintf(", m.offset=%#x", b.m.offset);
 			} else if (b.memory == V4L2_MEMORY_USERPTR) {
-				tprintf(", m.userptr=%#lx",
-					(unsigned long) b.m.userptr);
+				tprints(", m.userptr=");
+				printaddr((unsigned long) b.m.userptr);
 			}
 
 			tprintf(", length=%u, bytesused=%u, flags=",
 				b.length, b.bytesused);
 			printflags(v4l2_buf_flags, b.flags, "V4L2_BUF_FLAG_???");
-			if (code == VIDIOC_DQBUF)
-				tprintf(", timestamp = {%ju.%06ju}",
-					(uintmax_t)b.timestamp.tv_sec,
-					(uintmax_t)b.timestamp.tv_usec);
+			if (code == VIDIOC_DQBUF) {
+				tprints(", timestamp = ");
+				MPERS_FUNC_NAME(print_struct_timeval)(&b.timestamp);
+			}
 			tprints(", ...");
 		}
 		tprints("}");
@@ -373,8 +384,10 @@ print_v4l2_framebuffer(struct tcb *tcp, const long arg)
 
 	tprints(", ");
 	if (!umove_or_printaddr(tcp, arg, &b)) {
-		tprintf("{capability=%#x, flags=%#x, base=%#lx}",
-			b.capability, b.flags, (unsigned long) b.base);
+		tprintf("{capability=%#x, flags=%#x, base=",
+			b.capability, b.flags);
+		printaddr((unsigned long) b.base);
+		tprints("}");
 	}
 
 	return RVAL_DECODED | 1;
@@ -558,14 +571,15 @@ print_v4l2_queryctrl(struct tcb *tcp, const long arg)
 			tprints("}");
 			return 1;
 		}
-		if (tcp->auxstr)
+		if (get_tcb_priv_ulong(tcp))
 			tprints(" => ");
 	}
 
-	if (entering(tcp) || tcp->auxstr) {
+	if (entering(tcp) || get_tcb_priv_ulong(tcp)) {
 #ifdef V4L2_CTRL_FLAG_NEXT_CTRL
-		tcp->auxstr = (c.id & V4L2_CTRL_FLAG_NEXT_CTRL) ? "" : NULL;
-		if (tcp->auxstr) {
+		const unsigned long next = c.id & V4L2_CTRL_FLAG_NEXT_CTRL;
+		set_tcb_priv_ulong(tcp, next);
+		if (next) {
 			tprints("V4L2_CTRL_FLAG_NEXT_CTRL|");
 			c.id &= ~V4L2_CTRL_FLAG_NEXT_CTRL;
 		}
@@ -660,21 +674,6 @@ print_v4l2_ext_control(struct tcb *tcp, void *elem_buf, size_t elem_size, void *
 }
 
 #include "xlat/v4l2_control_classes.h"
-
-static int
-umoven_or_printaddr_ignore_syserror(struct tcb *tcp, const long addr,
-				    const unsigned int len, void *our_addr)
-{
-	if (!addr) {
-		tprints("NULL");
-		return -1;
-	}
-	if (umoven(tcp, addr, len, our_addr) < 0) {
-		tprintf("%#lx", addr);
-		return -1;
-	}
-	return 0;
-}
 
 static int
 print_v4l2_ext_controls(struct tcb *tcp, const long arg, const bool is_get)
@@ -835,7 +834,8 @@ print_v4l2_create_buffers(struct tcb *tcp, const long arg)
 }
 #endif /* VIDIOC_CREATE_BUFS */
 
-MPERS_PRINTER_DECL(int, v4l2_ioctl)(struct tcb *tcp, const unsigned int code, const long arg)
+MPERS_PRINTER_DECL(int, v4l2_ioctl,
+		   struct tcb *tcp, const unsigned int code, const long arg)
 {
 #ifdef ENABLE_DATASERIES
 	if (!ds_module) {
@@ -849,17 +849,13 @@ MPERS_PRINTER_DECL(int, v4l2_ioctl)(struct tcb *tcp, const unsigned int code, co
 	switch (code) {
 	case VIDIOC_QUERYCAP: /* R */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct v4l2_capability));
+		DS_SET_IOCTL_SIZE(struct v4l2_capability);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_capability(tcp, arg);
 
 	case VIDIOC_ENUM_FMT: /* RW */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct v4l2_fmtdesc));
+		DS_SET_IOCTL_SIZE(struct v4l2_fmtdesc);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_fmtdesc(tcp, arg);
 
@@ -867,17 +863,13 @@ MPERS_PRINTER_DECL(int, v4l2_ioctl)(struct tcb *tcp, const unsigned int code, co
 	case VIDIOC_S_FMT: /* RW */
 	case VIDIOC_TRY_FMT: /* RW */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct_v4l2_format));
+		DS_SET_IOCTL_SIZE(struct_v4l2_format);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_format(tcp, arg, code == VIDIOC_G_FMT);
 
 	case VIDIOC_REQBUFS: /* RW */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct v4l2_requestbuffers));
+		DS_SET_IOCTL_SIZE(struct v4l2_requestbuffers);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_requestbuffers(tcp, arg);
 
@@ -885,9 +877,7 @@ MPERS_PRINTER_DECL(int, v4l2_ioctl)(struct tcb *tcp, const unsigned int code, co
 	case VIDIOC_QBUF: /* RW */
 	case VIDIOC_DQBUF: /* RW */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct_v4l2_buffer));
+		DS_SET_IOCTL_SIZE(struct_v4l2_buffer);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_buffer(tcp, code, arg);
 
@@ -897,26 +887,21 @@ MPERS_PRINTER_DECL(int, v4l2_ioctl)(struct tcb *tcp, const unsigned int code, co
 		/* fall through */
 	case VIDIOC_S_FBUF: /* W */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct_v4l2_framebuffer));
+		DS_SET_IOCTL_SIZE(struct_v4l2_framebuffer);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_framebuffer(tcp, arg);
 
 	case VIDIOC_STREAMON: /* W */
 	case VIDIOC_STREAMOFF: /* W */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-		  ds_set_ioctl_size(ds_module, sizeof(int));
+		DS_SET_IOCTL_SIZE(int);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_buf_type(tcp, arg);
 
 	case VIDIOC_G_PARM: /* RW */
 	case VIDIOC_S_PARM: /* RW */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct v4l2_streamparm));
+		DS_SET_IOCTL_SIZE(struct v4l2_streamparm);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_streamparm(tcp, arg, code == VIDIOC_G_PARM);
 
@@ -927,42 +912,33 @@ MPERS_PRINTER_DECL(int, v4l2_ioctl)(struct tcb *tcp, const unsigned int code, co
 	case VIDIOC_S_STD: /* W */
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(int64_t));
+		DS_SET_IOCTL_SIZE(int64_t);
 #endif /* ENABLE_DATASERIES */
 		printnum_int64(tcp, arg, "%#" PRIx64);
 		return RVAL_DECODED | 1;
 
 	case VIDIOC_ENUMSTD: /* RW */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct_v4l2_standard));
+		DS_SET_IOCTL_SIZE(struct_v4l2_standard);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_standard(tcp, arg);
 
 	case VIDIOC_ENUMINPUT: /* RW */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct_v4l2_input));
+		DS_SET_IOCTL_SIZE(struct_v4l2_input);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_input(tcp, arg);
 
 	case VIDIOC_G_CTRL: /* RW */
 	case VIDIOC_S_CTRL: /* RW */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct v4l2_control));
+		DS_SET_IOCTL_SIZE(struct v4l2_control);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_control(tcp, arg, code == VIDIOC_G_CTRL);
 
 	case VIDIOC_QUERYCTRL: /* RW */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct v4l2_queryctrl));
+		DS_SET_IOCTL_SIZE(struct v4l2_queryctrl);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_queryctrl(tcp, arg);
 
@@ -973,25 +949,21 @@ MPERS_PRINTER_DECL(int, v4l2_ioctl)(struct tcb *tcp, const unsigned int code, co
 	case VIDIOC_S_INPUT: /* RW */
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(unsigned int));
+		DS_SET_IOCTL_SIZE(unsigned int);
 #endif /* ENABLE_DATASERIES */
 		printnum_int(tcp, arg, "%u");
 		return RVAL_DECODED | 1;
 
 	case VIDIOC_CROPCAP: /* RW */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct v4l2_cropcap));
+		DS_SET_IOCTL_SIZE(struct v4l2_cropcap);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_cropcap(tcp, arg);
 
 	case VIDIOC_G_CROP: /* RW */
 	case VIDIOC_S_CROP: /* W */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(struct v4l2_crop));
+		DS_SET_IOCTL_SIZE(struct v4l2_crop);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_crop(tcp, arg, code == VIDIOC_G_CROP);
 
@@ -1000,9 +972,7 @@ MPERS_PRINTER_DECL(int, v4l2_ioctl)(struct tcb *tcp, const unsigned int code, co
 	case VIDIOC_TRY_EXT_CTRLS: /* RW */
 	case VIDIOC_G_EXT_CTRLS: /* RW */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct_v4l2_ext_controls));
+		DS_SET_IOCTL_SIZE(struct_v4l2_ext_controls);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_ext_controls(tcp, arg,
 					       code == VIDIOC_G_EXT_CTRLS);
@@ -1011,9 +981,7 @@ MPERS_PRINTER_DECL(int, v4l2_ioctl)(struct tcb *tcp, const unsigned int code, co
 #ifdef VIDIOC_ENUM_FRAMESIZES
 	case VIDIOC_ENUM_FRAMESIZES: /* RW */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct v4l2_frmsizeenum));
+		DS_SET_IOCTL_SIZE(struct v4l2_frmsizeenum);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_frmsizeenum(tcp, arg);
 #endif /* VIDIOC_ENUM_FRAMESIZES */
@@ -1021,9 +989,7 @@ MPERS_PRINTER_DECL(int, v4l2_ioctl)(struct tcb *tcp, const unsigned int code, co
 #ifdef VIDIOC_ENUM_FRAMEINTERVALS
 	case VIDIOC_ENUM_FRAMEINTERVALS: /* RW */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct v4l2_frmivalenum));
+		DS_SET_IOCTL_SIZE(struct v4l2_frmivalenum);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_frmivalenum(tcp, arg);
 #endif /* VIDIOC_ENUM_FRAMEINTERVALS */
@@ -1031,9 +997,7 @@ MPERS_PRINTER_DECL(int, v4l2_ioctl)(struct tcb *tcp, const unsigned int code, co
 #ifdef VIDIOC_CREATE_BUFS
 	case VIDIOC_CREATE_BUFS: /* RW */
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-					     struct_v4l2_create_buffers));
+		DS_SET_IOCTL_SIZE(struct_v4l2_create_buffers);
 #endif /* ENABLE_DATASERIES */
 		return print_v4l2_create_buffers(tcp, arg);
 #endif /* VIDIOC_CREATE_BUFS */

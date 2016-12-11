@@ -171,7 +171,7 @@ do_adjtimex(struct tcb *tcp, long addr)
 {
 	if (print_timex(tcp, addr))
 		return 0;
-	tcp->auxstr = xlookup(adjtimex_state, tcp->u_rval);
+	tcp->auxstr = xlookup(adjtimex_state, (unsigned long) tcp->u_rval);
 	if (tcp->auxstr)
 		return RVAL_STR;
 	return 0;
@@ -314,15 +314,17 @@ SYS_FUNC(timerfd_create)
 
 SYS_FUNC(timerfd_settime)
 {
-	printfd(tcp, tcp->u_arg[0]);
-	tprints(", ");
-	printflags(timerfdflags, tcp->u_arg[1], "TFD_???");
-	tprints(", ");
-	print_itimerspec(tcp, tcp->u_arg[2]);
-	tprints(", ");
-	print_itimerspec(tcp, tcp->u_arg[3]);
-
-	return RVAL_DECODED;
+	if (entering(tcp)) {
+		printfd(tcp, tcp->u_arg[0]);
+		tprints(", ");
+		printflags(timerfdflags, tcp->u_arg[1], "TFD_???");
+		tprints(", ");
+		print_itimerspec(tcp, tcp->u_arg[2]);
+		tprints(", ");
+	} else {
+		print_itimerspec(tcp, tcp->u_arg[3]);
+	}
+	return 0;
 }
 
 SYS_FUNC(timerfd_gettime)

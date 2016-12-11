@@ -28,7 +28,7 @@
  */
 
 #include "tests.h"
-#include <sys/syscall.h>
+#include <asm/unistd.h>
 
 #ifdef __NR_set_mempolicy
 
@@ -56,10 +56,9 @@ print_nodes(const unsigned long maxnode, unsigned int offset)
 	unsigned long *const nodemask =
 		tail_alloc(size ? size : (offset ? 1 : 0));
 	memset(nodemask, 0, size);
-	(void) tail_alloc(1);
 
 	long rc = syscall(__NR_set_mempolicy, 0, nodemask, maxnode);
-	int saved_errno = errno;
+	const char *errstr = sprintrc(rc);
 
 	fputs("set_mempolicy(MPOL_DEFAULT, ", stdout);
 
@@ -89,13 +88,7 @@ print_nodes(const unsigned long maxnode, unsigned int offset)
 			printf("[]");
 	}
 
-	printf(", %lu) = ", maxnode);
-	if (rc) {
-		errno = saved_errno;
-		printf("%ld %s (%m)\n", rc, errno2name());
-	} else {
-		puts("0");
-	}
+	printf(", %lu) = %s\n", maxnode, errstr);
 }
 
 static void
@@ -133,11 +126,11 @@ main(void)
 		perror_msg_and_skip("set_mempolicy");
 	puts("set_mempolicy(MPOL_DEFAULT, NULL, 0) = 0");
 
-	const unsigned long *nodemask = (void *) 0xfacefeedfffffffe;
-	const unsigned long maxnode = (unsigned long) 0xcafef00dbadc0ded;
+	const unsigned long *nodemask = (void *) 0xfacefeedfffffffeULL;
+	const unsigned long maxnode = (unsigned long) 0xcafef00dbadc0dedULL;
 	long rc = syscall(__NR_set_mempolicy, 1, nodemask, maxnode);
-	printf("set_mempolicy(MPOL_PREFERRED, %p, %lu) = %ld %s (%m)\n",
-	       nodemask, maxnode, rc, errno2name());
+	printf("set_mempolicy(MPOL_PREFERRED, %p, %lu) = %s\n",
+	       nodemask, maxnode, sprintrc(rc));
 
 	test_offset(0);
 	test_offset(1);

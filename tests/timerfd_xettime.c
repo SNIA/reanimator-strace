@@ -27,7 +27,7 @@
 
 #include "tests.h"
 #include <fcntl.h>
-#include <sys/syscall.h>
+#include <asm/unistd.h>
 
 #if defined __NR_timerfd_create \
  && defined __NR_timerfd_gettime \
@@ -51,6 +51,10 @@ main(void)
 		struct itimerspec its;
 		uint32_t pad[4];
 	} old = {
+		.its = {
+			.it_interval = { 0xdeface5, 0xdeface6 },
+			.it_value = { 0xdeface7, 0xdeface8 }
+		},
 		.pad = { 0xdeadbeef, 0xbadc0ded, 0xdeadbeef, 0xbadc0ded }
 	}, new = {
 		.its = {
@@ -63,8 +67,10 @@ main(void)
 	if (syscall(__NR_timerfd_settime, 0, 0, &new.its, &old.its))
 		perror_msg_and_skip("timerfd_settime");
 	printf("timerfd_settime(0, 0"
-	       ", {it_interval={%jd, %jd}, it_value={%jd, %jd}}"
-	       ", {it_interval={%jd, %jd}, it_value={%jd, %jd}}"
+	       ", {it_interval={tv_sec=%jd, tv_nsec=%jd}"
+	       ", it_value={tv_sec=%jd, tv_nsec=%jd}}"
+	       ", {it_interval={tv_sec=%jd, tv_nsec=%jd}"
+	       ", it_value={tv_sec=%jd, tv_nsec=%jd}}"
 	       ") = 0\n",
 	       (intmax_t) new.its.it_interval.tv_sec,
 	       (intmax_t) new.its.it_interval.tv_nsec,
@@ -78,8 +84,8 @@ main(void)
 	if (syscall(__NR_timerfd_gettime, 0, &old.its))
 		perror_msg_and_skip("timerfd_gettime");
 	printf("timerfd_gettime(0"
-	       ", {it_interval={%jd, %jd}, it_value={%jd, %jd}}"
-	       ") = 0\n",
+	       ", {it_interval={tv_sec=%jd, tv_nsec=%jd}"
+	       ", it_value={tv_sec=%jd, tv_nsec=%jd}}) = 0\n",
 	       (intmax_t) old.its.it_interval.tv_sec,
 	       (intmax_t) old.its.it_interval.tv_nsec,
 	       (intmax_t) old.its.it_value.tv_sec,

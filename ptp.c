@@ -47,9 +47,7 @@ ptp_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-		  ds_set_ioctl_size(ds_module, sizeof(
-				       struct ptp_extts_request));
+		DS_SET_IOCTL_SIZE(struct ptp_extts_request);
 #endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &extts))
 			break;
@@ -65,9 +63,7 @@ ptp_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-		  ds_set_ioctl_size(ds_module, sizeof(
-				       struct ptp_perout_request));
+		DS_SET_IOCTL_SIZE(struct ptp_perout_request);
 #endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &perout))
 			break;
@@ -91,9 +87,7 @@ ptp_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		struct ptp_sys_offset sysoff;
 
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-		  ds_set_ioctl_size(ds_module, sizeof(
-				       struct ptp_sys_offset));
+		DS_SET_IOCTL_SIZE(struct ptp_sys_offset);
 #endif /* ENABLE_DATASERIES */
 		if (entering(tcp)) {
 			tprints(", ");
@@ -140,9 +134,7 @@ ptp_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-		  ds_set_ioctl_size(ds_module, sizeof(
-				       struct ptp_clock_caps));
+		DS_SET_IOCTL_SIZE(struct ptp_clock_caps));
 #endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &caps))
 			break;

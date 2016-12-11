@@ -1,23 +1,118 @@
 Noteworthy changes in release ?.?? (????-??-??)
+
+* Changes in behavior
+  * Time stamps are now printed according to ISO 8601.
+
+* Improvements
+  * Implemented syscall fault injection.
+  * Implemented decoding of DM_* ioctl commands.
+  * Implemented decoding of attr parameter of perf_event_open syscall.
+  * Implemented decoding of pkey_alloc, pkey_free, and pkey_mprotect syscalls.
+  * Implemented dumping of mq_timedsend and mq_timedreceive syscalls.
+  * Updated lists of ioctl commands from Linux 4.9.
+
+* Bug fixes
+  * Fixed corner cases in decoding of getgroups, getresuid, init_module,
+    inotify_init1, kcmp, kexec_load, lookup_dcookie, mq_getsetattr, mq_notify,
+    mq_open, mq_timedreceive, mq_timedsend, name_to_handle_at, process_vm_readv,
+    process_vm_writev, setfsuid, setgroups, setns, and unshare syscalls.
+  * Fixed handling of verbose flag in printing of controls array of
+    struct v4l2_ext_controls.
+  * Fixed omission of field names in the output of capability, sigaction,
+    statfs, timespec, timeval, and utimbuf structures.
+
+Noteworthy changes in release 4.14 (2016-10-04)
+===============================================
+
+* Changes in behavior
+  * When using -p option without a command and no processes has been attached,
+    strace exits with exit status 1.
+
+* Improvements
+  * Added printing of the mode argument of open and openat syscalls
+    when O_TMPFILE flag is set.  (Addresses Fedora bug #1377846).
+  * Enhanced -e abbrev=set, -e raw=set, and -e verbose=set.
+  * Enhanced decoding of futex, keyctl, quotactl, timerfd_settime,
+    and aio family syscalls.
+  * Implemented fetching of the 7th subcall argument on mips o32.
+  * Updated lists of BPF_*, ETH_P_*, KEXEC_ARCH_*, SCTP_*, TCP_*, and *_MAGIC
+    constants.
+  * Updated lists of ioctl commands from Linux 4.8.
+  * Added decoding of new syscalls on sh and sh64.
+  * Added RISC-V architecture support.
+
+* Bug fixes
+  * Marked io_setup and io_destroy as memory mapping related syscalls.
+  * Fixed leakage of placeholder descriptors to tracees.
+  * Fixed printing of mode_t, umode_t, and umask types.
+  * Fixed decoding of iovec arrays without a limit on total data size.
+  * Fixed decoding of fadvise64, fallocate, futex, keyctl, quotactl, readahead,
+    and ipc family syscalls.
+  * Fixed decoding of invalid syscalls mapped to indirect subcalls.
+  * Fixed decoding of struct btrfs_ioctl_vol_args_v2 on non-native
+    personalities.
+  * Fixed decoding of PTRACE_DETACH on sparc and sparc64.
+  * Fixed decoding of struct stat64 on sparc64.
+  * Fixed decoding of uid and gid-related syscalls on sparc64.
+  * Fixed decoding of the forth argument of semctl syscall on sparc64.
+  * Fixed values of tty ioctl constants on sparc64.
+  * Fixed sparc personality support on sparc64.
+
+Noteworthy changes in release 4.13 (2016-07-26)
+===============================================
+
+* Improvements
+  * Implemented a general netlink socket parser.
+  * Enhanced decoding of socket addresses.
+  * Enhanced decoding of cmsghdr, msghdr, and mmsghdr structures.
+  * Enhanced decoding of accept, accept4, bind, getpeername, getsockname,
+    ipc, recvfrom, recvmsg, recvmmsg, sendto, sendmmsg, and socketcall syscalls.
+  * Updated lists of AF_*, BPF_MAP_TYPE_*, KEY_*, KEYCTL_*, RWF_*, SS_*,
+    and *_MAGIC constants.
+  * Updated lists of ioctl commands from Linux 4.7.
+
+* Bug fixes
+  * Fixed decoding of pid_t argument of prlimit64 syscall.
+  * Fixed sign extension issues in the parser of struct rusage.
+  * Fixed race condition in decoding of timeout argument of recvmmsg and
+    rt_sigtimedwait syscalls.
+  * Fixed build with fresh linux kernel headers.
+
+Noteworthy changes in release 4.12 (2016-05-31)
 ===============================================
 
 * Improvements
   * Implemented simultaneous use of -p option and tracing of a command.
     (addresses Debian bug #549942).
-  * Enhanced decoding of personality, sched_getaffinity,
-    sched_setaffinity, statfs, statfs64, fstatfs, and fstatfs64 syscalls.
-  * Enhanced decoding of getxpid, getxuid, and getxgid syscalls on alpha.
-  * Added decoding of bind, listen, and setsockopt direct syscalls on sparc.
   * Implemented caching of netlink conversations to reduce amount of time
     spent in decoding socket details in -yy mode.
-  * Implemented decoding of copy_file_range syscall.
-  * Implemented dumping of preadv, pwritev, and vmsplice syscalls.
-  * Updated lists of ioctl commands from Linux 4.5.
+  * Implemented -yy mode decoding of protocol:portid pairs associated with
+    netlink socket descriptors.
+  * Implemented decoding of copy_file_range, preadv2, and pwritev2 syscalls.
+  * Implemented dumping of preadv, preadv2, pwritev, pwritev2, and vmsplice
+    syscalls.
+  * Implemented decoding of BTRFS_* and UFFDIO_* ioctl commands.
+  * Enhanced decoding of BLK*, EVIOC*, RTC_*, and VIDIOC_* ioctl commands.
+  * Enhanced decoding of fstatfs, fstatfs64, get_mempolicy, getdents,
+    getdents64, getgroups, getpriority, kill, mbind, migrate_pages, mknod,
+    mknodat, personality, poll, ppoll, quotactl, rt_sigpending,
+    rt_sigqueueinfo, rt_sigtimedwait, rt_tgsigqueueinfo, sched_getaffinity,
+    sched_setaffinity, seccomp, set_mempolicy, setgroups, setpriority, statfs,
+    statfs64, tgkill, waitid, and xattr family syscalls.
+  * Enhanced decoding of getxpid, getxuid, and getxgid syscalls on alpha.
+  * Enhanced decoding of pipe syscall on alpha, ia64, mips, sh, and sparc.
+  * Added decoding of bind, listen, and setsockopt direct syscalls on sparc.
+  * Added decoding of osf_statfs64 and osf_fstatfs64 syscalls on alpha.
+  * Added decoding of fadvise64 and fadvise64_64 on s390.
+  * Updated lists of AF_*, BPF_MAP_TYPE_*, CLONE_*, EPOLL*, IPV6_*, MADV_*,
+    MSG_*, PTRACE_*, SEGV_*, SO_*, SOL_*, *_MAGIC, and quotactl constants.
+  * Updated lists of ioctl commands from Linux 4.6.
 
 * Bug fixes
   * Fixed build on arc, metag, nios2, or1k, and tile architectures.
   * Fixed decoding of 32-bit times syscall return value on 64-bit architectures.
   * Fixed decoding of mlock2 syscall on sparc.
+  * Fixed decoding of osf_shmat syscall on alpha.
   * Fixed decoding of syscalls unknown to the kernel on s390/s390x.
     (addresses Debian bug #485979 and Fedora bug #1298294).
   * Fixed decoding of preadv syscall in case of short read.
@@ -26,6 +121,7 @@ Noteworthy changes in release ?.?? (????-??-??)
   * Fixed decoding of mincore syscall's last argument.
   * Fixed remaining errors in mapping between syscall numbers and numbers
     of syscall arguments.
+  * Applied various fixes to strace-graph script.
 
 Noteworthy changes in release 4.11 (2015-12-21)
 ===============================================

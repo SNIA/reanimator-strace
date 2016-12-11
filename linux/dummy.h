@@ -26,6 +26,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef STRACE_LINUX_DUMMY_H
+#define STRACE_LINUX_DUMMY_H
+
 #ifndef HAVE_STRUCT___OLD_KERNEL_STAT
 #define	sys_oldfstat		printargs
 #define	sys_oldstat		printargs
@@ -104,7 +107,6 @@
 #define	sys_gettid		printargs
 #define	sys_idle		printargs
 #define	sys_inotify_init	printargs
-#define	sys_ipc			printargs
 #define	sys_munlockall		printargs
 #define	sys_pause		printargs
 #define	sys_printargs		printargs
@@ -113,7 +115,6 @@
 #define	sys_setsid		printargs
 #define	sys_set_tid_address	printargs
 #define	sys_setup		printargs
-#define	sys_socketcall		printargs
 #define	sys_sync		printargs
 #define	sys_syscall		printargs
 #define	sys_vhangup		printargs
@@ -122,6 +123,7 @@
 #define	sys_alarm		printargs_u
 
 /* printargs_d does the right thing */
+#define	sys_exit		printargs_d
 #define	sys_getpgid		printargs_d
 #define	sys_getsid		printargs_d
 #define	sys_nice		printargs_d
@@ -133,6 +135,7 @@
 /* unimplemented */
 #define	sys_afs_syscall		printargs
 #define	sys_break		printargs
+#define	sys_create_module	printargs
 #define	sys_ftime		printargs
 #define	sys_get_kernel_syms	printargs
 #define	sys_getpmsg		printargs
@@ -158,3 +161,5 @@
 #define	sys_oldolduname		printargs
 #define	sys_olduname		printargs
 #define	sys_sysfs		printargs
+
+#endif /* !STRACE_LINUX_DUMMY_H */

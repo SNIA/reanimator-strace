@@ -61,9 +61,7 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case UFFDIO_API: {
 		struct uffdio_api ua;
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module,
-					  sizeof(struct uffdio_api));
+		DS_SET_IOCTL_SIZE(struct uffdio_api);
 #endif /* ENABLE_DATASERIES */
 		if (entering(tcp)) {
 			tprints(", ");
@@ -82,7 +80,7 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 				printflags64(uffd_api_flags, ua.ioctls,
 					     "_UFFDIO_???");
 			}
-			tprintf("}");
+			tprints("}");
 		}
 		return 1;
 	}
@@ -90,9 +88,7 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case UFFDIO_COPY: {
 		struct uffdio_copy uc;
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module,
-					  sizeof(struct uffdio_copy));
+		DS_SET_IOCTL_SIZE(struct uffdio_copy);
 #endif /* ENABLE_DATASERIES */
 		if (entering(tcp)) {
 			tprints(", ");
@@ -114,22 +110,20 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case UFFDIO_REGISTER: {
 		struct uffdio_register ur;
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module,
-					  sizeof(struct uffdio_register));
+		DS_SET_IOCTL_SIZE(struct uffdio_register);
 #endif /* ENABLE_DATASERIES */
 		if (entering(tcp)) {
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &ur))
 				return RVAL_DECODED | 1;
-			tprintf("{range=");
+			tprints("{range=");
 			tprintf_uffdio_range(&ur.range);
-			tprintf(", mode=");
+			tprints(", mode=");
 			printflags64(uffd_register_mode_flags, ur.mode,
 				     "UFFDIO_REGISTER_MODE_???");
 		} else {
 			if (!syserror(tcp) && !umove(tcp, arg, &ur)) {
-				tprintf(", ioctls=");
+				tprints(", ioctls=");
 				printflags64(uffd_register_ioctl_flags,
 					     ur.ioctls, "UFFDIO_???");
 			}
@@ -142,9 +136,7 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case UFFDIO_WAKE: {
 		struct uffdio_range ura;
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module,
-					  sizeof(struct uffdio_range));
+		DS_SET_IOCTL_SIZE(struct uffdio_range);
 #endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (!umove_or_printaddr(tcp, arg, &ura))
@@ -155,17 +147,15 @@ uffdio_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case UFFDIO_ZEROPAGE: {
 		struct uffdio_zeropage uz;
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module,
-					  sizeof(struct uffdio_zeropage));
+		DS_SET_IOCTL_SIZE(struct uffdio_zeropage);
 #endif /* ENABLE_DATASERIES */
 		if (entering(tcp)) {
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &uz))
 				return RVAL_DECODED | 1;
-			tprintf("{range=");
+			tprints("{range=");
 			tprintf_uffdio_range(&uz.range);
-			tprintf(", mode=");
+			tprints(", mode=");
 			printflags64(uffd_zeropage_flags, uz.mode,
 				     "UFFDIO_ZEROPAGE_???");
 		} else {

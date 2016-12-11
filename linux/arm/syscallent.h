@@ -268,8 +268,8 @@
 [240] = { 6,	0,		SEN(futex),			"futex"			},
 [241] = { 3,	0,		SEN(sched_setaffinity),		"sched_setaffinity"	},
 [242] = { 3,	0,		SEN(sched_getaffinity),		"sched_getaffinity"	},
-[243] = { 2,	0,		SEN(io_setup),			"io_setup"		},
-[244] = { 1,	0,		SEN(io_destroy),		"io_destroy"		},
+[243] = { 2,	TM,		SEN(io_setup),			"io_setup"		},
+[244] = { 1,	TM,		SEN(io_destroy),		"io_destroy"		},
 [245] = { 5,	0,		SEN(io_getevents),		"io_getevents"		},
 [246] = { 3,	0,		SEN(io_submit),			"io_submit"		},
 [247] = { 3,	0,		SEN(io_cancel),			"io_cancel"		},
@@ -351,7 +351,7 @@
 [324] = { 4,	TD|TF,		SEN(mknodat),			"mknodat"		},
 [325] = { 5,	TD|TF,		SEN(fchownat),			"fchownat"		},
 [326] = { 3,	TD|TF,		SEN(futimesat),			"futimesat"		},
-[327] = { 4,	TD|TF,		SEN(newfstatat),		"fstatat64"		},
+[327] = { 4,	TD|TF,		SEN(fstatat64),			"fstatat64"		},
 [328] = { 3,	TD|TF,		SEN(unlinkat),			"unlinkat"		},
 [329] = { 4,	TD|TF,		SEN(renameat),			"renameat"		},
 [330] = { 5,	TD|TF,		SEN(linkat),			"linkat"		},
@@ -416,6 +416,11 @@
 [389] = { 2,	0,		SEN(membarrier),		"membarrier",		},
 [390] = { 3,	TM,		SEN(mlock2),			"mlock2"		},
 [391] = { 6,	TD,		SEN(copy_file_range),		"copy_file_range"	},
+[392] = { 6,	TD,		SEN(preadv2),			"preadv2"		},
+[393] = { 6,	TD,		SEN(pwritev2),			"pwritev2"		},
+[394] = { 4,	TM|SI,		SEN(pkey_mprotect),		"pkey_mprotect"		},
+[395] = { 2,	0,		SEN(pkey_alloc),		"pkey_alloc"		},
+[396] = { 1,	0,		SEN(pkey_free),			"pkey_free"		},
 
 #ifdef __ARM_EABI__
 # define ARM_FIRST_SHUFFLED_SYSCALL 400

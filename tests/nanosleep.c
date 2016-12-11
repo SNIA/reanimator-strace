@@ -45,7 +45,7 @@ main(void)
 		struct timespec ts;
 		uint32_t pad[2];
 	} req = {
-		.ts = { .tv_nsec = 0xc0de1 },
+		.ts.tv_nsec = 0xc0de1,
 		.pad = { 0xdeadbeef, 0xbadc0ded }
 	}, rem = {
 		.ts = { .tv_sec = 0xc0de2, .tv_nsec = 0xc0de3 },
@@ -57,7 +57,7 @@ main(void)
 
 	if (nanosleep(&req.ts, NULL))
 		perror_msg_and_fail("nanosleep");
-	printf("nanosleep({%jd, %jd}, NULL) = 0\n",
+	printf("nanosleep({tv_sec=%jd, tv_nsec=%jd}, NULL) = 0\n",
 	       (intmax_t) req.ts.tv_sec, (intmax_t) req.ts.tv_nsec);
 
 	assert(nanosleep(NULL, &rem.ts) == -1);
@@ -65,12 +65,12 @@ main(void)
 
 	if (nanosleep(&req.ts, &rem.ts))
 		perror_msg_and_fail("nanosleep");
-	printf("nanosleep({%jd, %jd}, %p) = 0\n",
+	printf("nanosleep({tv_sec=%jd, tv_nsec=%jd}, %p) = 0\n",
 	       (intmax_t) req.ts.tv_sec, (intmax_t) req.ts.tv_nsec, &rem.ts);
 
 	req.ts.tv_nsec = 1000000000;
 	assert(nanosleep(&req.ts, &rem.ts) == -1);
-	printf("nanosleep({%jd, %jd}, %p) = -1 EINVAL (%m)\n",
+	printf("nanosleep({tv_sec=%jd, tv_nsec=%jd}, %p) = -1 EINVAL (%m)\n",
 	       (intmax_t) req.ts.tv_sec, (intmax_t) req.ts.tv_nsec, &rem.ts);
 
 	assert(sigaction(SIGALRM, &act, NULL) == 0);
@@ -78,8 +78,8 @@ main(void)
 
 	if (setitimer(ITIMER_REAL, &itv, NULL))
 		perror_msg_and_skip("setitimer");
-	printf("setitimer(ITIMER_REAL, {it_interval={%jd, %jd}"
-	       ", it_value={%jd, %jd}}, NULL) = 0\n",
+	printf("setitimer(ITIMER_REAL, {it_interval={tv_sec=%jd, tv_usec=%jd}"
+	       ", it_value={tv_sec=%jd, tv_usec=%jd}}, NULL) = 0\n",
 	       (intmax_t) itv.it_interval.tv_sec,
 	       (intmax_t) itv.it_interval.tv_usec,
 	       (intmax_t) itv.it_value.tv_sec,
@@ -87,7 +87,7 @@ main(void)
 
 	req.ts.tv_nsec = 999999999;
 	assert(nanosleep(&req.ts, &rem.ts) == -1);
-	printf("nanosleep({%jd, %jd}, {%jd, %jd})"
+	printf("nanosleep({tv_sec=%jd, tv_nsec=%jd}, {tv_sec=%jd, tv_nsec=%jd})"
 	       " = ? ERESTART_RESTARTBLOCK (Interrupted by signal)\n",
 	       (intmax_t) req.ts.tv_sec, (intmax_t) req.ts.tv_nsec,
 	       (intmax_t) rem.ts.tv_sec, (intmax_t) rem.ts.tv_nsec);

@@ -65,13 +65,13 @@ print_mmap(struct tcb *tcp, long *u_arg, unsigned long long offset)
 
 	printaddr(addr);
 	tprintf(", %lu, ", len);
-	printflags(mmap_prot, prot, "PROT_???");
+	printflags_long(mmap_prot, prot, "PROT_???");
 	tprints(", ");
 #ifdef MAP_TYPE
-	printxval(mmap_flags, flags & MAP_TYPE, "MAP_???");
+	printxval_long(mmap_flags, flags & MAP_TYPE, "MAP_???");
 	addflags(mmap_flags, flags & ~MAP_TYPE);
 #else
-	printflags(mmap_flags, flags, "MAP_???");
+	printflags_long(mmap_flags, flags, "MAP_???");
 #endif
 	tprints(", ");
 	printfd(tcp, fd);
@@ -135,10 +135,11 @@ SYS_FUNC(old_mmap_pgoff)
 /* Params are passed directly, offset is in bytes */
 SYS_FUNC(mmap)
 {
-	unsigned long long offset = (unsigned long) tcp->u_arg[5];
-#if defined(LINUX_MIPSN32) || defined(X32)
-	/* Try test/x32_mmap.c */
-	offset = tcp->ext_arg[5];
+	unsigned long long offset =
+#if HAVE_STRUCT_TCB_EXT_ARG
+		tcp->ext_arg[5];	/* try test/x32_mmap.c */
+#else
+		(unsigned long) tcp->u_arg[5];
 #endif
 	/* Example of kernel-side handling of this variety of mmap:
 	 * arch/x86/kernel/sys_x86_64.c::SYSCALL_DEFINE6(mmap, ...) calls
@@ -181,13 +182,27 @@ SYS_FUNC(munmap)
 	return RVAL_DECODED;
 }
 
-SYS_FUNC(mprotect)
+static int
+do_mprotect(struct tcb *tcp, bool has_pkey)
 {
 	printaddr(tcp->u_arg[0]);
 	tprintf(", %lu, ", tcp->u_arg[1]);
-	printflags(mmap_prot, tcp->u_arg[2], "PROT_???");
+	printflags_long(mmap_prot, tcp->u_arg[2], "PROT_???");
+
+	if (has_pkey)
+		tprintf(", %d", (int) tcp->u_arg[3]);
 
 	return RVAL_DECODED;
+}
+
+SYS_FUNC(mprotect)
+{
+	return do_mprotect(tcp, false);
+}
+
+SYS_FUNC(pkey_mprotect)
+{
+	return do_mprotect(tcp, true);
 }
 
 #include "xlat/mremap_flags.h"
@@ -196,7 +211,7 @@ SYS_FUNC(mremap)
 {
 	printaddr(tcp->u_arg[0]);
 	tprintf(", %lu, %lu, ", tcp->u_arg[1], tcp->u_arg[2]);
-	printflags(mremap_flags, tcp->u_arg[3], "MREMAP_???");
+	printflags_long(mremap_flags, tcp->u_arg[3], "MREMAP_???");
 #ifdef MREMAP_FIXED
 	if ((tcp->u_arg[3] & (MREMAP_MAYMOVE | MREMAP_FIXED)) ==
 	    (MREMAP_MAYMOVE | MREMAP_FIXED)) {
@@ -272,6 +287,8 @@ SYS_FUNC(mincore)
 			unsigned long i;
 			tprints("[");
 			for (i = 0; i < len; i++) {
+				if (i)
+					tprints(", ");
 				if (abbrev(tcp) && i >= max_strlen) {
 					tprints("...");
 					break;
@@ -303,13 +320,13 @@ SYS_FUNC(remap_file_pages)
 
 	printaddr(addr);
 	tprintf(", %lu, ", size);
-	printflags(mmap_prot, prot, "PROT_???");
+	printflags_long(mmap_prot, prot, "PROT_???");
 	tprintf(", %lu, ", pgoff);
 #ifdef MAP_TYPE
-	printxval(mmap_flags, flags & MAP_TYPE, "MAP_???");
+	printxval_long(mmap_flags, flags & MAP_TYPE, "MAP_???");
 	addflags(mmap_flags, flags & ~MAP_TYPE);
 #else
-	printflags(mmap_flags, flags, "MAP_???");
+	printflags_long(mmap_flags, flags, "MAP_???");
 #endif
 
 	return RVAL_DECODED;

@@ -28,6 +28,7 @@
  */
 
 #include "defs.h"
+#include "kernel_types.h"
 #include "syscall.h"
 
 #define TD 0
@@ -47,7 +48,7 @@ static const struct_sysent syscallent[] = {
 #include "syscallent.h"
 };
 
-#include <sys/syscall.h>
+#include <asm/unistd.h>
 
 #if defined __X32_SYSCALL_BIT && defined __NR_read \
  && (__X32_SYSCALL_BIT & __NR_read) != 0
@@ -56,29 +57,48 @@ static const struct_sysent syscallent[] = {
 # define SYSCALL_BIT 0
 #endif
 
-static const unsigned long nr = ARRAY_SIZE(syscallent) | SYSCALL_BIT;
+static void
+test_syscall(const unsigned long nr)
+{
+	static const kernel_ulong_t a[] = {
+		(kernel_ulong_t) 0xface0fedbadc0dedULL,
+		(kernel_ulong_t) 0xface1fedbadc1dedULL,
+		(kernel_ulong_t) 0xface2fedbadc2dedULL,
+		(kernel_ulong_t) 0xface3fedbadc3dedULL,
+		(kernel_ulong_t) 0xface4fedbadc4dedULL,
+		(kernel_ulong_t) 0xface5fedbadc5dedULL
+	};
+
+	long rc = syscall(nr | SYSCALL_BIT,
+			  a[0], a[1], a[2], a[3], a[4], a[5]);
+#ifdef LINUX_MIPSO32
+	printf("syscall(%#lx, %#lx, %#lx, %#lx, %#lx, %#lx, %#lx)"
+	       " = %ld ENOSYS (%m)\n", nr | SYSCALL_BIT,
+	       a[0], a[1], a[2], a[3], a[4], a[5], rc);
+#else
+	printf("syscall_%lu(%#llx, %#llx, %#llx, %#llx, %#llx, %#llx)"
+	       " = %ld (errno %d)\n", nr,
+	       (unsigned long long) a[0],
+	       (unsigned long long) a[1],
+	       (unsigned long long) a[2],
+	       (unsigned long long) a[3],
+	       (unsigned long long) a[4],
+	       (unsigned long long) a[5],
+	       rc, errno);
+#endif
+}
 
 int
 main(void)
 {
-	static const unsigned long a[] = {
-		(unsigned long) 0xface0fedbadc0ded,
-		(unsigned long) 0xface1fedbadc1ded,
-		(unsigned long) 0xface2fedbadc2ded,
-		(unsigned long) 0xface3fedbadc3ded,
-		(unsigned long) 0xface4fedbadc4ded,
-		(unsigned long) 0xface5fedbadc5ded
-	};
+	test_syscall(ARRAY_SIZE(syscallent));
 
-	long rc = syscall(nr, a[0], a[1], a[2], a[3], a[4], a[5]);
-#ifdef LINUX_MIPSO32
-	printf("syscall(%#lx, %#lx, %#lx, %#lx, %#lx, %#lx, %#lx)"
-	       " = %ld ENOSYS (%m)\n", nr,
-	       a[0], a[1], a[2], a[3], a[4], a[5], rc);
-#else
-	printf("syscall_%lu(%#lx, %#lx, %#lx, %#lx, %#lx, %#lx)"
-	       " = %ld (errno %d)\n", nr & (~SYSCALL_BIT),
-	       a[0], a[1], a[2], a[3], a[4], a[5], rc, errno);
+#ifdef SYS_socket_subcall
+	test_syscall(SYS_socket_subcall + 1);
+#endif
+
+#ifdef SYS_ipc_subcall
+	test_syscall(SYS_ipc_subcall + 1);
 #endif
 
 	puts("+++ exited with 0 +++");

@@ -28,17 +28,28 @@
  */
 
 #include "tests.h"
-#include <assert.h>
+#include <errno.h>
 #include <stdio.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 int
 main(void)
 {
-	static const char text[] = "attach-p-cmd.test cmd";
-	assert(chdir(text) == -1);
+	static const char lockdir[] = "attach-p-cmd.test-lock";
+	/* wait for the lock directory to be created by peer */
+	while (rmdir(lockdir)) {
+		if (ENOENT != errno)
+			perror_msg_and_fail("rmdir: %s", lockdir);
+	}
+
+	static const char dir[] = "attach-p-cmd.test cmd";
 	pid_t pid = getpid();
-	printf("%-5d chdir(\"%s\") = -1 ENOENT (%m)\n"
-	       "%-5d +++ exited with 0 +++\n", pid, text, pid);
+	int rc = chdir(dir);
+
+	printf("%-5d chdir(\"%s\") = %s\n"
+	       "%-5d +++ exited with 0 +++\n",
+	       pid, dir, sprintrc(rc), pid);
+
 	return 0;
 }

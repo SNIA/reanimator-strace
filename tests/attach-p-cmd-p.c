@@ -28,38 +28,56 @@
  */
 
 #include "tests.h"
-#include <assert.h>
+#include <errno.h>
 #include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-#include <sys/time.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 static void
 handler(int signo)
 {
-	_exit(!chdir("attach-p-cmd.test -p"));
 }
 
 int
-main(int ac, char **av)
+main(void)
 {
-	if (ac < 2)
-		error_msg_and_fail("missing operand");
-
-	if (ac > 2)
-		error_msg_and_fail("extra operand");
-
-	const sigset_t set = {};
 	const struct sigaction act = { .sa_handler = handler };
-	const struct itimerval itv = { .it_value.tv_sec = atoi(av[1]) };
+	if (sigaction(SIGALRM, &act, NULL))
+		perror_msg_and_fail("sigaction");
 
-	assert(sigaction(SIGALRM, &act, NULL) == 0);
-	assert(sigprocmask(SIG_SETMASK, &set, NULL) == 0);
-	if (setitimer(ITIMER_REAL, &itv, NULL))
-		perror_msg_and_skip("setitimer");
+	sigset_t mask = {};
+	sigaddset(&mask, SIGALRM);
+	if (sigprocmask(SIG_UNBLOCK, &mask, NULL))
+		perror_msg_and_fail("sigprocmask");
 
-	for (;;);
+	static const char lockdir[] = "attach-p-cmd.test-lock";
+	/* create a lock directory */
+	if (mkdir(lockdir, 0700))
+		perror_msg_and_fail("mkdir: %s", lockdir);
+
+	/* wait for the lock directory to be removed by peer */
+	while (mkdir(lockdir, 0700)) {
+		if (EEXIST != errno)
+			perror_msg_and_fail("mkdir: %s", lockdir);
+	}
+
+	/* remove the lock directory */
+	if (rmdir(lockdir))
+		perror_msg_and_fail("rmdir: %s", lockdir);
+
+	alarm(1);
+	pause();
+
+	static const char dir[] = "attach-p-cmd.test -p";
+	pid_t pid = getpid();
+	int rc = chdir(dir);
+
+	printf("%-5d --- SIGALRM {si_signo=SIGALRM, si_code=SI_KERNEL} ---\n"
+	       "%-5d chdir(\"%s\") = %d %s (%m)\n"
+	       "%-5d +++ exited with 0 +++\n",
+	       pid, pid, dir, rc, errno2name(), pid);
 
 	return 0;
 }

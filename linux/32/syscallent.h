@@ -1,8 +1,8 @@
 #ifndef sys_ARCH_mmap
 # define sys_ARCH_mmap sys_mmap
 #endif
-[  0] = { 2,	0,		SEN(io_setup),			"io_setup"		},
-[  1] = { 1,	0,		SEN(io_destroy),		"io_destroy"		},
+[  0] = { 2,	TM,		SEN(io_setup),			"io_setup"		},
+[  1] = { 1,	TM,		SEN(io_destroy),		"io_destroy"		},
 [  2] = { 3,	0,		SEN(io_submit),			"io_submit"		},
 [  3] = { 3,	0,		SEN(io_cancel),			"io_cancel"		},
 [  4] = { 5,	0,		SEN(io_getevents),		"io_getevents"		},
@@ -80,7 +80,7 @@
 [ 76] = { 6,	TD,		SEN(splice),			"splice"		},
 [ 77] = { 4,	TD,		SEN(tee),			"tee"			},
 [ 78] = { 4,	TD|TF,		SEN(readlinkat),		"readlinkat"		},
-[ 79] = { 4,	TD|TF,		SEN(newfstatat),		"fstatat64"		},
+[ 79] = { 4,	TD|TF,		SEN(fstatat64),			"fstatat64"		},
 [ 80] = { 2,	TD,		SEN(fstat64),			"fstat64"		},
 [ 81] = { 0,	0,		SEN(sync),			"sync"			},
 [ 82] = { 1,	TD,		SEN(fsync),			"fsync"			},
@@ -276,6 +276,11 @@
 [283] = { 2,	0,		SEN(membarrier),		"membarrier",		},
 [284] = { 3,	TM,		SEN(mlock2),			"mlock2"		},
 [285] = { 6,	TD,		SEN(copy_file_range),		"copy_file_range"	},
+[286] = { 6,	TD,		SEN(preadv2),			"preadv2"		},
+[287] = { 6,	TD,		SEN(pwritev2),			"pwritev2"		},
+[288] = { 4,	TM|SI,		SEN(pkey_mprotect),		"pkey_mprotect"		},
+[289] = { 2,	0,		SEN(pkey_alloc),		"pkey_alloc"		},
+[290] = { 1,	0,		SEN(pkey_free),			"pkey_free"		},
 
 #undef sys_ARCH_mmap
 #undef ARCH_WANT_SYNC_FILE_RANGE2

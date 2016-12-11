@@ -67,10 +67,10 @@ decode_termios(struct tcb *tcp, const long addr)
 	if (!(tios.c_lflag & ICANON))
 		tprintf("c_cc[VMIN]=%d, c_cc[VTIME]=%d, ",
 			tios.c_cc[VMIN], tios.c_cc[VTIME]);
-	tprintf("c_cc=\"");
+	tprints("c_cc=\"");
 	for (i = 0; i < NCCS; i++)
 		tprintf("\\x%02x", tios.c_cc[i]);
-	tprintf("\"}");
+	tprints("\"}");
 }
 
 static void
@@ -109,10 +109,10 @@ decode_termio(struct tcb *tcp, const long addr)
 		tprintf("c_cc[VMIN]=%d, c_cc[VTIME]=%d, ",
 			tio.c_cc[VMIN], tio.c_cc[VTIME]);
 #endif /* !_VMIN */
-	tprintf("c_cc=\"");
+	tprints("c_cc=\"");
 	for (i = 0; i < NCC; i++)
 		tprintf("\\x%02x", tio.c_cc[i]);
-	tprintf("\"}");
+	tprints("\"}");
 }
 
 static void
@@ -189,8 +189,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #endif
 	case TIOCSLCKTRMIOS:
 #ifdef ENABLE_DATASERIES
-	        if (ds_module)
-		        ds_set_ioctl_size(ds_module, sizeof(struct termios));
+		DS_SET_IOCTL_SIZE(struct termios);
 #endif /* ENABLE_DATASERIES */
 		decode_termios(tcp, arg);
 		break;
@@ -203,8 +202,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case TCSETAW:
 	case TCSETAF:
 #ifdef ENABLE_DATASERIES
-	        if (ds_module)
-		        ds_set_ioctl_size(ds_module, sizeof(struct termio));
+		DS_SET_IOCTL_SIZE(struct termio);
 #endif /* ENABLE_DATASERIES */
 		decode_termio(tcp, arg);
 		break;
@@ -215,8 +213,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			return 0;
 	case TIOCSWINSZ:
 #ifdef ENABLE_DATASERIES
-	        if (ds_module)
-		        ds_set_ioctl_size(ds_module, sizeof(struct winsize));
+		DS_SET_IOCTL_SIZE(struct winsize);
 #endif /* ENABLE_DATASERIES */
 		decode_winsize(tcp, arg);
 		break;
@@ -228,8 +225,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			return 0;
 	case TIOCSSIZE:
 #ifdef ENABLE_DATASERIES
-	        if (ds_module)
-		        ds_set_ioctl_size(ds_module, sizeof(struct ttysize));
+		DS_SET_IOCTL_SIZE(struct ttysize);
 #endif /* ENABLE_DATASERIES */
 		decode_ttysize(tcp, arg);
 		break;
@@ -238,11 +234,11 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	/* ioctls with a direct decodable arg */
 	case TCXONC:
 		tprints(", ");
-		printxval(tcxonc_options, arg, "TC???");
+		printxval_long(tcxonc_options, arg, "TC???");
 		break;
 	case TCFLSH:
 		tprints(", ");
-		printxval(tcflsh_options, arg, "TC???");
+		printxval_long(tcflsh_options, arg, "TC???");
 		break;
 	case TCSBRK:
 	case TCSBRKP:
@@ -258,8 +254,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case TIOCMBIC:
 	case TIOCMSET:
 #ifdef ENABLE_DATASERIES
-	        if (ds_module)
-		        ds_set_ioctl_size(ds_module, sizeof(int));
+		DS_SET_IOCTL_SIZE(int);
 #endif /* ENABLE_DATASERIES */
 		decode_modem_flags(tcp, arg);
 		break;
@@ -288,8 +283,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case TIOCSSOFTCAR:
 	case TIOCSPTLCK:
 #ifdef ENABLE_DATASERIES
-	        if (ds_module)
-		        ds_set_ioctl_size(ds_module, sizeof(int));
+		DS_SET_IOCTL_SIZE(int);
 #endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printnum_int(tcp, arg, "%d");
@@ -299,8 +293,8 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case TIOCSTI:
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-	        if (ds_module)
-		        ds_set_ioctl_size(ds_module, 1);
+		if (ds_module)
+			ds_set_ioctl_size(ds_module, 1);
 #endif /* ENABLE_DATASERIES */
 		printstr(tcp, arg, 1);
 		break;

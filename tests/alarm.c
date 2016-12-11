@@ -28,7 +28,7 @@
  */
 
 #include "tests.h"
-#include <sys/syscall.h>
+#include <asm/unistd.h>
 
 #ifdef __NR_alarm
 
@@ -38,7 +38,7 @@
 int
 main(void)
 {
-	int rc = syscall(__NR_alarm, (unsigned long) 0xffffffff0000002a);
+	int rc = syscall(__NR_alarm, (unsigned long) 0xffffffff0000002aULL);
 	printf("alarm(%u) = %d\n", 42, rc);
 
 	puts("+++ exited with 0 +++");

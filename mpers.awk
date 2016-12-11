@@ -90,7 +90,6 @@ function what_is(what_idx, type_idx, special, item, \
 		returned_size = array_get(what_idx, "byte_size")
 		break
 	case "enumeration_type":
-		type_idx = array_get(what_idx, "type")
 		returned_size = array_get(what_idx, "byte_size")
 		printf("uint%s_t ", 8 * returned_size)
 		break
@@ -147,7 +146,7 @@ function what_is(what_idx, type_idx, special, item, \
 			if ("parent" in array[item] && \
 				array_get(item, "parent") == what_idx) {
 				returned = what_is(item)
-				printf("%s", array_get(item, "name"))
+				printf("%s", array[item]["name"])
 				if ("" != returned) {
 					printf("[%s]", returned)
 				}

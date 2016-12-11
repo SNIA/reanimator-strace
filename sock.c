@@ -27,34 +27,21 @@
 
 #include "defs.h"
 #include <sys/socket.h>
+#if defined ALPHA || defined SH || defined SH64
+# include <linux/ioctl.h>
+#endif
 #include <linux/sockios.h>
 #include <arpa/inet.h>
-#if defined(ALPHA) || defined(SH) || defined(SH64)
-# if defined(HAVE_SYS_IOCTL_H)
-#  include <sys/ioctl.h>
-# elif defined(HAVE_IOCTLS_H)
-#  include <ioctls.h>
-# endif
-#endif
 #include <net/if.h>
 
 #include "xlat/iffflags.h"
 
-static void
-print_ifreq_addr(struct tcb *tcp, const struct ifreq *ifr, const long addr)
-{
-	tprintf("{");
-	printxval(addrfams, ifr->ifr_addr.sa_family, "AF_???");
-	tprints(", ");
-	if (ifr->ifr_addr.sa_family == AF_INET) {
-		const struct sockaddr_in *sinp =
-			(struct sockaddr_in *) &ifr->ifr_addr;
-		tprintf("inet_addr(\"%s\")", inet_ntoa(sinp->sin_addr));
-	} else
-		printstr(tcp, addr + offsetof(struct ifreq, ifr_addr.sa_data),
-			 sizeof(ifr->ifr_addr.sa_data));
-	tprints("}");
-}
+#define PRINT_IFREQ_ADDR(tcp, ifr, sockaddr)					\
+	do {									\
+		tprints(#sockaddr "=");						\
+		print_sockaddr(tcp, &((ifr)->sockaddr),				\
+			       sizeof((ifr)->sockaddr));			\
+	} while (0)
 
 static void
 print_ifname(const char *ifname)
@@ -69,23 +56,19 @@ print_ifreq(struct tcb *tcp, const unsigned int code, const long arg,
 	switch (code) {
 	case SIOCSIFADDR:
 	case SIOCGIFADDR:
-		tprints("ifr_addr=");
-		print_ifreq_addr(tcp, ifr, arg);
+		PRINT_IFREQ_ADDR(tcp, ifr, ifr_addr);
 		break;
 	case SIOCSIFDSTADDR:
 	case SIOCGIFDSTADDR:
-		tprints("ifr_dstaddr=");
-		print_ifreq_addr(tcp, ifr, arg);
+		PRINT_IFREQ_ADDR(tcp, ifr, ifr_dstaddr);
 		break;
 	case SIOCSIFBRDADDR:
 	case SIOCGIFBRDADDR:
-		tprints("ifr_broadaddr=");
-		print_ifreq_addr(tcp, ifr, arg);
+		PRINT_IFREQ_ADDR(tcp, ifr, ifr_broadaddr);
 		break;
 	case SIOCSIFNETMASK:
 	case SIOCGIFNETMASK:
-		tprints("ifr_netmask=");
-		print_ifreq_addr(tcp, ifr, arg);
+		PRINT_IFREQ_ADDR(tcp, ifr, ifr_netmask);
 		break;
 	case SIOCSIFHWADDR:
 	case SIOCGIFHWADDR: {
@@ -101,7 +84,7 @@ print_ifreq(struct tcb *tcp, const unsigned int code, const long arg,
 	case SIOCSIFFLAGS:
 	case SIOCGIFFLAGS:
 		tprints("ifr_flags=");
-		printflags(iffflags, ifr->ifr_flags, "IFF_???");
+		printflags(iffflags, (unsigned short) ifr->ifr_flags, "IFF_???");
 		break;
 	case SIOCSIFMETRIC:
 	case SIOCGIFMETRIC:
@@ -201,12 +184,7 @@ decode_ifconf(struct tcb *tcp, const long addr)
 		tprints("{ifr_name=");
 		print_ifname(ifra[i].ifr_name);
 		tprints(", ");
-		if (verbose(tcp)) {
-			tprints("ifr_addr=");
-			print_ifreq_addr(tcp, &ifra[i],
-					 addr + i * sizeof(ifra[0]));
-		} else
-			tprints("...");
+		PRINT_IFREQ_ADDR(tcp, &ifra[i], ifr_addr);
 		tprints("}");
 	}
 	if (i < nifra)
@@ -224,8 +202,7 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	switch (code) {
 	case SIOCGIFCONF:
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(struct ifconf));
+		DS_SET_IOCTL_SIZE(struct ifconf);
 #endif /* ENABLE_DATASERIES */
 		return decode_ifconf(tcp, arg);
 
@@ -263,8 +240,7 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #endif
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(int));
+		DS_SET_IOCTL_SIZE(int);
 #endif /* ENABLE_DATASERIES */
 		printnum_int(tcp, arg, "%d");
 		break;
@@ -282,8 +258,7 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			return 0;
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(int));
+		DS_SET_IOCTL_SIZE(int);
 #endif /* ENABLE_DATASERIES */
 		printnum_int(tcp, arg, "%d");
 		break;
@@ -310,8 +285,7 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case SIOCSIFTXQLEN:
 	case SIOCSIFMAP:
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(struct ifreq));
+		DS_SET_IOCTL_SIZE(struct ifreq);
 #endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &ifr))
@@ -343,8 +317,7 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case SIOCGIFTXQLEN:
 	case SIOCGIFMAP:
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(struct ifreq));
+		DS_SET_IOCTL_SIZE(struct ifreq);
 #endif /* ENABLE_DATASERIES */
 		if (entering(tcp)) {
 			tprints(", ");

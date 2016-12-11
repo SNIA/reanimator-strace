@@ -200,8 +200,8 @@
 [5197] = { 3,	0,		SEN(printargs),			"cacheflush"		},
 [5198] = { 3,	0,		SEN(printargs),			"cachectl"		},
 [5199] = { 4,	0,		SEN(sysmips),			"sysmips"		},
-[5200] = { 2,	0,		SEN(io_setup),			"io_setup"		},
-[5201] = { 1,	0,		SEN(io_destroy),		"io_destroy"		},
+[5200] = { 2,	TM,		SEN(io_setup),			"io_setup"		},
+[5201] = { 1,	TM,		SEN(io_destroy),		"io_destroy"		},
 [5202] = { 5,	0,		SEN(io_getevents),		"io_getevents"		},
 [5203] = { 3,	0,		SEN(io_submit),			"io_submit"		},
 [5204] = { 3,	0,		SEN(io_cancel),			"io_cancel"		},
@@ -321,6 +321,11 @@
 [5318] = { 2,	0,		SEN(membarrier),		"membarrier",		},
 [5319] = { 3,	TM,		SEN(mlock2),			"mlock2"		},
 [5320] = { 6,	TD,		SEN(copy_file_range),		"copy_file_range"	},
+[5321] = { 6,	TD,		SEN(preadv2),			"preadv2"		},
+[5322] = { 6,	TD,		SEN(pwritev2),			"pwritev2"		},
+[5323] = { 4,	TM|SI,		SEN(pkey_mprotect),		"pkey_mprotect"		},
+[5324] = { 2,	0,		SEN(pkey_alloc),		"pkey_alloc"		},
+[5325] = { 1,	0,		SEN(pkey_free),			"pkey_free"		},
 
 # define SYS_socket_subcall      5400
 # include "subcall.h"

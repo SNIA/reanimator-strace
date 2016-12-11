@@ -44,11 +44,11 @@ cond_def()
 
 	local val
 	val="$(printf %s "$line" |
-		sed -n 's/^\([^[:space:]]\+\).*$/\1/p')"
+		sed -r -n 's/^([^[:space:]]+).*$/\1/p')"
 
 	local def
 	def="$(printf %s "${line}" |
-		sed -n 's/^[^[:space:]]\+[[:space:]]\+\([^[:space:]].*\)$/\1/p')"
+		sed -r -n 's/^[^[:space:]]+[[:space:]]+([^[:space:]].*)$/\1/p')"
 
 	if [ -n "$def" ]; then
 		cat <<-EOF
@@ -89,10 +89,10 @@ cond_xlat()
 	local line val m def xlat
 	line="$1"; shift
 
-	val="$(printf %s "${line}" | sed -n 's/^\([^[:space:]]\+\).*$/\1/p')"
+	val="$(printf %s "${line}" | sed -r -n 's/^([^[:space:]]+).*$/\1/p')"
 	m="${val%%|*}"
 	def="$(printf %s "${line}" |
-	       sed -n 's/^[^[:space:]]\+[[:space:]]\+\([^[:space:]].*\)$/\1/p')"
+	       sed -r -n 's/^[^[:space:]]+[[:space:]]+([^[:space:]].*)$/\1/p')"
 
 	if [ "${m}" = "${m#1<<}" ]; then
 		xlat="$(print_xlat "${val}")"
@@ -135,6 +135,9 @@ gen_header()
 	while read line; do
 		LC_COLLATE=C
 		case $line in
+		'#conditional')
+			unconditional=
+			;;
 		'#unconditional')
 			unconditional=1
 			;;
@@ -190,6 +193,9 @@ gen_header()
 	while read line; do
 		LC_COLLATE=C
 		case ${line} in
+		'#conditional')
+			unconditional=
+			;;
 		'#unconditional')
 			unconditional=1
 			;;

@@ -36,7 +36,7 @@
 #else
 
 # include "tests.h"
-# include <sys/syscall.h>
+# include <asm/unistd.h>
 
 # ifdef __NR_getgroups
 
@@ -67,7 +67,7 @@ get_groups(const long size, GID_TYPE *const g)
 	if (i != ngroups)
 		perror_msg_and_fail("%s(%#lx, %p)", SYSCALL_NAME, size, g);
 
-	printf("%s(%u, [", SYSCALL_NAME, (unsigned) size);
+	printf("%s(%d, [", SYSCALL_NAME, (int) size);
 	for (i = 0; i < ngroups; ++i) {
 		if (i)
 			printf(", ");
@@ -95,37 +95,24 @@ main(void)
 	printf("%s(0, NULL) = %ld\n", SYSCALL_NAME, rc);
 
 	rc = syscall(SYSCALL_NR, -1U, 0);
-	printf("%s(%u, NULL) = %ld %s (%m)\n",
-	       SYSCALL_NAME, -1U, rc, errno2name());
+	printf("%s(%d, NULL) = %s\n", SYSCALL_NAME, -1, sprintrc(rc));
 
 	rc = syscall(SYSCALL_NR, -1L, 0);
-	printf("%s(%u, NULL) = %ld %s (%m)\n",
-	       SYSCALL_NAME, -1U, rc, errno2name());
+	printf("%s(%d, NULL) = %s\n", SYSCALL_NAME, -1, sprintrc(rc));
 
 	const unsigned int ngroups_max = sysconf(_SC_NGROUPS_MAX);
 
 	rc = syscall(SYSCALL_NR, ngroups_max, 0);
-	if (rc < 0)
-		printf("%s(%u, NULL) = %ld %s (%m)\n",
-		       SYSCALL_NAME, ngroups_max, rc, errno2name());
-	else
-		printf("%s(%u, NULL) = %ld\n",
-		       SYSCALL_NAME, ngroups_max, rc);
+	printf("%s(%d, NULL) = %s\n", SYSCALL_NAME, ngroups_max, sprintrc(rc));
 
 	rc = syscall(SYSCALL_NR, (long) 0xffffffff00000000ULL | ngroups_max, 0);
-	if (rc < 0)
-		printf("%s(%u, NULL) = %ld %s (%m)\n",
-		       SYSCALL_NAME, ngroups_max, rc, errno2name());
-	else
-		printf("%s(%u, NULL) = %ld\n",
-		       SYSCALL_NAME, ngroups_max, rc);
+	printf("%s(%d, NULL) = %s\n", SYSCALL_NAME, ngroups_max, sprintrc(rc));
 
 	/* check how the second argument is decoded */
 	GID_TYPE *const g1 =
 		tail_alloc(ngroups ? sizeof(*g1) * ngroups : 1);
 	GID_TYPE *const g2 = tail_alloc(sizeof(*g2) * (ngroups + 1));
 	void *efault = g2 + ngroups + 1;
-	(void) tail_alloc(1);
 
 	get_groups(ngroups, g1);
 	get_groups(ngroups + 1, g1);
@@ -133,9 +120,8 @@ main(void)
 
 	if (ngroups) {
 		rc = syscall(SYSCALL_NR, ngroups, efault);
-		printf("%s(%u, %p) = %ld %s (%m)\n",
-		       SYSCALL_NAME, (unsigned) ngroups, efault,
-		       rc, errno2name());
+		printf("%s(%d, %p) = %s\n",
+		       SYSCALL_NAME, (unsigned) ngroups, efault, sprintrc(rc));
 	}
 
 	puts("+++ exited with 0 +++");

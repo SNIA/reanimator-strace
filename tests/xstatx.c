@@ -40,18 +40,12 @@
 #  error PRINT_SYSCALL_FOOTER must be defined
 # endif
 
+# include <errno.h>
 # include <stdio.h>
 # include <stddef.h>
 # include <time.h>
 # include <unistd.h>
-
-# if defined MAJOR_IN_SYSMACROS
-#  include <sys/sysmacros.h>
-# elif defined MAJOR_IN_MKDEV
-#  include <sys/mkdev.h>
-# else
-#  include <sys/types.h>
-# endif
+# include <sys/sysmacros.h>
 
 static void
 print_time(const time_t t)
@@ -63,13 +57,25 @@ print_time(const time_t t)
 
 	struct tm *p = localtime(&t);
 
-	if (p)
-		printf("%02d/%02d/%02d-%02d:%02d:%02d",
-		       p->tm_year + 1900, p->tm_mon + 1, p->tm_mday,
-		       p->tm_hour, p->tm_min, p->tm_sec);
-	else
-		printf("%llu", (unsigned long long) t);
+	if (p) {
+		char buf[256];
+
+		strftime(buf, sizeof(buf), "%FT%T%z", p);
+
+		printf("%s", buf);
+	} else {
+		printf("%llu", zero_extend_signed_to_ull(t));
+	}
 }
+
+# ifndef STRUCT_STAT
+#  define STRUCT_STAT struct stat
+#  define STRUCT_STAT_STR "struct stat"
+#  define STRUCT_STAT_IS_STAT64 0
+# endif
+# ifndef SAMPLE_SIZE
+#  define SAMPLE_SIZE 43147718418ULL
+# endif
 
 typedef off_t libc_off_t;
 
@@ -88,54 +94,58 @@ typedef off_t libc_off_t;
 #  undef st_atime
 #  undef st_mtime
 #  undef st_ctime
-#  undef dev_t
-#  undef gid_t
-#  undef ino_t
-#  undef loff_t
-#  undef mode_t
-#  undef nlink_t
-#  undef off64_t
-#  undef off_t
-#  undef time_t
-#  undef uid_t
-#  define dev_t __kernel_dev_t
-#  define gid_t __kernel_gid_t
-#  define ino_t __kernel_ino_t
-#  define loff_t __kernel_loff_t
-#  define mode_t __kernel_mode_t
-#  define nlink_t __kernel_nlink_t
-#  define off64_t __kernel_off64_t
-#  define off_t __kernel_off_t
-#  define time_t __kernel_time_t
-#  define uid_t __kernel_uid_t
 #  include "asm_stat.h"
-# else
-#  undef HAVE_STRUCT_STAT_ST_ATIME_NSEC
-#  ifdef HAVE_STRUCT_STAT_ST_ATIM_TV_NSEC
-#   define HAVE_STRUCT_STAT_ST_ATIME_NSEC 1
-#   undef st_atime_nsec
-#   define st_atime_nsec st_atim.tv_nsec
-#  endif
+
+#  if STRUCT_STAT_IS_STAT64
+#   undef HAVE_STRUCT_STAT_ST_MTIME_NSEC
+#   if defined MPERS_IS_m32
+#    ifdef HAVE_M32_STRUCT_STAT64_ST_MTIME_NSEC
+#     define HAVE_STRUCT_STAT_ST_MTIME_NSEC 1
+#    endif
+#   elif defined MPERS_IS_mx32
+#    ifdef HAVE_MX32_STRUCT_STAT64_ST_MTIME_NSEC
+#     define HAVE_STRUCT_STAT_ST_MTIME_NSEC 1
+#    endif
+#   elif defined HAVE_STRUCT_STAT64_ST_MTIME_NSEC
+#    define HAVE_STRUCT_STAT_ST_MTIME_NSEC 1
+#   endif /* MPERS_IS_m32 || MPERS_IS_mx32 || HAVE_STRUCT_STAT64_ST_MTIME_NSEC */
+#  else /* !STRUCT_STAT_IS_STAT64 */
+#   if defined MPERS_IS_m32
+#    undef HAVE_STRUCT_STAT_ST_MTIME_NSEC
+#    ifdef HAVE_M32_STRUCT_STAT_ST_MTIME_NSEC
+#     define HAVE_STRUCT_STAT_ST_MTIME_NSEC 1
+#    endif
+#   elif defined MPERS_IS_mx32
+#    undef HAVE_STRUCT_STAT_ST_MTIME_NSEC
+#    ifdef HAVE_MX32_STRUCT_STAT_ST_MTIME_NSEC
+#     define HAVE_STRUCT_STAT_ST_MTIME_NSEC 1
+#    endif
+#   endif /*  MPERS_IS_m32 || MPERS_IS_mx32 */
+#  endif /* STRUCT_STAT_IS_STAT64 */
+
+# else /* !USE_ASM_STAT */
 #  undef HAVE_STRUCT_STAT_ST_MTIME_NSEC
 #  ifdef HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC
 #   define HAVE_STRUCT_STAT_ST_MTIME_NSEC 1
-#   undef st_mtime_nsec
-#   define st_mtime_nsec st_mtim.tv_nsec
-#  endif
-#  undef HAVE_STRUCT_STAT_ST_CTIME_NSEC
-#  ifdef HAVE_STRUCT_STAT_ST_CTIM_TV_NSEC
-#   define HAVE_STRUCT_STAT_ST_CTIME_NSEC 1
+#   undef st_atime_nsec
+#   define st_atime_nsec st_atim.tv_nsec
 #   undef st_ctime_nsec
 #   define st_ctime_nsec st_ctim.tv_nsec
-#  endif
+#   undef st_mtime_nsec
+#   define st_mtime_nsec st_mtim.tv_nsec
+#  endif /* HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC */
 # endif
 
-# ifndef STRUCT_STAT
-#  define STRUCT_STAT struct stat
-#  define STRUCT_STAT_STR "struct stat"
+# ifndef TEST_BOGUS_STRUCT_STAT
+#  define TEST_BOGUS_STRUCT_STAT 1
 # endif
-# ifndef SAMPLE_SIZE
-#  define SAMPLE_SIZE 43147718418
+
+# ifndef IS_FSTAT
+#  define IS_STAT 0
+# endif
+
+# ifndef OLD_STAT
+#  define OLD_STAT 0
 # endif
 
 static void
@@ -163,46 +173,50 @@ static void
 print_stat(const STRUCT_STAT *st)
 {
 	printf("{st_dev=makedev(%u, %u)",
-	       (unsigned int) major(st->st_dev),
-	       (unsigned int) minor(st->st_dev));
-	printf(", st_ino=%llu", (unsigned long long) st->st_ino);
+	       (unsigned int) major(zero_extend_signed_to_ull(st->st_dev)),
+	       (unsigned int) minor(zero_extend_signed_to_ull(st->st_dev)));
+	printf(", st_ino=%llu", zero_extend_signed_to_ull(st->st_ino));
 	printf(", st_mode=");
 	print_ftype(st->st_mode);
 	printf("|");
 	print_perms(st->st_mode);
-	printf(", st_nlink=%u", (unsigned int) st->st_nlink);
-	printf(", st_uid=%u", (unsigned int) st->st_uid);
-	printf(", st_gid=%u", (unsigned int) st->st_gid);
-	printf(", st_blksize=%u", (unsigned int) st->st_blksize);
-	printf(", st_blocks=%u", (unsigned int) st->st_blocks);
+	printf(", st_nlink=%llu", zero_extend_signed_to_ull(st->st_nlink));
+	printf(", st_uid=%llu", zero_extend_signed_to_ull(st->st_uid));
+	printf(", st_gid=%llu", zero_extend_signed_to_ull(st->st_gid));
+# if OLD_STAT
+	printf(", st_blksize=0, st_blocks=0");
+# else /* !OLD_STAT */
+	printf(", st_blksize=%llu", zero_extend_signed_to_ull(st->st_blksize));
+	printf(", st_blocks=%llu", zero_extend_signed_to_ull(st->st_blocks));
+# endif /* OLD_STAT */
 
 	switch (st->st_mode & S_IFMT) {
 	case S_IFCHR: case S_IFBLK:
 		printf(", st_rdev=makedev(%u, %u)",
-		       (unsigned int) major(st->st_rdev),
-		       (unsigned int) minor(st->st_rdev));
+		       (unsigned int) major(zero_extend_signed_to_ull(st->st_rdev)),
+		       (unsigned int) minor(zero_extend_signed_to_ull(st->st_rdev)));
 		break;
 	default:
-		printf(", st_size=%llu", (unsigned long long) st->st_size);
+		printf(", st_size=%llu", zero_extend_signed_to_ull(st->st_size));
 	}
 
 	printf(", st_atime=");
-	print_time(st->st_atime);
-# ifdef HAVE_STRUCT_STAT_ST_ATIME_NSEC
+	print_time(sign_extend_unsigned_to_ll(st->st_atime));
+# if defined(HAVE_STRUCT_STAT_ST_MTIME_NSEC) && !OLD_STAT
 	if (st->st_atime_nsec)
-		printf(".%09lu", (unsigned long) st->st_atime_nsec);
+		printf(".%09llu", zero_extend_signed_to_ull(st->st_atime_nsec));
 # endif
 	printf(", st_mtime=");
-	print_time(st->st_mtime);
-# ifdef HAVE_STRUCT_STAT_ST_MTIME_NSEC
+	print_time(sign_extend_unsigned_to_ll(st->st_mtime));
+# if defined(HAVE_STRUCT_STAT_ST_MTIME_NSEC) && !OLD_STAT
 	if (st->st_mtime_nsec)
-		printf(".%09lu", (unsigned long) st->st_mtime_nsec);
+		printf(".%09llu", zero_extend_signed_to_ull(st->st_mtime_nsec));
 # endif
 	printf(", st_ctime=");
-	print_time(st->st_ctime);
-# ifdef HAVE_STRUCT_STAT_ST_CTIME_NSEC
+	print_time(sign_extend_unsigned_to_ll(st->st_ctime));
+# if defined(HAVE_STRUCT_STAT_ST_MTIME_NSEC) && !OLD_STAT
 	if (st->st_ctime_nsec)
-		printf(".%09lu", (unsigned long) st->st_ctime_nsec);
+		printf(".%09llu", zero_extend_signed_to_ull(st->st_ctime_nsec));
 # endif
 	printf("}");
 }
@@ -233,27 +247,55 @@ create_sample(const char *fname, const libc_off_t size)
 int
 main(void)
 {
+# if !IS_FSTAT
+	static const char full[] = "/dev/full";
+# endif
 	static const char sample[] = TEST_SYSCALL_STR ".sample";
 	STRUCT_STAT st[2];
 
-	int rc = create_sample(sample, SAMPLE_SIZE);
+	int rc;
+
+	rc = create_sample(sample, SAMPLE_SIZE);
 	if (rc) {
 		(void) unlink(sample);
 		return rc;
 	}
 
-	if (TEST_SYSCALL_INVOKE(sample, st)) {
-		perror(TEST_SYSCALL_STR);
-		(void) unlink(sample);
-		return 77;
+# if TEST_BOGUS_STRUCT_STAT
+	STRUCT_STAT *st_cut = tail_alloc(sizeof(long) * 4);
+	rc = TEST_SYSCALL_INVOKE(sample, st_cut);
+	PRINT_SYSCALL_HEADER(sample);
+	printf("%p", st_cut);
+	PRINT_SYSCALL_FOOTER(rc);
+# endif
+
+# if !IS_FSTAT
+	rc = TEST_SYSCALL_INVOKE(full, st);
+	PRINT_SYSCALL_HEADER(full);
+	if (rc)
+		printf("%p", st);
+	else
+		print_stat(st);
+	PRINT_SYSCALL_FOOTER(rc);
+# endif
+
+	if ((rc = TEST_SYSCALL_INVOKE(sample, st))) {
+# if OLD_STAT
+		if (errno != EOVERFLOW)
+# endif
+		{
+			perror(TEST_SYSCALL_STR);
+			(void) unlink(sample);
+			return 77;
+		}
 	}
 	(void) unlink(sample);
-	if ((unsigned long long) SAMPLE_SIZE !=
-	    (unsigned long long) st[0].st_size) {
+	if (!rc && zero_extend_signed_to_ull(SAMPLE_SIZE) !=
+	    zero_extend_signed_to_ull(st[0].st_size)) {
 		fprintf(stderr, "Size mismatch: "
 				"requested size(%llu) != st_size(%llu)\n",
-			(unsigned long long) SAMPLE_SIZE,
-			(unsigned long long) st[0].st_size);
+			zero_extend_signed_to_ull(SAMPLE_SIZE),
+			zero_extend_signed_to_ull(st[0].st_size));
 		fprintf(stderr, "The most likely reason for this is incorrect"
 				" definition of %s.\n"
 				"Here is some diagnostics that might help:\n",
@@ -290,6 +332,7 @@ main(void)
 				", sizeof(st_size) = %zu\n",
 			STRUCT_STAT_STR, offsetof(STRUCT_STAT, st_size),
 			sizeof(st[0].st_size));
+# if !OLD_STAT
 		fprintf(stderr, "offsetof(%s, st_blksize) = %zu"
 				", sizeof(st_blksize) = %zu\n",
 			STRUCT_STAT_STR, offsetof(STRUCT_STAT, st_blksize),
@@ -298,12 +341,16 @@ main(void)
 				", sizeof(st_blocks) = %zu\n",
 			STRUCT_STAT_STR, offsetof(STRUCT_STAT, st_blocks),
 			sizeof(st[0].st_blocks));
+# endif /* !OLD_STAT */
 		return 77;
 	}
 
 	PRINT_SYSCALL_HEADER(sample);
-	print_stat(st);
-	PRINT_SYSCALL_FOOTER;
+	if (rc)
+		printf("%p", st);
+	else
+		print_stat(st);
+	PRINT_SYSCALL_FOOTER(rc);
 
 	puts("+++ exited with 0 +++");
 	return 0;

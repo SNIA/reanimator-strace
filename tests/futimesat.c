@@ -28,18 +28,15 @@
  */
 
 #include "tests.h"
-#include <sys/syscall.h>
+#include <asm/unistd.h>
 
 #ifdef __NR_futimesat
 
+# include <stdint.h>
 # include <stdio.h>
 # include <sys/time.h>
 # include <unistd.h>
 
-#define CAST_NUM(n)						\
-	(sizeof(n) == sizeof(long) ?				\
-		(unsigned long long) (unsigned long) (n) :	\
-		(unsigned long long) (n))
 
 int
 main(void)
@@ -49,31 +46,36 @@ main(void)
 		perror_msg_and_fail("gettimeofday");
 
 	static const char sample[] = "futimesat_sample";
-	unsigned long dirfd = (unsigned long) 0xdeadbeef00000000 | -100U;
+	unsigned long dirfd = (unsigned long) 0xdeadbeef00000000ULL | -100U;
 
 	long rc = syscall(__NR_futimesat, dirfd, sample, 0);
 	printf("futimesat(AT_FDCWD, \"%s\", NULL) = %ld %s (%m)\n",
 	       sample, rc, errno2name());
 
 	struct timeval *const ts = tail_alloc(sizeof(*ts) * 2);
-	(void) tail_alloc(1);
-	dirfd = (unsigned long) 0xdeadbeefffffffff;
-
-	rc = syscall(__NR_futimesat, dirfd, 0, ts + 1);
-	printf("futimesat(%d, NULL, %p) = %ld %s (%m)\n",
-	       (int) dirfd, ts + 1, rc, errno2name());
+	dirfd = (unsigned long) 0xdeadbeefffffffffULL;
 
 	ts[0].tv_sec = tv.tv_sec;
 	ts[0].tv_usec = tv.tv_usec;
 	ts[1].tv_sec = tv.tv_sec - 1;
 	ts[1].tv_usec = tv.tv_usec + 1;
 
+	rc = syscall(__NR_futimesat, dirfd, 0, ts + 2);
+	printf("futimesat(%d, NULL, %p) = %ld %s (%m)\n",
+	       (int) dirfd, ts + 2, rc, errno2name());
+
+	rc = syscall(__NR_futimesat, dirfd, 0, ts + 1);
+	printf("futimesat(%d, NULL, [{tv_sec=%jd, tv_usec=%jd}, %p]) = "
+	       "%ld %s (%m)\n", (int) dirfd,
+	       (intmax_t) ts[1].tv_sec, (intmax_t) ts[1].tv_usec,
+	       ts + 2, rc, errno2name());
+
 	(void) close(0);
 	rc = syscall(__NR_futimesat, 0, "", ts);
-	printf("futimesat(0, \"\", [{%llu, %llu}, {%llu, %llu}])"
-	       " = %ld %s (%m)\n",
-	       CAST_NUM(ts[0].tv_sec), CAST_NUM(ts[0].tv_usec),
-	       CAST_NUM(ts[1].tv_sec), CAST_NUM(ts[1].tv_usec),
+	printf("futimesat(0, \"\", [{tv_sec=%jd, tv_usec=%jd}, "
+	       "{tv_sec=%jd, tv_usec=%jd}]) = %ld %s (%m)\n",
+	       (intmax_t) ts[0].tv_sec, (intmax_t) ts[0].tv_usec,
+	       (intmax_t) ts[1].tv_sec, (intmax_t) ts[1].tv_usec,
 	       rc, errno2name());
 
 	puts("+++ exited with 0 +++");

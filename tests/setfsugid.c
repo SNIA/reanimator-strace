@@ -30,15 +30,26 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "kernel_types.h"
+
+void
+printuid(unsigned UGID_TYPE id)
+{
+	if (id == (unsigned UGID_TYPE) -1U)
+		printf("-1");
+	else
+		printf("%u", id);
+}
+
 int
 main(void)
 {
 	unsigned int ugid = GETUGID;
 
-	const long tests[] = {
+	const kernel_ulong_t tests[] = {
 		ugid,
 		0xffff0000U | ugid,
-		(unsigned long) 0xffffffff00000000ULL | ugid,
+		(kernel_ulong_t) 0xffffffff00000000ULL | ugid,
 		0xffffU,
 		-1U,
 		-1L,
@@ -54,7 +65,9 @@ main(void)
 		unsigned int rc;
 
 		rc = syscall(SYSCALL_NR, tests[i]);
-		printf("%s(%u) = %u\n", SYSCALL_NAME, num, rc);
+		printf("%s(", SYSCALL_NAME);
+		printuid(num);
+		printf(") = %u\n", rc);
 
 		rc = syscall(SYSCALL_NR, ugid);
 		printf("%s(%u) = %u\n", SYSCALL_NAME, ugid, rc);

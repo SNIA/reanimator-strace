@@ -28,7 +28,7 @@
  */
 
 #include "tests.h"
-#include <sys/syscall.h>
+#include <asm/unistd.h>
 #include <sched.h>
 
 #if defined __NR_sched_getaffinity && defined __NR_sched_setaffinity \
@@ -83,7 +83,7 @@ main(void)
 	for (i = 0, cpu = 0, sep = ""; i < cpuset_size * 8; ++i) {
 		if (CPU_ISSET_S(i, cpuset_size, cpuset)) {
 			printf("%s%u", sep, i);
-			sep = " ";
+			sep = ", ";
 			cpu = i;
 		}
 	}
@@ -104,7 +104,7 @@ main(void)
 	for (i = 0, sep = ""; i < (unsigned) ret_size * 8; ++i) {
 		if (CPU_ISSET_S(i, (unsigned) ret_size, cpuset)) {
 			printf("%s%u", sep, i);
-			sep = " ";
+			sep = ", ";
 		}
 	}
 	printf("]) = %d\n", ret_size);

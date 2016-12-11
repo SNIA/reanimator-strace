@@ -28,7 +28,7 @@
  */
 
 #include "tests.h"
-#include <sys/syscall.h>
+#include <asm/unistd.h>
 
 #ifdef __NR_move_pages
 
@@ -136,29 +136,23 @@ static void
 print_stat_pages(const unsigned long pid, const unsigned long count,
 		 const void **const pages, int *const status)
 {
-	const unsigned long flags = (unsigned long) 0xfacefeed00000002;
+	const unsigned long flags = (unsigned long) 0xfacefeed00000002ULL;
 
 	long rc = syscall(__NR_move_pages,
 			  pid, count, pages, NULL, status, flags);
+	const char *errstr = sprintrc(rc);
+	printf("move_pages(%d, %lu, ", (int) pid, count);
+	print_page_array(pages, count, 0);
+	printf(", NULL, ");
 	if (rc) {
-		int saved_errno = errno;
-		printf("move_pages(%d, %lu, ", (int) pid, count);
-		print_page_array(pages, count, 0);
-		printf(", NULL, ");
 		if (count)
 			printf("%p", status);
 		else
 			printf("[]");
-		errno = saved_errno;
-		printf(", MPOL_MF_MOVE) = %ld %s (%m)\n",
-		       rc, errno2name());
 	} else {
-		printf("move_pages(%d, %lu, ", (int) pid, count);
-		print_page_array(pages, count, 0);
-		printf(", NULL, ");
 		print_status_array(status, count);
-		printf(", MPOL_MF_MOVE) = 0\n");
 	}
+	printf(", MPOL_MF_MOVE) = %s\n", errstr);
 }
 
 static void
@@ -169,12 +163,12 @@ print_move_pages(const unsigned long pid,
 		 int *const nodes,
 		 int *const status)
 {
-	const unsigned long flags = (unsigned long) 0xfacefeed00000004;
+	const unsigned long flags = (unsigned long) 0xfacefeed00000004ULL;
 	count += offset;
 
 	long rc = syscall(__NR_move_pages,
 			  pid, count, pages, nodes, status, flags);
-	int saved_errno = errno;
+	const char *errstr = sprintrc(rc);
 	printf("move_pages(%d, %lu, ", (int) pid, count);
 	print_page_array(pages, count, offset);
 	printf(", ");
@@ -184,29 +178,21 @@ print_move_pages(const unsigned long pid,
 		printf("%p", status);
 	else
 		printf("[]");
-	printf(", MPOL_MF_MOVE_ALL) = ");
-	if (rc) {
-		errno = saved_errno;
-		printf("%ld %s (%m)\n", rc, errno2name());
-	} else {
-		puts("0");
-	}
+	printf(", MPOL_MF_MOVE_ALL) = %s\n", errstr);
 }
 
 int
 main(void)
 {
 	const unsigned long pid =
-		(unsigned long) 0xfacefeed00000000 | getpid();
+		(unsigned long) 0xfacefeed00000000ULL | getpid();
 	unsigned long count = 1;
-	(void) tail_alloc(1);
 	const unsigned page_size = get_page_size();
 	const void *const page = tail_alloc(page_size);
 	const void *const efault = page + page_size;
 	const void **pages = tail_alloc(sizeof(*pages));
 	int *nodes = tail_alloc(sizeof(*nodes));
 	int *status = tail_alloc(sizeof(*status));
-	(void) tail_alloc(1);
 
 	print_stat_pages(pid, 0, pages, status);
 	print_move_pages(pid, 0, 0, pages, nodes, status);

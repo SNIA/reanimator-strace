@@ -25,8 +25,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TESTS_H_
-# define TESTS_H_
+#ifndef STRACE_TESTS_H
+#define STRACE_TESTS_H
 
 # ifdef HAVE_CONFIG_H
 #  include "config.h"
@@ -34,6 +34,11 @@
 
 # include <sys/types.h>
 # include "gcc_compat.h"
+
+/* Tests of "strace -v" are expected to define VERBOSE to 1. */
+#ifndef VERBOSE
+# define VERBOSE 0
+#endif
 
 /* Cached sysconf(_SC_PAGESIZE). */
 size_t get_page_size(void);
@@ -62,6 +67,16 @@ void *tail_alloc(const size_t)
 void *tail_memdup(const void *, const size_t)
 	ATTRIBUTE_MALLOC ATTRIBUTE_ALLOC_SIZE((2));
 
+/*
+ * Fill memory (pointed by ptr, having size bytes) with different bytes (with
+ * values starting with start and resetting every period) in order to catch
+ * sign, byte order and/or alignment errors.
+ */
+void fill_memory_ex(char *ptr, size_t size, unsigned char start,
+		    unsigned char period);
+/* Shortcut for fill_memory_ex(ptr, size, 0x80, 0x80) */
+void fill_memory(char *ptr, size_t size);
+
 /* Close stdin, move stdout to a non-standard descriptor, and print. */
 void tprintf(const char *, ...)
 	ATTRIBUTE_FORMAT((printf, 1, 2));
@@ -78,8 +93,14 @@ const char *hexquote_strndup(const char *, size_t);
 /* Return inode number of socket descriptor. */
 unsigned long inode_of_sockfd(int);
 
-/* Print string in quoted form. */
+/* Print string in a quoted form. */
 void print_quoted_string(const char *);
+
+/* Print memory in a quoted form. */
+void print_quoted_memory(const char *, size_t);
+
+/* Read an int from the file. */
+int read_int_from_file(const char *, int *);
 
 /* Check whether given uid matches kernel overflowuid. */
 void check_overflowuid(const int);
@@ -90,6 +111,14 @@ void check_overflowgid(const int);
 /* Translate errno to its name. */
 const char *errno2name(void);
 
+/* Translate signal number to its name. */
+const char *signal2name(int);
+
+/* Print return code and, in case return code is -1, errno information. */
+const char *sprintrc(long rc);
+/* sprintrc variant suitable for usage as part of grep pattern. */
+const char *sprintrc_grep(long rc);
+
 struct xlat;
 
 /* Print flags in symbolic form according to xlat table. */
@@ -98,10 +127,70 @@ int printflags(const struct xlat *, const unsigned long long, const char *);
 /* Print constant in symbolic form according to xlat table. */
 int printxval(const struct xlat *, const unsigned long long, const char *);
 
+/* Invoke a socket syscall, either directly or via __NR_socketcall. */
+int socketcall(const int nr, const int call,
+	       long a1, long a2, long a3, long a4, long a5);
+
+/* Wrappers for recvmmsg and sendmmsg syscalls. */
+struct mmsghdr;
+struct timespec;
+int recv_mmsg(int, struct mmsghdr *, unsigned int, unsigned int, struct timespec *);
+int send_mmsg(int, struct mmsghdr *, unsigned int, unsigned int);
+
+/* Create a pipe with maximized descriptor numbers. */
+void pipe_maxfd(int pipefd[2]);
+
 # define ARRAY_SIZE(arg) ((unsigned int) (sizeof(arg) / sizeof((arg)[0])))
 # define LENGTH_OF(arg) ((unsigned int) sizeof(arg) - 1)
+
+/* Zero-extend a signed integer type to unsigned long long. */
+#define zero_extend_signed_to_ull(v) \
+	(sizeof(v) == sizeof(char) ? (unsigned long long) (unsigned char) (v) : \
+	 sizeof(v) == sizeof(short) ? (unsigned long long) (unsigned short) (v) : \
+	 sizeof(v) == sizeof(int) ? (unsigned long long) (unsigned int) (v) : \
+	 sizeof(v) == sizeof(long) ? (unsigned long long) (unsigned long) (v) : \
+	 (unsigned long long) (v))
+
+/* Sign-extend an unsigned integer type to long long. */
+#define sign_extend_unsigned_to_ll(v) \
+	(sizeof(v) == sizeof(char) ? (long long) (char) (v) : \
+	 sizeof(v) == sizeof(short) ? (long long) (short) (v) : \
+	 sizeof(v) == sizeof(int) ? (long long) (int) (v) : \
+	 sizeof(v) == sizeof(long) ? (long long) (long) (v) : \
+	 (long long) (v))
 
 # define SKIP_MAIN_UNDEFINED(arg) \
 	int main(void) { error_msg_and_skip("undefined: %s", arg); }
 
-#endif
+/*
+ * The kernel used to define 64-bit types on 64-bit systems on a per-arch
+ * basis.  Some architectures would use unsigned long and others would use
+ * unsigned long long.  These types were exported as part of the
+ * kernel-userspace ABI and now must be maintained forever.  This matches
+ * what the kernel exports for each architecture so we don't need to cast
+ * every printing of __u64 or __s64 to stdint types.
+ */
+# if SIZEOF_LONG == 4
+#  define PRI__64 "ll"
+# elif defined ALPHA || defined IA64 || defined MIPS || defined POWERPC
+#  define PRI__64 "l"
+# else
+#  define PRI__64 "ll"
+# endif
+
+# define PRI__d64 PRI__64"d"
+# define PRI__u64 PRI__64"u"
+# define PRI__x64 PRI__64"x"
+
+# if WORDS_BIGENDIAN
+#  define LL_PAIR(HI, LO) (HI), (LO)
+# else
+#  define LL_PAIR(HI, LO) (LO), (HI)
+# endif
+# define LL_VAL_TO_PAIR(llval) LL_PAIR((long) ((llval) >> 32), (long) (llval))
+
+# define _STR(_arg) #_arg
+# define ARG_STR(_arg) (_arg), #_arg
+# define ARG_ULL_STR(_arg) _arg##ULL, #_arg
+
+#endif /* !STRACE_TESTS_H */

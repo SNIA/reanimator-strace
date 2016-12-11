@@ -84,7 +84,8 @@ print_sg_io_v3_req(struct tcb *tcp, const long arg)
 		tprintf(", data[%u]=", sg_io.dxfer_len);
 		if (sg_io.iovec_count)
 			tprint_iov_upto(tcp, sg_io.iovec_count,
-					(unsigned long) sg_io.dxferp, 1,
+					(unsigned long) sg_io.dxferp,
+					IOV_DECODE_STR,
 					sg_io.dxfer_len);
 		else
 			print_sg_io_buffer(tcp, (unsigned long) sg_io.dxferp,
@@ -112,8 +113,9 @@ print_sg_io_v3_res(struct tcb *tcp, const long arg)
 		tprintf(", data[%u]=", din_len);
 		if (sg_io.iovec_count)
 			tprint_iov_upto(tcp, sg_io.iovec_count,
-					(unsigned long) sg_io.dxferp, 1,
-					din_len);
+					(unsigned long) sg_io.dxferp,
+					syserror(tcp) ? IOV_DECODE_ADDR :
+					IOV_DECODE_STR, din_len);
 		else
 			print_sg_io_buffer(tcp, (unsigned long) sg_io.dxferp,
 					   din_len);
@@ -146,7 +148,7 @@ print_sg_io_v4_req(struct tcb *tcp, const long arg)
 	printxval(bsg_subprotocol, sg_io.subprotocol, "BSG_SUB_PROTOCOL_???");
 	tprintf(", request[%u]=", sg_io.request_len);
 	print_sg_io_buffer(tcp, sg_io.request, sg_io.request_len);
-	tprintf(", request_tag=%llu", (unsigned long long) sg_io.request_tag);
+	tprintf(", request_tag=%" PRI__u64, sg_io.request_tag);
 	tprintf(", request_attr=%u", sg_io.request_attr);
 	tprintf(", request_priority=%u", sg_io.request_priority);
 	tprintf(", request_extra=%u", sg_io.request_extra);
@@ -158,12 +160,12 @@ print_sg_io_v4_req(struct tcb *tcp, const long arg)
 	tprintf(", din_xfer_len=%u", sg_io.din_xfer_len);
 	tprintf(", timeout=%u", sg_io.timeout);
 	tprintf(", flags=%u", sg_io.flags);
-	tprintf(", usr_ptr=%llu", (unsigned long long) sg_io.usr_ptr);
+	tprintf(", usr_ptr=%" PRI__u64, sg_io.usr_ptr);
 	tprintf(", spare_in=%u", sg_io.spare_in);
 	tprintf(", dout[%u]=", sg_io.dout_xfer_len);
 	if (sg_io.dout_iovec_count)
 		tprint_iov_upto(tcp, sg_io.dout_iovec_count, sg_io.dout_xferp,
-				1, sg_io.dout_xfer_len);
+				IOV_DECODE_STR, sg_io.dout_xfer_len);
 	else
 		print_sg_io_buffer(tcp, sg_io.dout_xferp, sg_io.dout_xfer_len);
 	return 1;
@@ -188,7 +190,8 @@ print_sg_io_v4_res(struct tcb *tcp, const long arg)
 	tprintf(", din[%u]=", din_len);
 	if (sg_io.din_iovec_count)
 		tprint_iov_upto(tcp, sg_io.din_iovec_count, sg_io.din_xferp,
-				1, din_len);
+				syserror(tcp) ? IOV_DECODE_ADDR :
+				IOV_DECODE_STR, din_len);
 	else
 		print_sg_io_buffer(tcp, sg_io.din_xferp, din_len);
 	tprintf(", driver_status=%u", sg_io.driver_status);
@@ -200,7 +203,7 @@ print_sg_io_v4_res(struct tcb *tcp, const long arg)
 	tprintf(", response_len=%u", sg_io.response_len);
 	tprintf(", din_resid=%u", sg_io.din_resid);
 	tprintf(", dout_resid=%u", sg_io.dout_resid);
-	tprintf(", generated_tag=%llu", (unsigned long long) sg_io.generated_tag);
+	tprintf(", generated_tag=%" PRI__u64, sg_io.generated_tag);
 	tprintf(", spare_out=%u", sg_io.spare_out);
 }
 
@@ -228,14 +231,12 @@ print_sg_io_req(struct tcb *tcp, uint32_t iid, const long arg)
 	switch (iid) {
 	case 'S':
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(struct sg_io_hdr));
+		DS_SET_IOCTL_SIZE(struct sg_io_hdr);
 #endif /* ENABLE_DATASERIES */
 		return print_sg_io_v3_req(tcp, arg);
 	case 'Q':
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(struct sg_io_v4));
+		DS_SET_IOCTL_SIZE(struct sg_io_v4);
 #endif /* ENABLE_DATASERIES */
 		return print_sg_io_v4_req(tcp, arg);
 	default:
@@ -251,15 +252,13 @@ print_sg_io_res(struct tcb *tcp, uint32_t iid, const long arg)
 	switch (iid) {
 	case 'S':
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(struct sg_io_hdr));
+		DS_SET_IOCTL_SIZE(struct sg_io_hdr);
 #endif /* ENABLE_DATASERIES */
 		print_sg_io_v3_res(tcp, arg);
 		break;
 	case 'Q':
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(struct sg_io_v4));
+		DS_SET_IOCTL_SIZE(struct sg_io_v4);
 #endif /* ENABLE_DATASERIES */
 		print_sg_io_v4_res(tcp, arg);
 		break;
@@ -289,7 +288,7 @@ scsi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			else
 				print_sg_io_res(tcp, iid, arg);
 		}
-		tprintf("}");
+		tprints("}");
 		return RVAL_DECODED | 1;
 	}
 }

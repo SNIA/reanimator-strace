@@ -44,18 +44,35 @@
 #include "ptrace.h"
 
 int
-string_to_uint(const char *str)
+string_to_uint_ex(const char *const str, char **const endptr,
+		  const unsigned int max_val, const char *const accepted_ending)
 {
-	char *error;
-	long value;
+	char *end;
+	long val;
 
 	if (!*str)
 		return -1;
+
 	errno = 0;
-	value = strtol(str, &error, 10);
-	if (errno || *error || value < 0 || (long)(int)value != value)
+	val = strtol(str, &end, 10);
+
+	if (str == end || val < 0 || (unsigned long) val > max_val
+	    || (val == LONG_MAX && errno == ERANGE))
 		return -1;
-	return (int)value;
+
+	if (*end && (!accepted_ending || !strchr(accepted_ending, *end)))
+		return -1;
+
+	if (endptr)
+		*endptr = end;
+
+	return (int) val;
+}
+
+int
+string_to_uint(const char *const str)
+{
+	return string_to_uint_upto(str, INT_MAX);
 }
 
 int
@@ -121,7 +138,7 @@ tv_mul(struct timeval *tv, const struct timeval *a, int n)
 }
 
 const char *
-xlookup64(const struct xlat *xlat, const uint64_t val)
+xlookup(const struct xlat *xlat, const uint64_t val)
 {
 	for (; xlat->str != NULL; xlat++)
 		if (xlat->val == val)
@@ -171,7 +188,7 @@ int
 next_set_bit(const void *bit_array, unsigned cur_bit, unsigned size_bits)
 {
 	const unsigned endian = 1;
-	int little_endian = *(char*)&endian;
+	int little_endian = * (char *) (void *) &endian;
 
 	const uint8_t *array = bit_array;
 	unsigned pos = cur_bit / 8;
@@ -204,10 +221,18 @@ next_set_bit(const void *bit_array, unsigned cur_bit, unsigned size_bits)
 		pos++;
 	}
 }
-/*
+
+/**
  * Print entry in struct xlat table, if there.
+ *
+ * @param val  Value to search a literal representation for.
+ * @param dflt String (abbreviated in comment syntax) which should be emitted
+ *             if no appropriate xlat value has been found.
+ * @param xlat (And the following arguments) Pointers to arrays of xlat values.
+ *             The last argument should be NULL.
+ * @return     1 if appropriate xlat value has been found, 0 otherwise.
  */
-void
+int
 printxvals(const uint64_t val, const char *dflt, const struct xlat *xlat, ...)
 {
 	va_list args;
@@ -219,13 +244,49 @@ printxvals(const uint64_t val, const char *dflt, const struct xlat *xlat, ...)
 		if (str) {
 			tprints(str);
 			va_end(args);
-			return;
+			return 1;
 		}
 	}
 	/* No hits -- print raw # instead. */
-	tprintf("%#" PRIx64 " /* %s */", val, dflt);
+	tprintf("%#" PRIx64, val);
+	if (dflt)
+		tprintf(" /* %s */", dflt);
 
 	va_end(args);
+
+	return 0;
+}
+
+/**
+ * Print entry in sorted struct xlat table, if it is there.
+ *
+ * @param xlat      Pointer to an array of xlat values (not terminated with
+ *                  XLAT_END).
+ * @param xlat_size Number of xlat elements present in array (usually ARRAY_SIZE
+ *                  if array is declared in the unit's scope and not
+ *                  terminated with XLAT_END).
+ * @param val       Value to search literal representation for.
+ * @param dflt      String (abbreviated in comment syntax) which should be
+ *                  emitted if no appropriate xlat value has been found.
+ * @return          1 if appropriate xlat value has been found, 0
+ *                  otherwise.
+ */
+int
+printxval_searchn(const struct xlat *xlat, size_t xlat_size, uint64_t val,
+	const char *dflt)
+{
+	const char *s = xlat_search(xlat, xlat_size, val);
+
+	if (s) {
+		tprints(s);
+		return 1;
+	}
+
+	tprintf("%#" PRIx64, val);
+	if (dflt)
+		tprintf(" /* %s */", dflt);
+
+	return 0;
 }
 
 /*
@@ -257,16 +318,16 @@ getllval(struct tcb *tcp, unsigned long long *val, int arg_no)
 # endif /* SUPPORTED_PERSONALITIES > 1 */
 #elif SIZEOF_LONG > 4
 #  error Unsupported configuration: SIZEOF_LONG > 4 && SIZEOF_LONG_LONG > SIZEOF_LONG
-#elif defined LINUX_MIPSN32
-	*val = tcp->ext_arg[arg_no];
-	arg_no++;
-#elif defined X32
-	if (current_personality == 0) {
-		*val = tcp->ext_arg[arg_no];
-		arg_no++;
-	} else {
+#elif HAVE_STRUCT_TCB_EXT_ARG
+# if SUPPORTED_PERSONALITIES > 1
+	if (current_personality == 1) {
 		*val = LONG_LONG(tcp->u_arg[arg_no], tcp->u_arg[arg_no + 1]);
 		arg_no += 2;
+	} else
+# endif
+	{
+		*val = tcp->ext_arg[arg_no];
+		arg_no++;
 	}
 #else
 # if defined __ARM_EABI__ || \
@@ -275,7 +336,17 @@ getllval(struct tcb *tcp, unsigned long long *val, int arg_no)
      defined XTENSA
 	/* Align arg_no to the next even number. */
 	arg_no = (arg_no + 1) & 0xe;
-# endif
+# elif defined SH
+	/*
+	 * The SH4 ABI does allow long longs in odd-numbered registers, but
+	 * does not allow them to be split between registers and memory - and
+	 * there are only four argument registers for normal functions.  As a
+	 * result, pread, for example, takes an extra padding argument before
+	 * the offset.  This was changed late in the 2.4 series (around 2.4.20).
+	 */
+	if (arg_no == 3)
+		arg_no++;
+# endif /* __ARM_EABI__ || LINUX_MIPSO32 || POWERPC || XTENSA || SH */
 	*val = LONG_LONG(tcp->u_arg[arg_no], tcp->u_arg[arg_no + 1]);
 	arg_no += 2;
 #endif
@@ -322,7 +393,7 @@ addflags(const struct xlat *xlat, uint64_t flags)
  * Return static string.
  */
 const char *
-sprintflags64(const char *prefix, const struct xlat *xlat, uint64_t flags)
+sprintflags(const char *prefix, const struct xlat *xlat, uint64_t flags)
 {
 	static char outstr[1024];
 	char *outptr;
@@ -396,12 +467,12 @@ printflags64(const struct xlat *xlat, uint64_t flags, const char *dflt)
 }
 
 void
-printaddr(const long addr)
+printaddr_ull(const unsigned long long addr)
 {
 	if (!addr)
 		tprints("NULL");
 	else
-		tprintf("%#lx", addr);
+		tprintf("%#llx", addr);
 }
 
 #define DEF_PRINTNUM(name, type) \
@@ -455,7 +526,7 @@ const char *
 sprinttime(time_t t)
 {
 	struct tm *tmp;
-	static char buf[sizeof(int) * 3 * 6];
+	static char buf[sizeof(int) * 3 * 6 + sizeof("+0000")];
 
 	if (t == 0) {
 		strcpy(buf, "0");
@@ -463,39 +534,40 @@ sprinttime(time_t t)
 	}
 	tmp = localtime(&t);
 	if (tmp)
-		snprintf(buf, sizeof buf, "%02d/%02d/%02d-%02d:%02d:%02d",
-			tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday,
-			tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
+		strftime(buf, sizeof(buf), "%FT%T%z", tmp);
 	else
-		snprintf(buf, sizeof buf, "%lu", (unsigned long) t);
+		snprintf(buf, sizeof(buf), "%lu", (unsigned long) t);
 
 	return buf;
 }
 
-static char *
-getfdproto(struct tcb *tcp, int fd, char *buf, unsigned bufsize)
+enum sock_proto
+getfdproto(struct tcb *tcp, int fd)
 {
 #ifdef HAVE_SYS_XATTR_H
+	size_t bufsize = 256;
+	char buf[bufsize];
 	ssize_t r;
 	char path[sizeof("/proc/%u/fd/%u") + 2 * sizeof(int)*3];
 
 	if (fd < 0)
-		return NULL;
+		return SOCK_PROTO_UNKNOWN;
 
 	sprintf(path, "/proc/%u/fd/%u", tcp->pid, fd);
 	r = getxattr(path, "system.sockprotoname", buf, bufsize - 1);
 	if (r <= 0)
-		return NULL;
+		return SOCK_PROTO_UNKNOWN;
 	else {
 		/*
 		 * This is a protection for the case when the kernel
 		 * side does not append a null byte to the buffer.
 		 */
 		buf[r] = '\0';
-		return buf;
+
+		return get_proto_by_name(buf);
 	}
 #else
-	return NULL;
+	return SOCK_PROTO_UNKNOWN;
 #endif
 }
 
@@ -516,9 +588,8 @@ printfd(struct tcb *tcp, int fd)
 				strtoul(path + socket_prefix_len, NULL, 10);
 
 			if (!print_sockaddr_by_inode_cached(inode)) {
-				char buf[256];
-				const char *proto =
-					getfdproto(tcp, fd, buf, sizeof(buf));
+				const enum sock_proto proto =
+					getfdproto(tcp, fd);
 				if (!print_sockaddr_by_inode(inode, proto))
 					tprints(path);
 			}
@@ -606,6 +677,9 @@ string_quote(const char *instr, char *outstr, const unsigned int size,
 			c = ustr[i];
 			/* Check for NUL-terminated string. */
 			if (c == eol)
+				goto asciz_ended;
+			if ((i == (size - 1)) &&
+			    (style & QUOTE_OMIT_TRAILING_0) && (c == '\0'))
 				goto asciz_ended;
 			switch (c) {
 				case '\"': case '\\':
@@ -761,7 +835,7 @@ printpathn(struct tcb *tcp, long addr, unsigned int n)
 	/* Fetch one byte more to find out whether path length > n. */
 	nul_seen = umovestr(tcp, addr, n + 1, path);
 	if (nul_seen < 0)
-		tprintf("%#lx", addr);
+		printaddr(addr);
 	else {
 		path[n++] = '\0';
 		print_quoted_string(path, n, QUOTE_0_TERMINATED);
@@ -779,16 +853,21 @@ printpath(struct tcb *tcp, long addr)
 
 /*
  * Print string specified by address `addr' and length `len'.
- * If `len' < 0, treat the string as a NUL-terminated string.
- * If string length exceeds `max_strlen', append `...' to the output.
+ * If `len' == -1, set QUOTE_0_TERMINATED bit in `user_style'.
+ * If `user_style' has QUOTE_0_TERMINATED bit set, treat the string
+ * as a NUL-terminated string.
+ * Pass `user_style' on to `string_quote'.
+ * Append `...' to the output if either the string length exceeds `max_strlen',
+ * or `len' != -1 and the string length exceeds `len'.
  */
 void
-printstr(struct tcb *tcp, long addr, long len)
+printstr_ex(struct tcb *tcp, long addr, long len, unsigned int user_style)
 {
 	static char *str = NULL;
 	static char *outstr;
 	unsigned int size;
-	unsigned int style;
+	unsigned int style = user_style;
+	int rc;
 	int ellipsis;
 
 	if (!addr) {
@@ -805,33 +884,39 @@ printstr(struct tcb *tcp, long addr, long len)
 		outstr = xmalloc(outstr_size);
 	}
 
-	size = max_strlen;
+	size = max_strlen + 1;
 	if (len == -1) {
 		/*
 		 * Treat as a NUL-terminated string: fetch one byte more
 		 * because string_quote may look one byte ahead.
 		 */
-		if (umovestr(tcp, addr, size + 1, str) < 0) {
-			tprintf("%#lx", addr);
-			return;
-		}
-		style = QUOTE_0_TERMINATED;
+		style |= QUOTE_0_TERMINATED;
+		rc = umovestr(tcp, addr, size, str);
+	} else {
+		if (size > (unsigned long) len)
+			size = (unsigned long) len;
+		if (style & QUOTE_0_TERMINATED)
+			rc = umovestr(tcp, addr, size, str);
+		else
+			rc = umoven(tcp, addr, size, str);
 	}
-	else {
-		if (size > (unsigned long)len)
-			size = (unsigned long)len;
-		if (umoven(tcp, addr, size, str) < 0) {
-			tprintf("%#lx", addr);
-			return;
-		}
-		style = 0;
+	if (rc < 0) {
+		printaddr(addr);
+		return;
 	}
+
+	if (size > max_strlen)
+		size = max_strlen;
+	else
+		str[size] = '\xff';
 
 	/* If string_quote didn't see NUL and (it was supposed to be ASCIZ str
 	 * or we were requested to print more than -s NUM chars)...
 	 */
-	ellipsis = (string_quote(str, outstr, size, style) &&
-			(len < 0 || (unsigned long) len > max_strlen));
+	ellipsis = string_quote(str, outstr, size, style)
+		   && len
+		   && ((style & QUOTE_0_TERMINATED)
+		       || (unsigned long) len > max_strlen);
 
 	tprints(outstr);
 	if (ellipsis)
@@ -1071,7 +1156,7 @@ umoven(struct tcb *tcp, long addr, unsigned int len, void *our_addr)
 		n = addr & (sizeof(long) - 1);	/* residue */
 		addr &= -sizeof(long);		/* aligned address */
 		errno = 0;
-		u.val = ptrace(PTRACE_PEEKDATA, pid, (char *) addr, 0);
+		u.val = ptrace(PTRACE_PEEKDATA, pid, (void *) addr, 0);
 		switch (errno) {
 			case 0:
 				break;
@@ -1096,7 +1181,7 @@ umoven(struct tcb *tcp, long addr, unsigned int len, void *our_addr)
 	}
 	while (len) {
 		errno = 0;
-		u.val = ptrace(PTRACE_PEEKDATA, pid, (char *) addr, 0);
+		u.val = ptrace(PTRACE_PEEKDATA, pid, (void *) addr, 0);
 		switch (errno) {
 			case 0:
 				break;
@@ -1131,13 +1216,20 @@ int
 umoven_or_printaddr(struct tcb *tcp, const long addr, const unsigned int len,
 		    void *our_addr)
 {
-	if (!addr) {
-		tprints("NULL");
+	if (!addr || !verbose(tcp) || (exiting(tcp) && syserror(tcp)) ||
+	    umoven(tcp, addr, len, our_addr) < 0) {
+		printaddr(addr);
 		return -1;
 	}
-	if (!verbose(tcp) || (exiting(tcp) && syserror(tcp)) ||
-	    umoven(tcp, addr, len, our_addr) < 0) {
-		tprintf("%#lx", addr);
+	return 0;
+}
+
+int
+umoven_or_printaddr_ignore_syserror(struct tcb *tcp, const long addr,
+				    const unsigned int len, void *our_addr)
+{
+	if (!addr || !verbose(tcp) || umoven(tcp, addr, len, our_addr) < 0) {
+		printaddr(addr);
 		return -1;
 	}
 	return 0;
@@ -1243,7 +1335,7 @@ umovestr(struct tcb *tcp, long addr, unsigned int len, char *laddr)
 		n = addr & (sizeof(long) - 1);	/* residue */
 		addr &= -sizeof(long);		/* aligned address */
 		errno = 0;
-		u.val = ptrace(PTRACE_PEEKDATA, pid, (char *)addr, 0);
+		u.val = ptrace(PTRACE_PEEKDATA, pid, (void *) addr, 0);
 		switch (errno) {
 			case 0:
 				break;
@@ -1272,7 +1364,7 @@ umovestr(struct tcb *tcp, long addr, unsigned int len, char *laddr)
 
 	while (len) {
 		errno = 0;
-		u.val = ptrace(PTRACE_PEEKDATA, pid, (char *)addr, 0);
+		u.val = ptrace(PTRACE_PEEKDATA, pid, (void *) addr, 0);
 		switch (errno) {
 			case 0:
 				break;
@@ -1403,6 +1495,110 @@ print_array(struct tcb *tcp,
 		tprints("]");
 
 	return cur >= end_addr;
+}
+
+long long
+getarg_ll(struct tcb *tcp, int argn)
+{
+#if HAVE_STRUCT_TCB_EXT_ARG
+# if SUPPORTED_PERSONALITIES > 1
+	if (current_personality == 1)
+		return (long) tcp->u_arg[argn];
+	else
+# endif
+	return (long long) tcp->ext_arg[argn];
+#else
+	return (long) tcp->u_arg[argn];
+#endif
+}
+
+unsigned long long
+getarg_ull(struct tcb *tcp, int argn)
+{
+#if HAVE_STRUCT_TCB_EXT_ARG
+# if SUPPORTED_PERSONALITIES > 1
+	if (current_personality == 1)
+		return (unsigned long) tcp->u_arg[argn];
+	else
+# endif
+	return (unsigned long long) tcp->ext_arg[argn];
+#else
+	return (unsigned long) tcp->u_arg[argn];
+#endif
+}
+
+int
+printargs(struct tcb *tcp)
+{
+	const int n = tcp->s_ent->nargs;
+	int i;
+	for (i = 0; i < n; ++i)
+		tprintf("%s%#llx", i ? ", " : "", getarg_ull(tcp, i));
+	return RVAL_DECODED;
+}
+
+int
+printargs_u(struct tcb *tcp)
+{
+	const int n = tcp->s_ent->nargs;
+	int i;
+	for (i = 0; i < n; ++i)
+		tprintf("%s%u", i ? ", " : "",
+			(unsigned int) tcp->u_arg[i]);
+	return RVAL_DECODED;
+}
+
+int
+printargs_d(struct tcb *tcp)
+{
+	const int n = tcp->s_ent->nargs;
+	int i;
+	for (i = 0; i < n; ++i)
+		tprintf("%s%d", i ? ", " : "",
+			(int) tcp->u_arg[i]);
+	return RVAL_DECODED;
+}
+
+#if defined _LARGEFILE64_SOURCE && defined HAVE_OPEN64
+# define open_file open64
+#else
+# define open_file open
+#endif
+
+int
+read_int_from_file(const char *const fname, int *const pvalue)
+{
+	const int fd = open_file(fname, O_RDONLY);
+	if (fd < 0)
+		return -1;
+
+	long lval;
+	char buf[sizeof(lval) * 3];
+	int n = read(fd, buf, sizeof(buf) - 1);
+	int saved_errno = errno;
+	close(fd);
+
+	if (n < 0) {
+		errno = saved_errno;
+		return -1;
+	}
+
+	buf[n] = '\0';
+	char *endptr = 0;
+	errno = 0;
+	lval = strtol(buf, &endptr, 10);
+	if (!endptr || (*endptr && '\n' != *endptr)
+#if INT_MAX < LONG_MAX
+	    || lval > INT_MAX || lval < INT_MIN
+#endif
+	    || ERANGE == errno) {
+		if (!errno)
+			errno = EINVAL;
+		return -1;
+	}
+
+	*pvalue = (int) lval;
+	return 0;
 }
 
 #ifdef ENABLE_DATASERIES

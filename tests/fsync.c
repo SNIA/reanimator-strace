@@ -1,5 +1,5 @@
 #include "tests.h"
-#include <sys/syscall.h>
+#include <asm/unistd.h>
 
 #ifdef __NR_fsync
 
@@ -9,7 +9,7 @@
 int
 main(void)
 {
-	const long int fd = (long int) 0xdeadbeefffffffff;
+	const long int fd = (long int) 0xdeadbeefffffffffULL;
 
 	long rc = syscall(__NR_fsync, fd);
 	printf("fsync(%d) = %ld %s (%m)\n", (int) fd, rc, errno2name());

@@ -145,7 +145,7 @@
 [114] = { 4,	TP,		SEN(wait4),			"wait4"			},
 [115] = { 1,	TF,		SEN(swapoff),			"swapoff"		},
 [116] = { 1,	0,		SEN(sysinfo),			"sysinfo"		},
-[117] = { 6,	TI,		SEN(ipc),			"ipc"			},
+[117] = { 5,	TI,		SEN(ipc),			"ipc"			},
 [118] = { 1,	TD,		SEN(fsync),			"fsync"			},
 [119] = { 0,	TS,		SEN(sigreturn),			"sigreturn"		},
 [120] = { 5,	TP,		SEN(clone),			"clone"			},
@@ -271,8 +271,8 @@
 [240] = { 3,	0,		SEN(sched_getaffinity),		"sched_getaffinity"	},
 [241] = { 3,	TS,		SEN(tgkill),			"tgkill"		},
 [242] = { },
-[243] = { 2,	0,		SEN(io_setup),			"io_setup"		},
-[244] = { 1,	0,		SEN(io_destroy),		"io_destroy"		},
+[243] = { 2,	TM,		SEN(io_setup),			"io_setup"		},
+[244] = { 1,	TM,		SEN(io_destroy),		"io_destroy"		},
 [245] = { 5,	0,		SEN(io_getevents),		"io_getevents"		},
 [246] = { 3,	0,		SEN(io_submit),			"io_submit"		},
 [247] = { 3,	0,		SEN(io_cancel),			"io_cancel"		},
@@ -321,7 +321,7 @@
 [290] = { 4,	TD|TF,		SEN(mknodat),			"mknodat"		},
 [291] = { 5,	TD|TF,		SEN(fchownat),			"fchownat"		},
 [292] = { 3,	TD|TF,		SEN(futimesat),			"futimesat"		},
-[293] = { 4,	TD|TF,		SEN(newfstatat),		"fstatat64"		},
+[293] = { 4,	TD|TF,		SEN(fstatat64),			"fstatat64"		},
 [294] = { 3,	TD|TF,		SEN(unlinkat),			"unlinkat"		},
 [295] = { 4,	TD|TF,		SEN(renameat),			"renameat"		},
 [296] = { 5,	TD|TF,		SEN(linkat),			"linkat"		},
@@ -404,6 +404,8 @@
 [373] = { 2,	TN,		SEN(shutdown),			"shutdown"		},
 [374] = { 3,	TM,		SEN(mlock2),			"mlock2"		},
 [375] = { 6,	TD,		SEN(copy_file_range),		"copy_file_range"	},
+[376] = { 6,	TD,		SEN(preadv2),			"preadv2"		},
+[377] = { 6,	TD,		SEN(pwritev2),			"pwritev2"		},
 
 #define SYS_socket_subcall	400
 #include "subcall.h"

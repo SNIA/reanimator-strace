@@ -43,12 +43,12 @@ print_iov(const struct iovec *iov)
 	unsigned int i;
 	unsigned char *buf = iov->iov_base;
 
-	fputs("{\"", stdout);
+	fputs("{iov_base=\"", stdout);
 	for (i = 0; i < iov->iov_len; ++i) {
 		if (i < LIM)
 			printf("\\%d", (int) buf[i]);
 	}
-	printf("\"%s, %u}",
+	printf("\"%s, iov_len=%u}",
 	       i > LIM ? "..." : "", (unsigned) iov->iov_len);
 }
 
@@ -95,7 +95,6 @@ main(void)
 		iov[i].iov_base = &buf[i];
 		iov[i].iov_len = LEN - i;
 	}
-	tail_alloc(1);
 
 	const off_t offset = 0xdefaceddeadbeefLL;
 	long rc;
@@ -121,7 +120,7 @@ main(void)
 
 	iov->iov_base = iov + LEN * 2;
 	rc = pwritev(0, iov, 1, -1);
-	printf("pwritev(0, [{%p, %d}], 1, -1) = %ld %s (%m)\n",
+	printf("pwritev(0, [{iov_base=%p, iov_len=%d}], 1, -1) = %ld %s (%m)\n",
 	       iov->iov_base, LEN, rc, errno2name());
 
 	iov += LEN;

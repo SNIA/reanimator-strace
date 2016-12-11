@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2009, 2010 Jeff Mahoney <jeffm@suse.com>
+ * Copyright (c) 2011-2016 Dmitry V. Levin <ldv@altlinux.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,16 +27,34 @@
  */
 
 #include "defs.h"
-#include <linux/blkpg.h>
-#include <linux/fs.h>
-#include <linux/hdreg.h>
 
-/* ioctls <= 114 are present in Linux 2.4. The following ones have been
- * added since then and headers containing them may not be available on
- * every system. */
+#include DEF_MPERS_TYPE(struct_blk_user_trace_setup)
+#include DEF_MPERS_TYPE(struct_blkpg_ioctl_arg)
+#include DEF_MPERS_TYPE(struct_blkpg_partition)
+
+#include <linux/ioctl.h>
+#include <linux/fs.h>
+
+typedef struct {
+	int op;
+	int flags;
+	int datalen;
+	void *data;
+} struct_blkpg_ioctl_arg;
+
+#define BLKPG_DEVNAMELTH	64
+#define BLKPG_VOLNAMELTH	64
+typedef struct {
+	long long start;		/* starting offset in bytes */
+	long long length;		/* length in bytes */
+	int pno;			/* partition number */
+	char devname[BLKPG_DEVNAMELTH];	/* partition name, like sda5 or c0d1p2,
+					   to be used in kernel messages */
+	char volname[BLKPG_VOLNAMELTH];	/* volume label */
+} struct_blkpg_partition;
 
 #define BLKTRACE_BDEV_SIZE      32
-struct blk_user_trace_setup {
+typedef struct blk_user_trace_setup {
 	char name[BLKTRACE_BDEV_SIZE];	/* output */
 	uint16_t act_mask;		/* input */
 	uint32_t buf_size;		/* input */
@@ -43,10 +62,22 @@ struct blk_user_trace_setup {
 	uint64_t start_lba;
 	uint64_t end_lba;
 	uint32_t pid;
-};
+} struct_blk_user_trace_setup;
+
+#include MPERS_DEFS
+
+#ifndef BLKPG
+# define BLKPG      _IO(0x12,105)
+#endif
+
+/*
+ * ioctl numbers <= 114 are present in Linux 2.4.  The following ones have been
+ * added since then and headers containing them may not be available on every
+ * system.
+ */
 
 #ifndef BLKTRACESETUP
-# define BLKTRACESETUP _IOWR(0x12,115,struct blk_user_trace_setup)
+# define BLKTRACESETUP _IOWR(0x12, 115, struct_blk_user_trace_setup)
 #endif
 #ifndef BLKTRACESTART
 # define BLKTRACESTART _IO(0x12,116)
@@ -88,9 +119,9 @@ struct blk_user_trace_setup {
 #include "xlat/blkpg_ops.h"
 
 static void
-print_blkpg_req(struct tcb *tcp, const struct blkpg_ioctl_arg *blkpg)
+print_blkpg_req(struct tcb *tcp, const struct_blkpg_ioctl_arg *blkpg)
 {
-	struct blkpg_partition p;
+	struct_blkpg_partition p;
 
 	tprints("{");
 	printxval(blkpg_ops, blkpg->op, "BLKPG_???");
@@ -100,7 +131,7 @@ print_blkpg_req(struct tcb *tcp, const struct blkpg_ioctl_arg *blkpg)
 
 	if (!umove_or_printaddr(tcp, (long) blkpg->data, &p)) {
 		tprintf("{start=%lld, length=%lld, pno=%d, devname=",
-			p.start, p.length, p.pno);
+			(long long) p.start, (long long) p.length, p.pno);
 		print_quoted_string(p.devname, sizeof(p.devname),
 				    QUOTE_0_TERMINATED);
 		tprints(", volname=");
@@ -111,25 +142,14 @@ print_blkpg_req(struct tcb *tcp, const struct blkpg_ioctl_arg *blkpg)
 	tprints("}");
 }
 
-int
-block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
+MPERS_PRINTER_DECL(int, block_ioctl, struct tcb *tcp,
+		   const unsigned int code, const long arg)
 {
 	switch (code) {
 	/* take arg as a value, not as a pointer */
 	case BLKRASET:
 	case BLKFRASET:
 		tprintf(", %lu", arg);
-		break;
-
-	/* take a signed int */
-	case BLKROSET:
-	case BLKBSZSET:
-		tprints(", ");
-#ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(int));
-#endif /* ENABLE_DATASERIES */
-		printnum_int(tcp, arg, "%d");
 		break;
 
 	/* return an unsigned short */
@@ -139,8 +159,7 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			return 0;
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(unsigned short));
+		DS_SET_IOCTL_SIZE(unsigned short);
 #endif /* ENABLE_DATASERIES */
 		printnum_short(tcp, arg, "%hu");
 		break;
@@ -152,10 +171,13 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case BLKALIGNOFF:
 		if (entering(tcp))
 			return 0;
+		/* fall through */
+	/* take a signed int */
+	case BLKROSET:
+	case BLKBSZSET:
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(int));
+		DS_SET_IOCTL_SIZE(unsigned int);
 #endif /* ENABLE_DATASERIES */
 		printnum_int(tcp, arg, "%d");
 		break;
@@ -169,8 +191,7 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			return 0;
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(unsigned int));
+		DS_SET_IOCTL_SIZE(unsigned int);
 #endif /* ENABLE_DATASERIES */
 		printnum_int(tcp, arg, "%u");
 		break;
@@ -182,8 +203,7 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			return 0;
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-		  ds_set_ioctl_size(ds_module, sizeof(long));
+		DS_SET_IOCTL_SIZE(long);
 #endif /* ENABLE_DATASERIES */
 		printnum_slong(tcp, arg);
 		break;
@@ -194,8 +214,7 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			return 0;
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(unsigned long));
+		DS_SET_IOCTL_SIZE(unsigned long);
 #endif /* ENABLE_DATASERIES */
 		printnum_ulong(tcp, arg);
 		break;
@@ -207,8 +226,7 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			return 0;
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(uint64_t));
+		DS_SET_IOCTL_SIZE(uint64_t);
 #endif /* ENABLE_DATASERIES */
 		printnum_int64(tcp, arg, "%" PRIu64);
 		break;
@@ -220,42 +238,18 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case BLKZEROOUT:
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, 2 * sizeof(uint64_t));
+		DS_SET_IOCTL_SIZEN(uint64_t, 2);
 #endif /* ENABLE_DATASERIES */
-		printpair_int64(tcp, arg, "%" PRIx64);
+		printpair_int64(tcp, arg, "%" PRIu64);
 		break;
 
 	/* More complex types */
-	case HDIO_GETGEO:
-		if (entering(tcp))
-			return 0;
-		else {
-			struct hd_geometry geo;
-
-			tprints(", ");
-#ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(struct hd_geometry));
-#endif /* ENABLE_DATASERIES */
-			if (!umove_or_printaddr(tcp, arg, &geo))
-				tprintf("{heads=%u, sectors=%u, "
-					"cylinders=%u, start=%lu}",
-					(unsigned)geo.heads,
-					(unsigned)geo.sectors,
-					(unsigned)geo.cylinders,
-					geo.start);
-		}
-		break;
-
 	case BLKPG: {
-		struct blkpg_ioctl_arg blkpg;
+		struct_blkpg_ioctl_arg blkpg;
 
 		tprints(", ");
 #ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-				    struct blkpg_ioctl_arg));
+		DS_SET_IOCTL_SIZE(struct_blkpg_ioctl_arg);
 #endif /* ENABLE_DATASERIES */
 		if (!umove_or_printaddr(tcp, arg, &blkpg))
 			print_blkpg_req(tcp, &blkpg);
@@ -263,15 +257,13 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	}
 
 	case BLKTRACESETUP:
-#ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-				    struct blk_user_trace_setup));
-#endif /* ENABLE_DATASERIES */
 		if (entering(tcp)) {
-			struct blk_user_trace_setup buts;
+			struct_blk_user_trace_setup buts;
 
 			tprints(", ");
+#ifdef ENABLE_DATASERIES
+			DS_SET_IOCTL_SIZE(struct_blk_user_trace_setup);
+#endif /* ENABLE_DATASERIES */
 			if (umove_or_printaddr(tcp, arg, &buts))
 				break;
 			tprintf("{act_mask=%u, buf_size=%u, "
@@ -282,45 +274,19 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 				buts.end_lba, buts.pid);
 			return 1;
 		} else {
-			struct blk_user_trace_setup buts;
+			struct_blk_user_trace_setup buts;
 
-			if (syserror(tcp)) {
-				tprints("}");
-				break;
+#ifdef ENABLE_DATASERIES
+			DS_SET_IOCTL_SIZE(struct_blk_user_trace_setup);
+#endif /* ENABLE_DATASERIES */
+			if (!syserror(tcp) && !umove(tcp, arg, &buts)) {
+				tprints(", name=");
+				print_quoted_string(buts.name, sizeof(buts.name),
+						    QUOTE_0_TERMINATED);
 			}
-			tprints(", ");
-			if (umove(tcp, arg, &buts) < 0) {
-				tprints("???}");
-				break;
-			}
-			tprints(", name=");
-			print_quoted_string(buts.name, sizeof(buts.name),
-					    QUOTE_0_TERMINATED);
 			tprints("}");
 			break;
 		}
-
-#ifdef FITRIM
-	/* First seen in linux-2.6.37 */
-	case FITRIM: {
-		struct fstrim_range fstrim;
-
-		tprints(", ");
-#ifdef ENABLE_DATASERIES
-		if (ds_module)
-			ds_set_ioctl_size(ds_module, sizeof(
-				    struct fstrim_range));
-#endif /* ENABLE_DATASERIES */
-		if (!umove_or_printaddr(tcp, arg, &fstrim))
-			tprintf("{start=%#" PRIx64 ", "
-				"len=%#" PRIx64 ", "
-				"minlen=%#" PRIx64 "}",
-				(uint64_t) fstrim.start,
-				(uint64_t) fstrim.len,
-				(uint64_t) fstrim.minlen);
-		break;
-	}
-#endif
 
 	/* No arguments */
 	case BLKRRPART:
@@ -328,10 +294,6 @@ block_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case BLKTRACESTART:
 	case BLKTRACESTOP:
 	case BLKTRACETEARDOWN:
-#ifdef FIFREEZE
-	case FIFREEZE:
-	case FITHAW:
-#endif
 		break;
 	default:
 		return RVAL_DECODED;

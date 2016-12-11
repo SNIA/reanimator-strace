@@ -241,8 +241,8 @@
 [4238] = { 6,	0,		SEN(futex),			"futex"			},
 [4239] = { 3,	0,		SEN(sched_setaffinity),		"sched_setaffinity"	},
 [4240] = { 3,	0,		SEN(sched_getaffinity),		"sched_getaffinity"	},
-[4241] = { 2,	0,		SEN(io_setup),			"io_setup"		},
-[4242] = { 1,	0,		SEN(io_destroy),		"io_destroy"		},
+[4241] = { 2,	TM,		SEN(io_setup),			"io_setup"		},
+[4242] = { 1,	TM,		SEN(io_destroy),		"io_destroy"		},
 [4243] = { 5,	0,		SEN(io_getevents),		"io_getevents"		},
 [4244] = { 3,	0,		SEN(io_submit),			"io_submit"		},
 [4245] = { 3,	0,		SEN(io_cancel),			"io_cancel"		},
@@ -293,7 +293,7 @@
 [4290] = { 4,	TD|TF,		SEN(mknodat),			"mknodat"		},
 [4291] = { 5,	TD|TF,		SEN(fchownat),			"fchownat"		},
 [4292] = { 3,	TD|TF,		SEN(futimesat),			"futimesat"		},
-[4293] = { 4,	TD|TF,		SEN(newfstatat),		"fstatat64"		},
+[4293] = { 4,	TD|TF,		SEN(fstatat64),			"fstatat64"		},
 [4294] = { 3,	TD|TF,		SEN(unlinkat),			"unlinkat"		},
 [4295] = { 4,	TD|TF,		SEN(renameat),			"renameat"		},
 [4296] = { 5,	TD|TF,		SEN(linkat),			"linkat"		},
@@ -361,6 +361,11 @@
 [4358] = { 2,	0,		SEN(membarrier),		"membarrier",		},
 [4359] = { 3,	TM,		SEN(mlock2),			"mlock2"		},
 [4360] = { 6,	TD,		SEN(copy_file_range),		"copy_file_range"	},
+[4361] = { 6,	TD,		SEN(preadv2),			"preadv2"		},
+[4362] = { 6,	TD,		SEN(pwritev2),			"pwritev2"		},
+[4363] = { 4,	TM|SI,		SEN(pkey_mprotect),		"pkey_mprotect"		},
+[4364] = { 2,	0,		SEN(pkey_alloc),		"pkey_alloc"		},
+[4365] = { 1,	0,		SEN(pkey_free),			"pkey_free"		},
 
 # define SYS_socket_subcall      4400
 # include "subcall.h"

@@ -248,8 +248,8 @@
 [224] = { },
 [225] = { 5,	0,		SEN(printargs),			"tuxcall"		},
 [226] = { },
-[227] = { 2,	0,		SEN(io_setup),			"io_setup"		},
-[228] = { 1,	0,		SEN(io_destroy),		"io_destroy"		},
+[227] = { 2,	TM,		SEN(io_setup),			"io_setup"		},
+[228] = { 1,	TM,		SEN(io_destroy),		"io_destroy"		},
 [229] = { 5,	0,		SEN(io_getevents),		"io_getevents"		},
 [230] = { 3,	0,		SEN(io_submit),			"io_submit"		},
 [231] = { 3,	0,		SEN(io_cancel),			"io_cancel"		},
@@ -401,6 +401,8 @@
 [377] = { 3,	TI,		SEN(shmctl),			"shmctl"		},
 [378] = { 3,	TM,		SEN(mlock2),			"mlock2"		},
 [379] = { 6,	TD,		SEN(copy_file_range),		"copy_file_range"	},
+[380] = { 6,	TD,		SEN(preadv2),			"preadv2"		},
+[381] = { 6,	TD,		SEN(pwritev2),			"pwritev2"		},
 
 #define SYS_socket_subcall	400
 #include "subcall.h"
