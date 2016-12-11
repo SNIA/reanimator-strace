@@ -382,6 +382,7 @@ MPERS_PRINTER_DECL(int, mtd_ioctl, struct tcb *tcp,
 			return 0;
 		} else {
 			struct region_info_user rinfo;
+
 #ifdef ENABLE_DATASERIES
 			DS_SET_IOCTL_SIZE(struct region_info_user);
 #endif /* ENABLE_DATASERIES */

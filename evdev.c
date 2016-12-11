@@ -361,7 +361,7 @@ repeat_ioctl(struct tcb *tcp, long arg)
 {
 	tprints(", ");
 #ifdef ENABLE_DATASERIES
-	DS_SET_IOCTL_SIZE(unsigned int, 2);
+	DS_SET_IOCTL_SIZEN(unsigned int, 2);
 #endif /* ENABLE_DATASERIES */
 	printpair_int(tcp, arg, "%u");
 	return 1;
