@@ -82,7 +82,7 @@ SYS_FUNC(clone)
 #ifdef ENABLE_DATASERIES
 	if (ds_module)
 		ds_set_clone_ctid_index(ds_module, ARG_CTID);
-#endif
+#endif /* ENABLE_DATASERIES */
 	if (exiting(tcp)) {
 		const char *sep = "|";
 		unsigned long flags = tcp->u_arg[ARG_FLAGS];

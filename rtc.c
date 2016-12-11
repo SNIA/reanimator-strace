@@ -76,7 +76,7 @@ rtc_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(struct rtc_time));
-#endif
+#endif /* ENABLE_DATASERIES */
 		decode_rtc_time(tcp, arg);
 		break;
 	case RTC_ALM_READ:
@@ -86,7 +86,7 @@ rtc_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(struct rtc_time));
-#endif
+#endif /* ENABLE_DATASERIES */
 		decode_rtc_time(tcp, arg);
 		break;
 	case RTC_IRQP_SET:
@@ -101,7 +101,7 @@ rtc_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(unsigned long));
-#endif
+#endif /* ENABLE_DATASERIES */
 		printnum_ulong(tcp, arg);
 		break;
 	case RTC_WKALM_SET:
@@ -109,7 +109,7 @@ rtc_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 				    struct rtc_wkalrm));
-#endif
+#endif /* ENABLE_DATASERIES */
 		decode_rtc_wkalrm(tcp, arg);
 		break;
 	case RTC_WKALM_RD:
@@ -119,7 +119,7 @@ rtc_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(
 				    struct rtc_wkalrm));
-#endif
+#endif /* ENABLE_DATASERIES */
 		decode_rtc_wkalrm(tcp, arg);
 		break;
 #ifdef RTC_VL_READ
@@ -130,7 +130,7 @@ rtc_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(int));
-#endif
+#endif /* ENABLE_DATASERIES */
 		printnum_int(tcp, arg, "%d");
 		break;
 #endif

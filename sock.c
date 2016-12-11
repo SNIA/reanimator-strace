@@ -226,7 +226,7 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(struct ifconf));
-#endif
+#endif /* ENABLE_DATASERIES */
 		return decode_ifconf(tcp, arg);
 
 #ifdef SIOCBRADDBR
@@ -243,7 +243,6 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			 * length, set the ioctl buffer size, then free the
 			 * temporary buffer holding the data.  This isn't
 			 * optimal, as we also retrieve the string data later.
-			 * - Nina @ FSL
 			 */
 			char *str = xmalloc(max_strlen + 1);
 			umovestr(tcp, arg, max_strlen + 1, str);
@@ -251,7 +250,7 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			ds_set_ioctl_size(ds_module, len);
 			free(str);
 		}
-#endif
+#endif /* ENABLE_DATASERIES */
 		printstr(tcp, arg, -1);
 		break;
 #endif
@@ -266,7 +265,7 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(int));
-#endif
+#endif /* ENABLE_DATASERIES */
 		printnum_int(tcp, arg, "%d");
 		break;
 
@@ -285,7 +284,7 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(int));
-#endif
+#endif /* ENABLE_DATASERIES */
 		printnum_int(tcp, arg, "%d");
 		break;
 
@@ -313,7 +312,7 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(struct ifreq));
-#endif
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &ifr))
 			break;
@@ -346,7 +345,7 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, sizeof(struct ifreq));
-#endif
+#endif /* ENABLE_DATASERIES */
 		if (entering(tcp)) {
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &ifr))

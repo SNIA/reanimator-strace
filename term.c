@@ -191,7 +191,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 	        if (ds_module)
 		        ds_set_ioctl_size(ds_module, sizeof(struct termios));
-#endif
+#endif /* ENABLE_DATASERIES */
 		decode_termios(tcp, arg);
 		break;
 
@@ -205,7 +205,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 	        if (ds_module)
 		        ds_set_ioctl_size(ds_module, sizeof(struct termio));
-#endif
+#endif /* ENABLE_DATASERIES */
 		decode_termio(tcp, arg);
 		break;
 
@@ -217,7 +217,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 	        if (ds_module)
 		        ds_set_ioctl_size(ds_module, sizeof(struct winsize));
-#endif
+#endif /* ENABLE_DATASERIES */
 		decode_winsize(tcp, arg);
 		break;
 
@@ -230,7 +230,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 	        if (ds_module)
 		        ds_set_ioctl_size(ds_module, sizeof(struct ttysize));
-#endif
+#endif /* ENABLE_DATASERIES */
 		decode_ttysize(tcp, arg);
 		break;
 #endif
@@ -260,7 +260,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 	        if (ds_module)
 		        ds_set_ioctl_size(ds_module, sizeof(int));
-#endif
+#endif /* ENABLE_DATASERIES */
 		decode_modem_flags(tcp, arg);
 		break;
 
@@ -290,7 +290,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 	        if (ds_module)
 		        ds_set_ioctl_size(ds_module, sizeof(int));
-#endif
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printnum_int(tcp, arg, "%d");
 		break;
@@ -301,7 +301,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #ifdef ENABLE_DATASERIES
 	        if (ds_module)
 		        ds_set_ioctl_size(ds_module, 1);
-#endif
+#endif /* ENABLE_DATASERIES */
 		printstr(tcp, arg, 1);
 		break;
 

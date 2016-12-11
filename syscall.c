@@ -4,8 +4,8 @@
  * Copyright (c) 1993, 1994, 1995, 1996 Rick Sladkey <jrs@world.std.com>
  * Copyright (c) 1996-1999 Wichert Akkerman <wichert@cistron.nl>
  * Copyright (c) 1999 IBM Deutschland Entwicklung GmbH, IBM Corporation
- *			Linux for s390 port by D.J. Barrow
- *		       <barrow_dj@mail.yahoo.com,djbarrow@de.ibm.com>
+ *                     Linux for s390 port by D.J. Barrow
+ *                    <barrow_dj@mail.yahoo.com,djbarrow@de.ibm.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,7 @@
 #ifdef ENABLE_DATASERIES
 # include <fcntl.h>
 # include <sys/statfs.h>
-#endif
+#endif /* ENABLE_DATASERIES */
 
 /* for struct iovec */
 #include <sys/uio.h>
@@ -808,7 +808,7 @@ trace_syscall_entering(struct tcb *tcp)
 	void *common_fields[DS_NUM_COMMON_FIELDS];
 	bool exit_generated = false;
 	int continuation_number;
-#endif
+#endif /* ENABLE_DATASERIES */
 
 	scno_good = res = get_scno(tcp);
 	if (res == 0)
@@ -985,11 +985,11 @@ trace_syscall_entering(struct tcb *tcp)
 	}
 	else if (Tflag || cflag)
 		gettimeofday(&tcp->etime, NULL);
-#else
+#else /* !ENABLE_DATASERIES */
 	/* Measure the entrance time as late as possible to avoid errors. */
 	if (Tflag || cflag)
 		gettimeofday(&tcp->etime, NULL);
-#endif
+#endif /* !ENABLE_DATASERIES */
 	return res;
 }
 
@@ -1019,11 +1019,11 @@ trace_syscall_exiting(struct tcb *tcp)
 	}
 	else if (Tflag || cflag)
 		gettimeofday(&tv, NULL);
-#else
+#else /* !ENABLE_DATASERIES */
 	/* Measure the exit time as early as possible to avoid errors. */
 	if (Tflag || cflag)
 		gettimeofday(&tv, NULL);
-#endif
+#endif /* !ENABLE_DATASERIES */
 
 #ifdef USE_LIBUNWIND
 	if (stack_trace_enabled) {
@@ -1258,7 +1258,7 @@ trace_syscall_exiting(struct tcb *tcp)
 
 	/*
 	 * Write record in dataseries file for the system call which
-	 * is being traced.  -Shubhi @ FSL
+	 * is being traced.
 	 */
 
 	// First, initialize v_args and common_fields with NULL arguments.
@@ -1636,7 +1636,7 @@ trace_syscall_exiting(struct tcb *tcp)
 		if (v_args[i])
 			free(v_args[i]);
 	}
-#endif
+#endif /* ENABLE_DATASERIES */
 
  ret:
 	tcp->flags &= ~TCB_INSYSCALL;
