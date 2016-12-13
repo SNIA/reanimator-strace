@@ -1320,7 +1320,7 @@ trace_syscall_exiting(struct tcb *tcp)
 		case SEN_newfstatat: /* FStatat system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
 			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[2],
-						    sizeof(struct stat));
+						  sizeof(struct stat));
 			ds_write_record(ds_module, "fstatat", tcp->u_arg,
 					common_fields, v_args);
 			break;
