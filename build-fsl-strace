@@ -11,7 +11,7 @@ function runcmd
     fi
 }
 
-#runcmd bootstrap
+runcmd ./bootstrap
 #runcmd autoreconf -v -i
 #runcmd /bin/rm -fr BUILD
 runcmd mkdir -p BUILD
