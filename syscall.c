@@ -1210,6 +1210,10 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "chmod", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_umask: /* Umask system call */
+			ds_write_record(ds_module, "umask", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		case SEN_fchmod: /* FChmod system call */
 			ds_write_record(ds_module, "fchmod", tcp->u_arg,
 					common_fields, v_args);

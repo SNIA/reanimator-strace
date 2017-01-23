@@ -2522,6 +2522,12 @@ main(int argc, char *argv[])
 {
 	init(argc, argv);
 
+#ifdef ENABLE_DATASERIES
+	if (ds_module) {
+		ds_write_two_umask_records(ds_module, strace_child);
+	}
+#endif
+
 	exit_code = !nprocs;
 
 	while (trace())
