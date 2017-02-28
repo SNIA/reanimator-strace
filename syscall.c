@@ -1435,16 +1435,19 @@ trace_syscall_exiting(struct tcb *tcp)
 		case SEN_vfork: /* VFork system call */
 			ds_write_record(ds_module, "vfork", tcp->u_arg,
 					common_fields, v_args);
+			break;
 		case SEN_setrlimit: /* Setrlimit system call */
 			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
 				sizeof(struct rlimit));
 			ds_write_record(ds_module, "setrlimit", tcp->u_arg,
 				common_fields, v_args);
+			break;
 		case SEN_getrlimit: /* Getrlimit system call */
 			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
 				sizeof(struct rlimit));
 			ds_write_record(ds_module, "getrlimit", tcp->u_arg,
 				common_fields, v_args);
+			break;
 		/*
 		 * These system calls are chosen not be traced by
 		 * fsl-strace.
