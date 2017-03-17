@@ -1674,6 +1674,46 @@ out:
 }
 
 /*
+ * This function retrieves the name string passed as an argument to
+ * system call.  It internally calls umovestr() function which
+ * copies data from one address space to another.
+ */
+char *
+ds_get_name(struct tcb *tcp, long addr)
+{
+	char *name = NULL;
+	int nul_seen;
+
+	if (!addr)
+		goto out;
+
+	/*
+	 * Note: xmalloc succeeds always or aborts the trace process
+	 * with an error message to stderr.
+	 */
+	name = xmalloc(NAME_MAX + 1);
+
+	/*
+	 * Fetch one byte more to find out whether name length is
+	 * greater than NAME_MAX.
+	 */
+	nul_seen = umovestr(tcp, addr, NAME_MAX + 1, name);
+	if (nul_seen < 0)
+		goto out_free;
+	else {
+		name[NAME_MAX] = '\0';
+		goto out;
+	}
+out_free:
+	if (name) {
+		free(name);
+		name = NULL;
+	}
+out:
+	return name;
+}
+
+/*
  * This function iteratievly copies the each buffer of single
  * readv system call and then calls the ds_write_record() to
  * write each record in dataseries file.
