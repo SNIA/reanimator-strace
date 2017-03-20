@@ -1486,6 +1486,23 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "fgetxattr", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_listxattr: /* Listxattr and Llistxattr system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  tcp->u_rval);
+			if (tcp->s_ent->sys_name[1] == 'l')
+				ds_write_record(ds_module, "llistxattr",
+						tcp->u_arg, common_fields, v_args);
+			else
+				ds_write_record(ds_module, "listxattr",
+						tcp->u_arg, common_fields, v_args);
+			break;
+		case SEN_flistxattr: /* Flistxattr system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  tcp->u_rval);
+			ds_write_record(ds_module, "flistxattr", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		/*
 		 * These system calls are chosen not be traced by
 		 * fsl-strace.
