@@ -1503,6 +1503,21 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "flistxattr", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_removexattr: /* Removexattr & LRemovexattr system calls */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+			v_args[1] = ds_get_name(tcp, tcp->u_arg[1]);
+			if (tcp->s_ent->sys_name[0] == 'l')
+				ds_write_record(ds_module, "lremovexattr",
+						tcp->u_arg, common_fields, v_args);
+			else
+				ds_write_record(ds_module, "removexattr",
+						tcp->u_arg, common_fields, v_args);
+			break;
+		case SEN_fremovexattr: /* FRemovexattr system call */
+			v_args[0] = ds_get_name(tcp, tcp->u_arg[1]);
+			ds_write_record(ds_module, "fremovexattr", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		/*
 		 * These system calls are chosen not be traced by
 		 * fsl-strace.
