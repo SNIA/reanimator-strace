@@ -1448,6 +1448,14 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "getrlimit", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_setpgid: /* Setpgid system call */
+			ds_write_record(ds_module, "setpgid", tcp->u_arg,
+					common_fields, v_args);
+			break;
+		case SEN_setsid: /* Setsid system call */
+			ds_write_record(ds_module, "setsid", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		/*
 		 * These system calls are chosen not be traced by
 		 * fsl-strace.
