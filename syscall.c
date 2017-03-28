@@ -753,6 +753,13 @@ trace_syscall_entering(struct tcb *tcp)
 							&tcp->etime;
 			common_fields[DS_COMMON_FIELD_EXECUTING_PID] =
 							&tcp->pid;
+			/*
+			 * Linux has a unique implementation of threads. To the Linux kernel,
+			 * there is no concept of a thread. Linux implements all threads as standard processes.
+			 * Therefore, pid is same as tid.
+			 */
+			common_fields[DS_COMMON_FIELD_EXECUTING_TID] =
+							&tcp->pid;
 			if (exiting(tcp))
 				exit_generated = true;
 			v_args[0] = &exit_generated;
@@ -1111,6 +1118,12 @@ trace_syscall_exiting(struct tcb *tcp)
 	common_fields[DS_COMMON_FIELD_RETURN_VALUE] = &tcp->u_rval;
 	common_fields[DS_COMMON_FIELD_ERRNO_NUMBER] = &tcp->u_error;
 	common_fields[DS_COMMON_FIELD_EXECUTING_PID] = &tcp->pid;
+	/*
+	 * Linux has a unique implementation of threads. To the Linux kernel,
+	 * there is no concept of a thread. Linux implements all threads as standard processes.
+	 * Therefore, pid is same as tid.
+	 */
+	common_fields[DS_COMMON_FIELD_EXECUTING_TID] = &tcp->pid;
 
 	switch (tcp->s_ent->sen) {
 		case SEN_open: /* Open system call */
