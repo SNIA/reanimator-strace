@@ -1555,6 +1555,8 @@ trace_syscall_exiting(struct tcb *tcp)
 		case SEN_mremap:
 		case SEN_madvise:
 		case SEN_rt_sigreturn:
+		case SEN_sigreturn:
+		case SEN_rt_sigsuspend:
 		case SEN_getuid:
 		case SEN_getgid:
 		case SEN_geteuid:
