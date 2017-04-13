@@ -728,6 +728,30 @@ trace_syscall_entering(struct tcb *tcp)
 	 */
 	if (ds_module) {
 		gettimeofday(&tcp->etime, NULL);
+		// Initialize v_args and common_fields with NULL
+		memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
+		memset(common_fields, 0, sizeof(void *)
+					 * DS_NUM_COMMON_FIELDS);
+
+		/*
+		 * Then, store the common field values.
+		 * Since _exit(2) and execve system calls do not return,
+		 * we are not setting time_returned, return value
+		 * and error numbers in our replayer.  We are only
+		 * setting time_called and executing pid fields.
+		 */
+		common_fields[DS_COMMON_FIELD_TIME_CALLED] =
+						&tcp->etime;
+		common_fields[DS_COMMON_FIELD_EXECUTING_PID] =
+						&tcp->pid;
+		/*
+		 * Linux has a unique implementation of threads. To the Linux kernel,
+		 * there is no concept of a thread. Linux implements all threads as standard processes.
+		 * Therefore, pid is same as tid.
+		 */
+		common_fields[DS_COMMON_FIELD_EXECUTING_TID] =
+						&tcp->pid;
+
 		switch (tcp->s_ent->sen) {
 		case SEN_exit: /* exit system call */
 			/*
@@ -737,29 +761,6 @@ trace_syscall_entering(struct tcb *tcp)
 			 * trace_syscall_entering() function.
 			 */
 
-			// Initialize v_args and common_fields with NULL
-			memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
-			memset(common_fields, 0, sizeof(void *)
-						 * DS_NUM_COMMON_FIELDS);
-
-			/*
-			 * Then, store the common field values.
-			 * Since _exit(2) system calls do not return,
-			 * we are not setting time_returned, return value
-			 * and error numbers in our replayer.  We are only
-			 * setting time_called and executing pid fields.
-			 */
-			common_fields[DS_COMMON_FIELD_TIME_CALLED] =
-							&tcp->etime;
-			common_fields[DS_COMMON_FIELD_EXECUTING_PID] =
-							&tcp->pid;
-			/*
-			 * Linux has a unique implementation of threads. To the Linux kernel,
-			 * there is no concept of a thread. Linux implements all threads as standard processes.
-			 * Therefore, pid is same as tid.
-			 */
-			common_fields[DS_COMMON_FIELD_EXECUTING_TID] =
-							&tcp->pid;
 			if (exiting(tcp))
 				exit_generated = true;
 			v_args[0] = &exit_generated;
@@ -773,14 +774,6 @@ trace_syscall_entering(struct tcb *tcp)
 			 * and the memory segments of calling process is
 			 * overwritten by that of program loaded.  So we should
 			 * capture traces in trace_syscall_entering() function.
-			 */
-
-			/* Initialize v_args and common fields with NULL */
-			memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
-			memset(common_fields, 0, sizeof(void *)
-						 * DS_NUM_COMMON_FIELDS);
-
-			/*
 			 * The execve system call can accept arbitrary number
 			 * of arguments.  Continuation numbers are used to
 			 * record all the arguments.  First record has a
