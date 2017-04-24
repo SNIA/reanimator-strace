@@ -1191,6 +1191,12 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "symlink", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_symlinkat: /* symlinkat system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+			v_args[1] = ds_get_path(tcp, tcp->u_arg[2]);
+			ds_write_record(ds_module, "symlinkat", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		case SEN_unlink: /* unlink system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
 			ds_write_record(ds_module, "unlink", tcp->u_arg,
@@ -1371,6 +1377,11 @@ trace_syscall_exiting(struct tcb *tcp)
 		case SEN_mknod: /* mknod system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
 			ds_write_record(ds_module, "mknod", tcp->u_arg,
+					common_fields, v_args);
+			break;
+		case SEN_mknodat: /* mknodat system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+			ds_write_record(ds_module, "mknodat", tcp->u_arg,
 					common_fields, v_args);
 			break;
 		case SEN_pipe: /* pipe system call */
