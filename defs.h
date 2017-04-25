@@ -37,6 +37,7 @@
 #ifdef ENABLE_DATASERIES
 # include <strace2ds.h>
 # include <utime.h>
+# include <limits.h>
 #endif /* ENABLE_DATASERIES */
 
 #include <features.h>
@@ -227,10 +228,94 @@ struct fault_opts {
 # define HAVE_STRUCT_TCB_EXT_ARG 0
 #endif
 
+#ifdef ENABLE_DATASERIES
+/*
+ * Process info Block
+ * Reference structure of info available in /proc/<PID>/stat (Linux)
+ * See: /fs/proc/array.c
+ */
+typedef struct statstruct_proc {
+	pid_t pid;			/*  1: Process id */
+	char pname[PATH_MAX];		/*  2: Filename of the process' executable */
+	char state;			/*  3: R is running, S is sleeping,
+					 *     D is sleeping in an uninterruptible wait,
+					 *     Z is zombie, T is traced or stopped */
+	pid_t ppid;			/*  4: Pid of the parent. */
+	pid_t pgid;			/*  5: Group id of the process. */
+	pid_t sid;			/*  6: Session id of the process. */
+	int tty_nr;			/*  7: Tty the process uses */
+	int tty_pgrp;			/*  8: Group id of tty */
+	unsigned int flags;		/*  9: Flags of the process. */
+	unsigned long min_flt;		/* 10: Number of minor faults */
+	unsigned long cmin_flt;		/* 11: Number of minor faults with childs */
+	unsigned long maj_flt;		/* 12: Number of major faults */
+	unsigned long cmaj_flt;		/* 13: Number of major faults with childs */
+	clock_t utime;			/* 14: User mode jiffies */
+	clock_t stime;			/* 15: Kernel mode jiffies */
+	clock_t cutime;			/* 16: User mode jiffies with childs */
+	clock_t cstime;			/* 17: Kernel mode jiffies with childs */
+	int priority;			/* 18: Priority level */
+	int nice;			/* 19: Nice level timeslice */
+	int num_threads;		/* 20: Number of threads */
+	long long zero1;		/* 21: Obsolete, always 0 */
+	unsigned long long start_time;	/* 22: Time the process started after system boot */
+	unsigned long vsize;		/* 23: Virtual memory size */
+	unsigned long rss;		/* 24: Resident set memory size */
+	unsigned long rsslim;		/* 25: Current limit in bytes on the rss */
+	unsigned long start_code;	/* 26: Address above which program text can run */
+	unsigned long end_code;		/* 27: Address below which program text can run */
+	unsigned long start_stack;	/* 28: Address of the start of the main process stack */
+	unsigned long esp;		/* 29: Current value of ESP */
+	unsigned long eip;		/* 30: Current value of EIP */
+	unsigned long signal;		/* 31: Bitmap of pending signals */
+	unsigned long blocked;		/* 32: Bitmap of blocked signals */
+	unsigned long sigignore;	/* 33: Bitmap of ignored signals */
+	unsigned long sigcatch;		/* 34: Bitmap of caught signals */
+	long long zero2;		/* 35: Place holder, used to be wchan */
+	long long zero3;		/* 36: Place holder */
+	long long zero4;		/* 37: Place holder */
+	int exit_signal;		/* 38: Signal to send to parent thread on exit */
+	unsigned int task_cpu;		/* 39: Which CPU the task is scheduled on */
+	unsigned int rt_priority;	/* 40: Realtime priority */
+	unsigned int policy;		/* 41: Scheduling policy */
+	unsigned long long blkio_ticks;	/* 42: Time spent waiting for block IO */
+	long gtime;			/* 43: Guest time of the task in jiffies */
+	long cgtime;			/* 44: Guest time of the task children in jiffies */
+	unsigned long start_data;	/* 45: Address above which program data+bss is placed */
+	unsigned long end_data;		/* 46: Address below which program data+bss is placed */
+	unsigned long start_brk;	/* 47: Address above which program head can be expanded with brk() */
+	unsigned long arg_start;	/* 48: Address above which program command line is placed */
+	unsigned long arg_end;		/* 49: Address below which program command line is placed */
+	unsigned long env_start;	/* 50: Address above which program environment is placed */
+	unsigned long env_end;		/* 51: Address below which program environment is placed */
+	int exit_code;			/* 52: Thread's exit code in the form reported by waitpid */
+	/* End of info from /proc/<PID>/stat */
+
+	/* Additionally from stat(/proc/<PID>/stat) */
+	int euid;			/* 53: Effective user id */
+} procinfo;
+
+/*
+ * The max total length of above block:
+ * PATH_MAX (for pname)
+ * + 2 (for parenthesis enclosing the path name)
+ * + 52 * 19 (for characters representing individual integers)
+ * + 53 (for spaces and new line character)
+ * = PATH_MAX + 1043
+ */
+# define PROC_MAX (PATH_MAX + 1043)
+#endif /* ENABLE_DATASERIES */
+
 /* Trace Control Block */
 struct tcb {
 	int flags;		/* See below for TCB_ values */
 	int pid;		/* If 0, this tcb is free */
+#ifdef ENABLE_DATASERIES
+	int ppid;		/* Process' parent id */
+	int euid;		/* Effective user id */
+	int sid;		/* Session id */
+	int pgid;		/* Process group id */
+#endif /* ENABLE_DATASERIES */
 	int qual_flg;		/* qual_flags[scno] or DEFAULT_QUAL_FLAGS + RAW */
 	unsigned long u_error;	/* Error code */
 	long scno;		/* System call number */
@@ -427,6 +512,7 @@ extern unsigned os_release;
 
 #ifdef ENABLE_DATASERIES
 extern DataSeriesOutputModule *ds_module;
+extern int get_proc_info(struct tcb *tcp);
 #endif /* ENABLE_DATASERIES */
 
 void error_msg(const char *fmt, ...) ATTRIBUTE_FORMAT((printf, 1, 2));

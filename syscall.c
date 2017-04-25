@@ -39,6 +39,7 @@
 #ifdef ENABLE_DATASERIES
 # include <fcntl.h>
 # include <sys/statfs.h>
+# include <sys/stat.h>
 # include <sys/time.h>
 # include <sys/resource.h>
 #endif /* ENABLE_DATASERIES */
@@ -1183,6 +1184,12 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "symlink", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_symlinkat: /* symlinkat system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+			v_args[1] = ds_get_path(tcp, tcp->u_arg[2]);
+			ds_write_record(ds_module, "symlinkat", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		case SEN_unlink: /* unlink system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
 			ds_write_record(ds_module, "unlink", tcp->u_arg,
@@ -1367,6 +1374,11 @@ trace_syscall_exiting(struct tcb *tcp)
 		case SEN_mknod: /* mknod system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
 			ds_write_record(ds_module, "mknod", tcp->u_arg,
+					common_fields, v_args);
+			break;
+		case SEN_mknodat: /* mknodat system call */
+			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+			ds_write_record(ds_module, "mknodat", tcp->u_arg,
 					common_fields, v_args);
 			break;
 		case SEN_pipe: /* pipe system call */
@@ -1864,6 +1876,85 @@ get_scno(struct tcb *tcp)
 	}
 	return 1;
 }
+
+#ifdef ENABLE_DATASERIES
+/*
+ * Returns:
+ * 1: ok, update tcp
+ * other: error, could not read stat file for the pid
+ *
+ * Reads /proc/<PID>/stat using pid from struct tcb.
+ * On success, it parses the data read, and update struct tcb with
+ * sid, pgid, ppid, euid of the process.
+ * The structure of information in /proc/<PID>/stat has been defined
+ * in struct procinfo - defs.h
+ */
+int
+get_proc_info(struct tcb *tcp)
+{
+	int fd;
+	char *stat_file_path = NULL, *stat_str = NULL, *s;
+	int ret = 1;
+	struct stat st;
+
+	stat_file_path = xmalloc(PATH_MAX + 1);
+	/*
+	 * Note: On failure xmalloc will aborts the trace process
+	 * with an error message to stderr
+	 */
+
+	sprintf(stat_file_path, "/proc/%d/stat", tcp->pid);
+
+	ret = access(stat_file_path, R_OK);
+	if (ret == -1)
+		goto out_free;
+
+	fd = open(stat_file_path, O_RDONLY);
+	if (fd < 0) {
+		ret = -1;
+		goto out_free;
+	}
+
+	stat_str = xmalloc(PROC_MAX + 1);
+
+	ret = read(fd, stat_str, PROC_MAX);
+	if (ret < 0)
+		goto out_fd;
+	stat_str[PROC_MAX] = 0;
+
+	/*
+	 * /proc/<PID>/stat has the following format:
+	 * `pid (process_name) state ppid ...'
+	 * we can skip pointer to `state' by finding the last location of `)'
+	 */
+	s = strrchr(stat_str, ')') + 2;
+
+	/* Skips process state. Reads parent pid, group id, session id */
+	sscanf(s, "%*c %d %d %d", &tcp->ppid, &tcp->pgid, &tcp->sid);
+
+	ret = stat(stat_file_path, &st);
+	if (ret != -1)
+		tcp->euid = st.st_uid;
+	else
+		tcp->euid = -1;
+
+out_fd:
+	close(fd);
+
+out_free:
+	if (stat_str) {
+		free(stat_str);
+		stat_str = NULL;
+	}
+
+	if (stat_file_path) {
+		free(stat_file_path);
+		stat_file_path = NULL;
+	}
+
+	return ret;
+}
+#endif /* ENABLE_DATASERIES */
 
 #ifdef USE_GET_SYSCALL_RESULT_REGS
 static int get_syscall_result_regs(struct tcb *);
