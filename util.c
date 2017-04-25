@@ -1852,6 +1852,9 @@ write_record:
 		 */
 		v_args[2] = (void *) arg_env;
 
+		tcp->dsid = ds_get_next_id(ds_module);
+		common_fields[DS_COMMON_FIELD_UNIQUE_ID] =
+						&tcp->dsid;
 		// Write each individual record
 		ds_write_record(ds_module, "execve", tcp->u_arg,
 				common_fields, v_args);

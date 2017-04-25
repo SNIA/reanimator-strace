@@ -763,10 +763,12 @@ trace_syscall_entering(struct tcb *tcp)
 			 * _exit(2) system call, we should do this in
 			 * trace_syscall_entering() function.
 			 */
-
+			common_fields[DS_COMMON_FIELD_UNIQUE_ID] =
+						&tcp->dsid;
 			if (exiting(tcp))
 				exit_generated = true;
 			v_args[0] = &exit_generated;
+
 			ds_write_record(ds_module, "exit", tcp->u_arg,
 					common_fields, v_args);
 			v_args[0] = NULL;
@@ -783,6 +785,8 @@ trace_syscall_entering(struct tcb *tcp)
 			 * zero continuation number.  Each subsequent records
 			 * have an incrementing continuation number.
 			 */
+			common_fields[DS_COMMON_FIELD_UNIQUE_ID] =
+						&tcp->dsid;
 			continuation_number = 0;
 			v_args[0] = &continuation_number;
 			v_args[1] = ds_get_path(tcp, tcp->u_arg[0]);
@@ -1120,7 +1124,7 @@ trace_syscall_exiting(struct tcb *tcp)
 	 * Therefore, pid is same as tid.
 	 */
 	common_fields[DS_COMMON_FIELD_EXECUTING_TID] = &tcp->pid;
-
+	common_fields[DS_COMMON_FIELD_UNIQUE_ID] = &tcp->dsid;
 	switch (tcp->s_ent->sen) {
 		case SEN_open: /* open system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
