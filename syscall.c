@@ -753,6 +753,8 @@ trace_syscall_entering(struct tcb *tcp)
 		common_fields[DS_COMMON_FIELD_EXECUTING_TID] =
 						&tcp->pid;
 
+		tcp->dsid = ds_get_next_id(ds_module);
+
 		switch (tcp->s_ent->sen) {
 		case SEN_exit: /* exit system call */
 			/*

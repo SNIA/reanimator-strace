@@ -315,6 +315,7 @@ struct tcb {
 	int euid;		/* Effective user id */
 	int sid;		/* Session id */
 	int pgid;		/* Process group id */
+	int64_t dsid;		/* DataSeries record id */
 #endif /* ENABLE_DATASERIES */
 	int qual_flg;		/* qual_flags[scno] or DEFAULT_QUAL_FLAGS + RAW */
 	unsigned long u_error;	/* Error code */
