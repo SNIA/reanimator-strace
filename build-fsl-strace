@@ -18,10 +18,10 @@ runcmd mkdir -p BUILD
 runcmd cd BUILD
 
 # pass parameters to configure for linking with our libs
-export CPPFLAGS="-I$HOME/strace2ds/include"
+export CPPFLAGS="-I$HOME/lib/strace2ds/include"
 export LDFLAGS="\
-	-Xlinker -rpath=/usr/local/dataseries/lib:$HOME/strace2ds/lib \
-	-L/usr/local/dataseries/lib -L$HOME/strace2ds/lib"
+	-Xlinker -rpath=/usr/local/dataseries/lib:$HOME/lib/strace2ds/lib \
+	-L/usr/local/dataseries/lib -L$HOME/lib/strace2ds/lib"
 LIBS="-lstrace2ds -lLintel -lDataSeries"
 
 # show configure command than run it
