@@ -39,5 +39,5 @@ make LIBS="$LIBS" CCLD=g++ || exit $?
 
 # example how to run new strace
 # $ cd BUILD
-# $ STRACE2DS=~/strace2ds ./strace -X foo.ds /bin/cat stamp-h
+# $ STRACE2DS=~/lib/strace2ds ./strace -X foo.ds /bin/cat stamp-h
 # ls -l foo.ds
