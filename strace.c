@@ -2524,7 +2524,7 @@ main(int argc, char *argv[])
 
 #ifdef ENABLE_DATASERIES
 	if (ds_module) {
-		ds_write_two_umask_records(ds_module, strace_child);
+		ds_write_umask_at_start(ds_module, strace_child);
 	}
 #endif
 
