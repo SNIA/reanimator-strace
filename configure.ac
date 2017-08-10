@@ -261,8 +261,12 @@ case "$enable_dataseries" in
 	no) enable_dataseries=0 ;;
 	*) AC_MSG_ERROR([bad value $enable_dataseries for dataseries option]) ;;
 esac
-AC_DEFINE_UNQUOTED([ENABLE_DATASERIES], [$enable_dataseries],
-		   [Define to 1 if you want DataSeries output format support.])
+if test "$enable_dataseries" = 1
+then
+	AC_DEFINE_UNQUOTED([ENABLE_DATASERIES],
+		[$enable_dataseries],
+		[Define to 1 if you want DataSeries output format support.])
+fi
 
 AC_C_BIGENDIAN
 AC_C_TYPEOF
