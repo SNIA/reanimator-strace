@@ -1561,6 +1561,7 @@ trace_syscall_exiting(struct tcb *tcp)
 		case SEN_socket: /* socket system call */
 			ds_write_record(ds_module, "socket", tcp->u_arg,
 					common_fields, v_args);
+			break;
 		/*
 		 * These system calls are chosen not be traced by
 		 * fsl-strace.
