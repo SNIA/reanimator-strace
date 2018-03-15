@@ -42,6 +42,7 @@
 # include <sys/stat.h>
 # include <sys/time.h>
 # include <sys/resource.h>
+# include <sys/socket.h>
 #endif /* ENABLE_DATASERIES */
 
 /* for struct iovec */
@@ -1562,8 +1563,28 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "fremovexattr", tcp->u_arg,
 					common_fields, v_args);
 			break;
-		case SEN_socket: /* socket system call */
+		case SEN_socket: /* Socket system call */
 			ds_write_record(ds_module, "socket", tcp->u_arg,
+					common_fields, v_args);
+			break;
+                case SEN_connect:  /* Connect system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  tcp->u_arg[2]);
+			ds_write_record(ds_module, "connect", tcp->u_arg,
+					common_fields, v_args);
+			break;
+                case SEN_bind:  /* Bind system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  tcp->u_arg[2]);
+			ds_write_record(ds_module, "bind", tcp->u_arg,
+					common_fields, v_args);
+			break;
+                case SEN_accept:  /* Accept system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  sizeof(struct sockaddr_storage));
+			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[2],
+                                                  sizeof(socklen_t));
+			ds_write_record(ds_module, "accept", tcp->u_arg,
 					common_fields, v_args);
 			break;
 		/*
