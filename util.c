@@ -1773,8 +1773,8 @@ ds_write_iov_records(struct tcb *tcp, const long start_addr,
 		v_args[2] = ds_get_buffer(tcp, iov[0], iov[1]);
 
 		// Write each individual record.
-		ds_write_record(ds_module, sys_call_name, tcp->u_arg,
-				common_fields, v_args);
+		ds_write_into_same_record(ds_module, sys_call_name, tcp->u_arg,
+					  common_fields, v_args);
 
 		// Increment the iov number.
 		iov_number++;
@@ -1852,9 +1852,6 @@ write_record:
 		 */
 		v_args[2] = (void *) arg_env;
 
-		tcp->dsid = ds_get_next_id(ds_module);
-		common_fields[DS_COMMON_FIELD_UNIQUE_ID] =
-						&tcp->dsid;
 		// Write each individual record
 		ds_write_record(ds_module, "execve", tcp->u_arg,
 				common_fields, v_args);
