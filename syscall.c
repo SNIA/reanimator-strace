@@ -1580,14 +1580,17 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "accept", tcp->u_arg,
 					common_fields, v_args);
 			break;
-		/*
-		 * These system calls are chosen not be traced by
-		 * fsl-strace.
-		 */
 		case SEN_listen: /* listen system call */
 			ds_write_record(ds_module, "listen", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_shutdown: /*shutdown system call */
+			ds_write_record(ds_module, "shutdown", tcp->u_arg,
+					common_fields, v_args);
+		/*
+		 * These system calls are chosen not be traced by
+		 * fsl-strace.
+		 */
 		case SEN_brk:
 		case SEN_mprotect:
 		case SEN_arch_prctl:
