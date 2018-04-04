@@ -849,6 +849,7 @@ trace_syscall_exiting(struct tcb *tcp)
 	void *v_args[DS_MAX_ARGS];
 	void *common_fields[DS_NUM_COMMON_FIELDS];
 	int i, iov_number, continuation_number;
+	socklen_t ulen;
 
 	/* Get a time stamp for time_returned and store as in a timeval tv. */
 	if (ds_module) {
@@ -1572,22 +1573,52 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "bind", tcp->u_arg,
 					common_fields, v_args);
 			break;
+			/*
+			 * NOTE: accept(2), getsockname(2) and getpeername(2)
+			 * system calls are incomplete. We do not currently
+			 * record the struct sockaddr buffer and it is set as
+			 * NULL in ds_module for now. Nor do we record the
+			 * value of the buffer's original length on syscall
+			 * entry.
+			 */
                 case SEN_accept:  /* Accept system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  sizeof(struct sockaddr_storage));
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[2],
-                                                  sizeof(socklen_t));
+			if ((!tcp->u_arg[2]) ||
+			    (umoven(tcp, tcp->u_arg[2], sizeof(socklen_t), &ulen) < 0)) {
+			  ulen = 0;
+			}
+			v_args[0] = &ulen;
 			ds_write_record(ds_module, "accept", tcp->u_arg,
+					common_fields, v_args);
+			v_args[0] = NULL;
+			break;
+		case SEN_getsockname: /* Getsockname system call */
+			if ((!tcp->u_arg[2]) ||
+			    (umoven(tcp, tcp->u_arg[2], sizeof(socklen_t), &ulen) < 0)) {
+			  ulen = 0;
+			}
+			v_args[0] = &ulen;
+			ds_write_record(ds_module, "getsockname", tcp->u_arg,
+					common_fields, v_args);
+			v_args[0] = NULL;
+			break;
+		case SEN_getpeername: /* Getpeername system call*/
+			if ((!tcp->u_arg[2]) ||
+			    (umoven(tcp, tcp->u_arg[2], sizeof(socklen_t), &ulen) < 0)) {
+			  ulen = 0;
+			}
+			v_args[0] = &ulen;
+			ds_write_record(ds_module, "getpeername", tcp->u_arg,
+					common_fields, v_args);
+			v_args[0] = NULL;
+			break;
+		case SEN_listen: /* listen system call */
+			ds_write_record(ds_module, "listen", tcp->u_arg,
 					common_fields, v_args);
 			break;
 		/*
 		 * These system calls are chosen not be traced by
 		 * fsl-strace.
 		 */
-		case SEN_listen: /* listen system call */
-			ds_write_record(ds_module, "listen", tcp->u_arg,
-					common_fields, v_args);
-			break;
 		case SEN_brk:
 		case SEN_mprotect:
 		case SEN_arch_prctl:
