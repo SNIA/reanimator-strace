@@ -1574,11 +1574,11 @@ trace_syscall_exiting(struct tcb *tcp)
 					common_fields, v_args);
 			break;
 			/*
-			 * NOTE: accept(2), getsockname(2) and getpeername(2)
-			 * system calls are incomplete. We do not currently
-			 * record the struct sockaddr buffer and it is set as
-			 * NULL in ds_module for now. Nor do we record the
-			 * value of the buffer's original length on syscall
+			 * NOTE: support for tracing the accept(2), getsockname(2)
+			 * and getpeername(2) system calls is incomplete.  We do
+			 * not currently record the struct sockaddr buffer and it
+			 * is set as NULL in ds_module for now.  Nor do we record
+			 * the value of the buffer's original length on syscall
 			 * entry.
 			 */
                 case SEN_accept:  /* Accept system call */
@@ -1617,6 +1617,34 @@ trace_syscall_exiting(struct tcb *tcp)
 			break;
 		case SEN_shutdown: /*shutdown system call */
 			ds_write_record(ds_module, "shutdown", tcp->u_arg,
+					common_fields, v_args);
+			break;
+		case SEN_socketpair: /* socketpair system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[3],
+						  2 * sizeof(int));
+			ds_write_record(ds_module, "socketpair", tcp->u_arg,
+					common_fields, v_args);
+			break;
+			/*
+			 * NOTE: support for tracing the getsockopt(2) system call is
+			 * incomplete.  We do not currently record the optval buffer
+			 * and it is set as NULL in ds_module for now.  Nor do we record
+			 * the value of the buffer's original length on syscall entry.
+			 */
+		case SEN_getsockopt: /* getsockopt system call */
+			if ((!tcp->u_arg[4]) ||
+			    (umoven(tcp, tcp->u_arg[4], sizeof(socklen_t), &ulen) < 0)) {
+			  ulen = 0;
+			}
+			v_args[0] = &ulen;
+			ds_write_record(ds_module, "getsockopt", tcp->u_arg,
+					common_fields, v_args);
+			v_args[0] = NULL;
+			break;
+		case SEN_setsockopt: /* setsockopt system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[3],
+						  tcp->u_arg[4]);
+			ds_write_record(ds_module, "setsockopt", tcp->u_arg,
 					common_fields, v_args);
 			break;
 		/*
