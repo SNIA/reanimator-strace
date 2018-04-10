@@ -1653,6 +1653,14 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "send", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_sendto: /* sendto system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  tcp->u_arg[2]);
+			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[4],
+						  tcp->u_arg[5]);
+			ds_write_record(ds_module, "sendto", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		/*
 		 * These system calls are chosen not be traced by
 		 * fsl-strace.
