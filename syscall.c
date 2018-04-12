@@ -854,6 +854,7 @@ trace_syscall_exiting(struct tcb *tcp)
 	void *common_fields[DS_NUM_COMMON_FIELDS];
 	int i, iov_number, continuation_number;
 	socklen_t ulen;
+	struct msghdr *msg;
 
 	/* Get a time stamp for time_returned and store as in a timeval tv. */
 	if (ds_module) {
@@ -1666,6 +1667,37 @@ trace_syscall_exiting(struct tcb *tcp)
 						  tcp->u_arg[5]);
 			ds_write_record(ds_module, "sendto", tcp->u_arg,
 					common_fields, v_args);
+			break;
+			/*
+			 * NOTE: support for tracing the sendmsg system call is
+			 * incomplete.  Currently, we do not record all the
+			 * fields in the struct msghdr.
+			 */
+		case SEN_sendmsg: /* sendmsg system call */
+			msg = ds_get_buffer(tcp, tcp->u_arg[1],
+					    sizeof(struct msghdr));
+			/* iov_number equals to '-1' denotes first record. */
+			iov_number = -1;
+			if (!msg) {
+				v_args[0] = NULL;
+				v_args[1] = NULL;
+			} else {
+				v_args[0] = &iov_number;
+				v_args[1] = &tcp->u_rval;
+			}
+			/* Write the first record. */
+			ds_write_record(ds_module, "sendmsg", tcp->u_arg,
+					common_fields, v_args);
+			/*
+			 * Then, iteratively write the record for each
+			 * buffer passed in struct iovec.
+			 */
+			if (msg) {
+				ds_write_iov_records(tcp, (long)msg->msg_iov,
+						     "sendmsg", common_fields,
+						     v_args, msg->msg_iovlen);
+				free(msg);
+			}
 			break;
 		/*
 		 * These system calls are chosen not be traced by
