@@ -1316,7 +1316,7 @@ trace_syscall_exiting(struct tcb *tcp)
 			 * buffer passed in struct iovec.
 			 */
 			ds_write_iov_records(tcp, tcp->u_arg[1], "readv",
-					     common_fields, v_args);
+					common_fields, v_args, tcp->u_arg[2]);
 			break;
 		case SEN_writev: /* writev system call */
 			/* iov_number equals to '-1' denotes first record. */
@@ -1331,7 +1331,7 @@ trace_syscall_exiting(struct tcb *tcp)
 			 * buffer passed in struct iovec.
 			 */
 			ds_write_iov_records(tcp, tcp->u_arg[1], "writev",
-					     common_fields, v_args);
+					common_fields, v_args, tcp->u_arg[2]);
 			break;
 		case SEN_utime: /* utime system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);

@@ -1713,35 +1713,27 @@ out:
 	return name;
 }
 
-/*
- * This function iteratievly copies the each buffer of single
- * readv system call and then calls the ds_write_record() to
- * write each record in dataseries file.
+/**
+ * ds_write_iov_records - iteratievly copies each iov record buffer
+ * and then calls the ds_write_record() to write each record in
+ * dataseries file.
+ * @struct tcb: trace control block structure
+ * @start_addr: start address of iov records buffer
+ * @sys_call_name: system call name
+ * @common_fields: common fields
+ * @v_args: variable args
+ * @iovcnt: number of iov records
  */
 void
 ds_write_iov_records(struct tcb *tcp, const long start_addr,
 		     const char *sys_call_name, void **common_fields,
-		     void **v_args)
+		     void **v_args, size_t iovcnt)
 {
-	size_t count, size, elem_size, iov_number;
-	long end_addr, cur;
-	struct iovec *iov_buf;
+	size_t iov_number, rec;
+	struct iovec *iov_buf, *current = (struct iovec *) start_addr;
 	unsigned long iov[2];
 
 	if (!start_addr) {
-		goto out;
-	}
-
-	count = tcp->u_arg[2];
-	if (!count) {
-		goto out;
-	}
-
-	elem_size = sizeof(struct iovec);
-	size = count * elem_size;
-	end_addr = start_addr + size;
-
-	if (end_addr <= start_addr) {
 		goto out;
 	}
 
@@ -1752,9 +1744,10 @@ ds_write_iov_records(struct tcb *tcp, const long start_addr,
 	 * Iteratively copy each buffer and add record to
 	 * dataseries file.
 	 */
-	for (cur = start_addr; cur < end_addr; cur += elem_size) {
-		iov_buf = (struct iovec *) ds_get_buffer(tcp, cur,
-							 sizeof(struct iovec));
+	for (rec = 0; rec < iovcnt; ++rec) {
+		iov_buf = (struct iovec *) ds_get_buffer(tcp,
+				(const long)(current + rec),
+				sizeof(struct iovec));
 
 		if (iov_buf == NULL)
 			continue;
@@ -1762,7 +1755,7 @@ ds_write_iov_records(struct tcb *tcp, const long start_addr,
 		// Stores the address of buffer.
 		iov[0] = ((uintptr_t) iov_buf->iov_base);
 		// Stores the length of buffer.
-		iov[1] = ((unsigned int) iov_buf->iov_len);
+		iov[1] = ((uint64_t) iov_buf->iov_len);
 
 		/*
 		 * Save iov_number, length of buffer and buffer
