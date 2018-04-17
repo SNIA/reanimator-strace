@@ -1694,6 +1694,8 @@ trace_syscall_exiting(struct tcb *tcp)
 		case SEN_fadvise64:
 		case SEN_sched_getaffinity:
 		case SEN_sigaltstack:
+		case SEN_poll:
+		case SEN_select:
 			ds_add_to_untraced_set(ds_module,
 					       tcp->s_ent->sys_name,
 					       tcp->scno);
