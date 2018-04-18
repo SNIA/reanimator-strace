@@ -758,6 +758,10 @@ trace_syscall_entering(struct tcb *tcp)
 						&tcp->pid;
 
 		switch (tcp->s_ent->sen) {
+		case SEN_vfork:
+		case SEN_clone:
+		        tcp->clone_dsid = ds_get_next_id(ds_module);
+			break;
 		case SEN_exit: /* exit system call */
 			/*
 			 * For _exit(2) system call, trace_syscall_exiting()
@@ -1459,13 +1463,15 @@ trace_syscall_exiting(struct tcb *tcp)
 						  sizeof(int));
 			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[ctid_index],
 						  sizeof(int));
-			ds_write_record(ds_module, "clone", tcp->u_arg,
-					common_fields, v_args);
+			common_fields[DS_COMMON_FIELD_UNIQUE_ID] = &tcp->clone_dsid;
+			ds_write_into_same_record(ds_module, "clone", tcp->u_arg,
+						  common_fields, v_args);
 			break;
 		}
 		case SEN_vfork: /* vfork system call */
-			ds_write_record(ds_module, "vfork", tcp->u_arg,
-					common_fields, v_args);
+			common_fields[DS_COMMON_FIELD_UNIQUE_ID] = &tcp->clone_dsid;
+		        ds_write_into_same_record(ds_module, "vfork", tcp->u_arg,
+						  common_fields, v_args);
 			break;
 		case SEN_setrlimit: /* setrlimit system call */
 			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],

@@ -315,6 +315,7 @@ struct tcb {
 	int euid;		/* Effective user id */
 	int sid;		/* Session id */
 	int pgid;		/* Process group id */
+	uint64_t clone_dsid;	/* data series id is going to be used in clone */
 #endif /* ENABLE_DATASERIES */
 	int qual_flg;		/* qual_flags[scno] or DEFAULT_QUAL_FLAGS + RAW */
 	unsigned long u_error;	/* Error code */
