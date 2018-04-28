@@ -1655,7 +1655,7 @@ trace_syscall_exiting(struct tcb *tcp)
 					common_fields, v_args);
 			break;
 			/*
-			 * NOTE: support for tracing the recv(2) system call is
+			 * NOTE: support for replaying the recv(2) system call is
 			 * incomplete.
 			 */
 		case SEN_recv: /* recv system call */
