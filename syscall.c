@@ -1654,6 +1654,16 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "setsockopt", tcp->u_arg,
 					common_fields, v_args);
 			break;
+			/*
+			 * NOTE: support for tracing the recv(2) system call is
+			 * incomplete.
+			 */
+		case SEN_recv: /* recv system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  tcp->u_arg[2]);
+			ds_write_record(ds_module,"recv", tcp->u_arg,
+					common_fields, v_args);
+			break;
 		case SEN_send: /* send system call */
 			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
 						  tcp->u_arg[2]);
