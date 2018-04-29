@@ -1664,6 +1664,22 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module,"recv", tcp->u_arg,
 					common_fields, v_args);
 			break;
+			/*
+			 * NOTE: support for replaying the recvfrom(2) system call is
+			 * incomplete.
+			 */
+		case SEN_recvfrom: /* recvfrom system call */
+			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+						  tcp->u_arg[2]);
+			if ((!tcp->u_arg[5]) ||
+			    (umoven(tcp, tcp->u_arg[5], sizeof(socklen_t), &ulen) < 0)) {
+			  ulen = 0;
+			}
+			v_args[1] = &ulen;
+			ds_write_record(ds_module, "recvfrom", tcp->u_arg,
+					common_fields, v_args);
+			v_args[1] = NULL;
+			break;
 		case SEN_send: /* send system call */
 			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
 						  tcp->u_arg[2]);
