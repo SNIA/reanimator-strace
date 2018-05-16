@@ -1680,6 +1680,36 @@ trace_syscall_exiting(struct tcb *tcp)
 					common_fields, v_args);
 			v_args[1] = NULL;
 			break;
+			/*
+			 * NOTE: support for replaying the recvmsg(2) system call is
+			 * incomplete.
+			 */
+		case SEN_recvmsg: /* recvmsg system call*/
+			msg = ds_get_buffer(tcp, tcp->u_arg[1],
+					    sizeof(struct msghdr));
+			/* iov_number equals to '-1' denotes first record */
+			iov_number = -1;
+			if (!msg) {
+			  v_args[0] = NULL;
+			  v_args[1] = NULL;
+			} else {
+			  v_args[0] = &iov_number;
+			  v_args[1] = &tcp->u_rval;
+			}
+			/* Write the first record */
+			ds_write_record(ds_module, "recvmsg", tcp->u_arg,
+					common_fields, v_args);
+			/*
+			 * Then, iteratively write the record for each
+			 * buffer passed in struct iovec.
+			 */
+			if (msg) {
+			  ds_write_iov_records(tcp, (long)msg->msg_iov,
+					       "recvmsg", common_fields,
+					       v_args, msg->msg_iovlen);
+			  free(msg);
+			}
+			break;
 		case SEN_send: /* send system call */
 			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
 						  tcp->u_arg[2]);
