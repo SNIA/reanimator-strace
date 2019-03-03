@@ -1123,6 +1123,7 @@ trace_syscall_exiting(struct tcb *tcp)
 	common_fields[DS_COMMON_FIELD_ERRNO_NUMBER] = &tcp->u_error;
 	common_fields[DS_COMMON_FIELD_EXECUTING_PID] = &tcp->pid;
 	common_fields[DS_COMMON_FIELD_SYSCALL_NUM] = &tcp->scno;
+	common_fields[DS_COMMON_FIELD_BUFFER_NOT_CAPTURED] = (void *) false;
 	/*
 	 * Linux has a unique implementation of threads. To the Linux kernel,
 	 * there is no concept of a thread. Linux implements all threads as standard processes.
