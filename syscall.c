@@ -1394,6 +1394,10 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "fallocate", tcp->u_arg,
 					common_fields, NULL);
 			break;
+		case SEN_readahead: /* readahead system call */
+			ds_write_record(ds_module, "readahead", tcp->u_arg,
+					common_fields, NULL);
+			break;
 		case SEN_mknod: /* mknod system call */
 			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
 			ds_write_record(ds_module, "mknod", tcp->u_arg,
