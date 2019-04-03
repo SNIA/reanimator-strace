@@ -1590,6 +1590,14 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "socket", tcp->u_arg,
 					common_fields, v_args);
 			break;
+		case SEN_epoll_create: /* epoll_create system call */
+			ds_write_record(ds_module, "epoll_create", tcp->u_arg,
+					common_fields, v_args);
+			break;
+		case SEN_epoll_create1: /* epoll_create1 system call */
+			ds_write_record(ds_module, "epoll_create1", tcp->u_arg,
+					common_fields, v_args);
+			break;
                 case SEN_connect:  /* Connect system call */
 			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
 						  tcp->u_arg[2]);
