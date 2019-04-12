@@ -776,6 +776,7 @@ trace_syscall_entering(struct tcb *tcp)
 			ds_write_record(ds_module, "exit", tcp->u_arg,
 					common_fields, v_args);
 			v_args[0] = NULL;
+			common_fields[DS_COMMON_FIELD_TIME_RETURNED] = &tcp->etime;
 			break;
 		case SEN_execve: /* execve system call */
 			/*
@@ -1431,6 +1432,10 @@ trace_syscall_exiting(struct tcb *tcp)
 			ds_write_record(ds_module, "dup2", tcp->u_arg,
 					common_fields, NULL);
 			break;
+		case SEN_dup3: /* dup3 system call */
+			ds_write_record(ds_module, "dup3", tcp->u_arg,
+					common_fields, NULL);
+			break;
 		case SEN_execve: /* execve system call */
 			/*
 			 * continuation number equal to '-1' denotes the
@@ -1625,6 +1630,16 @@ trace_syscall_exiting(struct tcb *tcp)
 			}
 			v_args[0] = &ulen;
 			ds_write_record(ds_module, "accept", tcp->u_arg,
+					common_fields, v_args);
+			v_args[0] = NULL;
+			break;
+                case SEN_accept4:  /* Accept system call */
+			if ((!tcp->u_arg[2]) ||
+			    (umoven(tcp, tcp->u_arg[2], sizeof(socklen_t), &ulen) < 0)) {
+			  ulen = 0;
+			}
+			v_args[0] = &ulen;
+			ds_write_record(ds_module, "accept4", tcp->u_arg,
 					common_fields, v_args);
 			v_args[0] = NULL;
 			break;
