@@ -1,5 +1,12 @@
+/*
+ * Copyright (c) 2016-2019 The strace developers.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
 #include "tests.h"
-#include <asm/unistd.h>
+#include "scno.h"
 
 #ifdef __NR_mknod
 
@@ -8,7 +15,7 @@
 # include <sys/sysmacros.h>
 # include <unistd.h>
 
-static const char sample[] = "mknod";
+static const char *sample;
 
 static long
 call_mknod(unsigned short mode, unsigned long dev)
@@ -18,9 +25,10 @@ call_mknod(unsigned short mode, unsigned long dev)
 }
 
 int
-main(void)
+main(int ac, char **av)
 {
 	unsigned long dev = (unsigned long) 0xdeadbeefbadc0dedULL;
+	sample = av[0];
 
 	long rc = call_mknod(0, dev);
 	printf("mknod(\"%s\", 000) = %ld %s (%m)\n",
@@ -49,7 +57,7 @@ main(void)
 	dev = (unsigned long) 0xdeadbeef00000000ULL | makedev(1, 7);
 
 	rc = call_mknod(S_IFCHR | 024, dev);
-	printf("mknod(\"%s\", S_IFCHR|024, makedev(1, 7)) = %ld %s (%m)\n",
+	printf("mknod(\"%s\", S_IFCHR|024, makedev(0x1, 0x7)) = %ld %s (%m)\n",
 	       sample, rc, errno2name());
 
 	const unsigned short mode = (0xffff & ~S_IFMT) | S_IFBLK;
@@ -57,8 +65,8 @@ main(void)
 
 	rc = call_mknod(mode, dev);
 	printf("mknod(\"%s\", S_IFBLK|S_ISUID|S_ISGID|S_ISVTX|%#03ho"
-	       ", makedev(%u, %u)) = %ld %s (%m)\n",
-	       sample, mode & ~(S_IFMT|S_ISUID|S_ISGID|S_ISVTX),
+	       ", makedev(%#x, %#x)) = %ld %s (%m)\n",
+	       sample, (short) (mode & ~(S_IFMT|S_ISUID|S_ISGID|S_ISVTX)),
 	       major((unsigned) dev), minor((unsigned) dev),
 	       rc, errno2name());
 

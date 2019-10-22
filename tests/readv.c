@@ -2,29 +2,10 @@
  * Check decoding of readv and writev syscalls.
  *
  * Copyright (c) 2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2016-2018 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
@@ -88,7 +69,7 @@ main(void)
 		fds[1], (long) writev(fds[1], w_iov, 0));
 
 	rc = writev(fds[1], w_iov + ARRAY_SIZE(w_iov_) - 1, 2);
-	tprintf("writev(%d, [{iov_base=\"%s\", iov_len=%u}, %p], 2)"
+	tprintf("writev(%d, [{iov_base=\"%s\", iov_len=%u}, ... /* %p */], 2)"
 		" = %ld %s (%m)\n",
 		fds[1], w2_c, LENGTH_OF(w2_c), w_iov + ARRAY_SIZE(w_iov_),
 		rc, errno2name());
@@ -108,7 +89,7 @@ main(void)
 		" * %u bytes in buffer 2\n"
 		" | 00000 %-49s  %-16s |\n",
 		fds[1], w0_c, LENGTH_OF(w0_c), w1_c, LENGTH_OF(w1_c),
-		w2_c, LENGTH_OF(w2_c), ARRAY_SIZE(w_iov_), w_len,
+		w2_c, LENGTH_OF(w2_c), (unsigned int) ARRAY_SIZE(w_iov_), w_len,
 		LENGTH_OF(w0_c), w0_d, w0_c,
 		LENGTH_OF(w1_c), w1_d, w1_c, LENGTH_OF(w2_c), w2_d, w2_c);
 
@@ -126,8 +107,8 @@ main(void)
 	tprintf("readv(%d, [{iov_base=\"%s\", iov_len=%u}], %u) = %u\n"
 		" * %u bytes in buffer 0\n"
 		" | 00000 %-49s  %-16s |\n",
-		fds[0],
-		r0_c, r_len, ARRAY_SIZE(r0_iov_), r_len, r_len, r0_d, r0_c);
+		fds[0], r0_c, r_len, (unsigned int) ARRAY_SIZE(r0_iov_),
+		r_len, r_len, r0_d, r0_c);
 
 	void *r1 = tail_alloc(r_len);
 	void *r2 = tail_alloc(w_len);
@@ -148,8 +129,8 @@ main(void)
 		", {iov_base=\"\", iov_len=%u}], %u) = %u\n"
 		" * %u bytes in buffer 0\n"
 		" | 00000 %-49s  %-16s |\n",
-		fds[0], r1_c, r_len, w_len, ARRAY_SIZE(r1_iov_), w_len - r_len,
-		w_len - r_len, r1_d, r1_c);
+		fds[0], r1_c, r_len, w_len, (unsigned int) ARRAY_SIZE(r1_iov_),
+		w_len - r_len, w_len - r_len, r1_d, r1_c);
 	close(fds[0]);
 
 	tprintf("+++ exited with 0 +++\n");

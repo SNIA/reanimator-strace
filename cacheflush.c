@@ -4,29 +4,10 @@
  * Copyright (c) 2010 Carmelo Amoroso <carmelo.amoroso@st.com>
  * Copyright (c) 2015 Ezequiel Garcia <ezequiel@vanguardiasur.com.ar>
  * Copyright (c) 2014-2015 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2014-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "defs.h"
@@ -39,15 +20,15 @@
 # include "xlat/cacheflush_scope.h"
 
 static const struct xlat cacheflush_flags[] = {
-#ifdef FLUSH_CACHE_BOTH
+# ifdef FLUSH_CACHE_BOTH
 	XLAT(FLUSH_CACHE_BOTH),
-#endif
-#ifdef FLUSH_CACHE_DATA
+# endif
+# ifdef FLUSH_CACHE_DATA
 	XLAT(FLUSH_CACHE_DATA),
-#endif
-#ifdef FLUSH_CACHE_INSN
+# endif
+# ifdef FLUSH_CACHE_INSN
 	XLAT(FLUSH_CACHE_INSN),
-#endif
+# endif
 	XLAT_END
 };
 
@@ -68,7 +49,7 @@ SYS_FUNC(cacheflush)
 }
 #endif /* M68K */
 
-#ifdef BFIN
+#if defined(BFIN) || defined(CSKY)
 static const struct xlat cacheflush_flags[] = {
 	XLAT(ICACHE),
 	XLAT(DCACHE),
@@ -87,22 +68,22 @@ SYS_FUNC(cacheflush)
 
 	return RVAL_DECODED;
 }
-#endif /* BFIN */
+#endif /* BFIN || CSKY */
 
 #ifdef SH
 static const struct xlat cacheflush_flags[] = {
-#ifdef CACHEFLUSH_D_INVAL
+# ifdef CACHEFLUSH_D_INVAL
 	XLAT(CACHEFLUSH_D_INVAL),
-#endif
-#ifdef CACHEFLUSH_D_WB
+# endif
+# ifdef CACHEFLUSH_D_WB
 	XLAT(CACHEFLUSH_D_WB),
-#endif
-#ifdef CACHEFLUSH_D_PURGE
+# endif
+# ifdef CACHEFLUSH_D_PURGE
 	XLAT(CACHEFLUSH_D_PURGE),
-#endif
-#ifdef CACHEFLUSH_I
+# endif
+# ifdef CACHEFLUSH_I
 	XLAT(CACHEFLUSH_I),
-#endif
+# endif
 	XLAT_END
 };
 

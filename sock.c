@@ -1,31 +1,14 @@
 /*
  * Copyright (c) 1993, 1994, 1995, 1996 Rick Sladkey <jrs@world.std.com>
+ * Copyright (c) 1996-2018 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "defs.h"
+#include "print_fields.h"
+
 #include <sys/socket.h>
 #if defined ALPHA || defined SH || defined SH64
 # include <linux/ioctl.h>
@@ -34,14 +17,19 @@
 #include <arpa/inet.h>
 #include <net/if.h>
 
+#include DEF_MPERS_TYPE(struct_ifconf)
+#include DEF_MPERS_TYPE(struct_ifreq)
+
+typedef struct ifconf struct_ifconf;
+typedef struct ifreq struct_ifreq;
+
+#include MPERS_DEFS
+
 #include "xlat/iffflags.h"
 
-#define PRINT_IFREQ_ADDR(tcp, ifr, sockaddr)					\
-	do {									\
-		tprints(#sockaddr "=");						\
-		print_sockaddr(tcp, &((ifr)->sockaddr),				\
-			       sizeof((ifr)->sockaddr));			\
-	} while (0)
+#define XLAT_MACROS_ONLY
+#include "xlat/arp_hardware_types.h"
+#undef XLAT_MACROS_ONLY
 
 static void
 print_ifname(const char *ifname)
@@ -50,35 +38,34 @@ print_ifname(const char *ifname)
 }
 
 static void
-print_ifreq(struct tcb *tcp, const unsigned int code, const long arg,
-	    const struct ifreq *ifr)
+print_ifreq(struct tcb *const tcp, const unsigned int code,
+	    const kernel_ulong_t arg, const struct_ifreq *const ifr)
 {
 	switch (code) {
 	case SIOCSIFADDR:
 	case SIOCGIFADDR:
-		PRINT_IFREQ_ADDR(tcp, ifr, ifr_addr);
+		PRINT_FIELD_SOCKADDR("", *ifr, ifr_addr);
 		break;
 	case SIOCSIFDSTADDR:
 	case SIOCGIFDSTADDR:
-		PRINT_IFREQ_ADDR(tcp, ifr, ifr_dstaddr);
+		PRINT_FIELD_SOCKADDR("", *ifr, ifr_dstaddr);
 		break;
 	case SIOCSIFBRDADDR:
 	case SIOCGIFBRDADDR:
-		PRINT_IFREQ_ADDR(tcp, ifr, ifr_broadaddr);
+		PRINT_FIELD_SOCKADDR("", *ifr, ifr_broadaddr);
 		break;
 	case SIOCSIFNETMASK:
 	case SIOCGIFNETMASK:
-		PRINT_IFREQ_ADDR(tcp, ifr, ifr_netmask);
+		PRINT_FIELD_SOCKADDR("", *ifr, ifr_netmask);
 		break;
 	case SIOCSIFHWADDR:
 	case SIOCGIFHWADDR: {
-		/* XXX Are there other hardware addresses
-		   than 6-byte MACs?  */
-		const unsigned char *bytes =
-			(unsigned char *) &ifr->ifr_hwaddr.sa_data;
-		tprintf("ifr_hwaddr=%02x:%02x:%02x:%02x:%02x:%02x",
-			bytes[0], bytes[1], bytes[2],
-			bytes[3], bytes[4], bytes[5]);
+		PRINT_FIELD_XVAL("ifr_hwaddr={", ifr->ifr_hwaddr, sa_family,
+				 arp_hardware_types, "ARPHRD_???");
+		PRINT_FIELD_HWADDR_SZ(", ", ifr->ifr_hwaddr, sa_data,
+				      sizeof(ifr->ifr_hwaddr.sa_data),
+				      ifr->ifr_hwaddr.sa_family);
+		tprints("}");
 		break;
 	}
 	case SIOCSIFFLAGS:
@@ -105,11 +92,11 @@ print_ifreq(struct tcb *tcp, const unsigned int code, const long arg,
 		break;
 	case SIOCSIFMAP:
 	case SIOCGIFMAP:
-		tprintf("ifr_map={mem_start=%#lx, "
-			"mem_end=%#lx, base_addr=%#x, "
+		tprintf("ifr_map={mem_start=%#" PRI_klx ", "
+			"mem_end=%#" PRI_klx ", base_addr=%#x, "
 			"irq=%u, dma=%u, port=%u}",
-			ifr->ifr_map.mem_start,
-			ifr->ifr_map.mem_end,
+			(kernel_ulong_t) ifr->ifr_map.mem_start,
+			(kernel_ulong_t) ifr->ifr_map.mem_end,
 			(unsigned) ifr->ifr_map.base_addr,
 			(unsigned) ifr->ifr_map.irq,
 			(unsigned) ifr->ifr_map.dma,
@@ -121,9 +108,9 @@ print_ifreq(struct tcb *tcp, const unsigned int code, const long arg,
 static unsigned int
 print_ifc_len(int len)
 {
-	const unsigned int n = (unsigned int) len / sizeof(struct ifreq);
+	const unsigned int n = (unsigned int) len / sizeof(struct_ifreq);
 
-	if (len < 0 || n * sizeof(struct ifreq) != (unsigned int) len)
+	if (len < 0 || n * sizeof(struct_ifreq) != (unsigned int) len)
 		tprintf("%d", len);
 	else
 		tprintf("%u * sizeof(struct ifreq)", n);
@@ -131,73 +118,116 @@ print_ifc_len(int len)
 	return n;
 }
 
-static int
-decode_ifconf(struct tcb *tcp, const long addr)
+static bool
+print_ifconf_ifreq(struct tcb *tcp, void *elem_buf, size_t elem_size,
+		   void *dummy)
 {
-	struct ifconf ifc;
+	struct_ifreq *ifr = elem_buf;
 
-	if (entering(tcp)) {
-		tprints(", ");
-		if (umove_or_printaddr(tcp, addr, &ifc))
-			return RVAL_DECODED | 1;
-		if (ifc.ifc_buf) {
-			tprints("{");
-			print_ifc_len(ifc.ifc_len);
-		}
-		return 1;
-	}
+	tprints("{ifr_name=");
+	print_ifname(ifr->ifr_name);
+	PRINT_FIELD_SOCKADDR(", ", *ifr, ifr_addr);
+	tprints("}");
 
-	if (syserror(tcp) || umove(tcp, addr, &ifc) < 0) {
-		if (ifc.ifc_buf)
-			tprints("}");
-		else
-			printaddr(addr);
-		return RVAL_DECODED | 1;
-	}
-
-	if (!ifc.ifc_buf) {
-		tprints("{");
-		print_ifc_len(ifc.ifc_len);
-		tprints(", NULL}");
-		return RVAL_DECODED | 1;
-	}
-
-	tprints(" => ");
-	const unsigned int nifra = print_ifc_len(ifc.ifc_len);
-	if (!nifra) {
-		tprints("}");
-		return RVAL_DECODED | 1;
-	}
-
-	struct ifreq ifra[nifra > max_strlen ? max_strlen : nifra];
-	tprints(", ");
-	if (umove_or_printaddr(tcp, (unsigned long) ifc.ifc_buf, &ifra)) {
-		tprints("}");
-		return RVAL_DECODED | 1;
-	}
-
-	tprints("[");
-	unsigned int i;
-	for (i = 0; i < ARRAY_SIZE(ifra); ++i) {
-		if (i > 0)
-			tprints(", ");
-		tprints("{ifr_name=");
-		print_ifname(ifra[i].ifr_name);
-		tprints(", ");
-		PRINT_IFREQ_ADDR(tcp, &ifra[i], ifr_addr);
-		tprints("}");
-	}
-	if (i < nifra)
-		tprints(", ...");
-	tprints("]}");
-
-	return RVAL_DECODED | 1;
+	return true;
 }
 
-int
-sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
+/*
+ * There are two different modes of operation:
+ *
+ * - Get buffer size.  In this case, the callee sets ifc_buf to NULL,
+ *   and the kernel returns the buffer size in ifc_len.
+ * - Get actual data.  In this case, the callee specifies the buffer address
+ *   in ifc_buf and its size in ifc_len.  The kernel fills the buffer with
+ *   the data, and its amount is returned in ifc_len.
+ *
+ * Note that, technically, the whole struct ifconf is overwritten,
+ * so ifc_buf could be different on exit, but current ioctl handler
+ * implementation does not touch it.
+ */
+static int
+decode_ifconf(struct tcb *const tcp, const kernel_ulong_t addr)
 {
-	struct ifreq ifr;
+	struct_ifconf *entering_ifc = NULL;
+	struct_ifconf *ifc =
+		entering(tcp) ? malloc(sizeof(*ifc)) : alloca(sizeof(*ifc));
+
+	if (exiting(tcp)) {
+		entering_ifc = get_tcb_priv_data(tcp);
+
+		if (!entering_ifc) {
+			error_func_msg("where is my ifconf?");
+			return 0;
+		}
+	}
+
+	if (!ifc || umove(tcp, addr, ifc) < 0) {
+		if (entering(tcp)) {
+			free(ifc);
+
+			tprints(", ");
+			printaddr(addr);
+		} else {
+			/*
+			 * We failed to fetch the structure on exiting syscall,
+			 * print whatever was fetched on entering syscall.
+			 */
+			if (!entering_ifc->ifc_buf)
+				print_ifc_len(entering_ifc->ifc_len);
+
+			tprints(", ifc_buf=");
+			printaddr(ptr_to_kulong(entering_ifc->ifc_buf));
+
+			tprints("}");
+		}
+
+		return RVAL_IOCTL_DECODED;
+	}
+
+	if (entering(tcp)) {
+		tprints(", {ifc_len=");
+		if (ifc->ifc_buf)
+			print_ifc_len(ifc->ifc_len);
+
+		set_tcb_priv_data(tcp, ifc, free);
+
+		return 0;
+	}
+
+	/* exiting */
+
+	if (entering_ifc->ifc_buf && (entering_ifc->ifc_len != ifc->ifc_len))
+		tprints(" => ");
+	if (!entering_ifc->ifc_buf || (entering_ifc->ifc_len != ifc->ifc_len))
+		print_ifc_len(ifc->ifc_len);
+
+	tprints(", ifc_buf=");
+
+	if (!entering_ifc->ifc_buf || syserror(tcp)) {
+		printaddr(ptr_to_kulong(entering_ifc->ifc_buf));
+		if (entering_ifc->ifc_buf != ifc->ifc_buf) {
+			tprints(" => ");
+			printaddr(ptr_to_kulong(ifc->ifc_buf));
+		}
+	} else {
+		struct_ifreq ifr;
+
+		print_array(tcp, ptr_to_kulong(ifc->ifc_buf),
+			    ifc->ifc_len / sizeof(struct_ifreq),
+			    &ifr, sizeof(ifr),
+			    tfetch_mem, print_ifconf_ifreq, NULL);
+	}
+
+	tprints("}");
+
+	return RVAL_IOCTL_DECODED;
+}
+
+MPERS_PRINTER_DECL(int, sock_ioctl,
+		   struct tcb *tcp, const unsigned int code,
+		   const kernel_ulong_t arg)
+{
+	struct_ifreq ifr;
 
 	switch (code) {
 	case SIOCGIFCONF:
@@ -228,7 +258,7 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			free(str);
 		}
 #endif /* ENABLE_DATASERIES */
-		printstr(tcp, arg, -1);
+		printstr(tcp, arg);
 		break;
 #endif
 
@@ -330,7 +360,7 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 				tprints("{ifr_name=");
 				print_ifname(ifr.ifr_name);
 			}
-			return 1;
+			return 0;
 		} else {
 			if (syserror(tcp)) {
 				tprints("}");
@@ -357,5 +387,5 @@ sock_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		return RVAL_DECODED;
 	}
 
-	return RVAL_DECODED | 1;
+	return RVAL_IOCTL_DECODED;
 }

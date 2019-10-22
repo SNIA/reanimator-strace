@@ -53,19 +53,19 @@
 #ifdef __ia64__
 extern int __clone2(int (*fn) (void *), void *child_stack_base,
 		size_t stack_size, int flags, void *arg, ...);
-#define clone2 __clone2
+# define clone2 __clone2
 #elif defined(__metag__)
-#define clone2(func, stack_base, size, flags, arg...) \
-        clone(func, stack_base, flags, arg)
+# define clone2(func, stack_base, size, flags, arg...) \
+	clone(func, stack_base, flags, arg)
 #else
-#define clone2(func, stack_base, size, flags, arg...) \
-        clone(func, (stack_base) + (size), flags, arg)
+# define clone2(func, stack_base, size, flags, arg...) \
+	clone(func, (stack_base) + (size), flags, arg)
 #endif
 /* Direct calls to syscalls, avoiding libc wrappers */
 #define syscall_tgkill(pid, tid, sig) syscall(__NR_tgkill, (pid), (tid), (sig))
 #define syscall_getpid() syscall(__NR_getpid)
 #define syscall_gettid() syscall(__NR_gettid)
-#define syscall_exit(v) syscall(__NR_exit, (v));
+#define syscall_exit(v) syscall(__NR_exit, (v))
 
 static char my_name[PATH_MAX];
 static int leader_final_action;
@@ -74,7 +74,8 @@ static int
 thread1(void *unused)
 {
 	write(1, "1", 1);
-	for(;;) pause();
+	for (;;)
+		pause();
 	return 0;
 }
 
@@ -89,7 +90,8 @@ thread2(void *unused)
 	execl("/proc/self/exe", "exe", "exe", buf, NULL);
 	/* So fall back to resolved name */
 	execl(my_name, "exe", "exe", buf, NULL);
-	for(;;) pause();
+	for (;;)
+		pause();
 	return 0;
 }
 
@@ -119,9 +121,14 @@ thread_leader(void)
 
 	/* Various states leader can be while other thread execve's: */
 	switch (leader_final_action % 3) {
-		case 0: syscall_exit(42); /* leader is dead */
-		case 1: for(;;) pause(); /* leader is in syscall */
-		default: for(;;) continue; /* leader is in userspace */
+		case 0:
+			syscall_exit(42); /* leader is dead */
+		case 1:
+			for (;;)
+				pause(); /* leader is in syscall */
+		default:
+			for (;;)
+				continue; /* leader is in userspace */
 	}
 }
 
@@ -143,5 +150,5 @@ main(int argc, char **argv)
 	alarm(argv[1] ? atoi(argv[1]) : 1);
 	thread_leader();
 
-        return 0;
+	return 0;
 }

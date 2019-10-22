@@ -7,47 +7,24 @@
  * Copyright (c) 2006-2007 Ulrich Drepper <drepper@redhat.com>
  * Copyright (c) 2009-2013 Denys Vlasenko <dvlasenk@redhat.com>
  * Copyright (c) 2005-2015 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2014-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "defs.h"
+#include "xstring.h"
 
-#include <fcntl.h>
+#include <asm/fcntl.h>
 
 /* some libcs are guilty of messing up with O_ACCMODE */
 #undef O_ACCMODE
 #define O_ACCMODE 03
 
 #ifdef O_LARGEFILE
-# if O_LARGEFILE == 0          /* biarch platforms in 64-bit mode */
+# if O_LARGEFILE == 0		/* biarch platforms in 64-bit mode */
 #  undef O_LARGEFILE
-#  ifdef SPARC64
-#   define O_LARGEFILE 0x40000
-#  elif defined X86_64 || defined S390X
-#   define O_LARGEFILE 0100000
-#  endif
 # endif
 #endif
 
@@ -55,7 +32,7 @@
 #include "xlat/open_mode_flags.h"
 
 #ifndef AT_FDCWD
-# define AT_FDCWD                -100
+# define AT_FDCWD	-100
 #endif
 
 /* The fd is an "int", so when decoding x86 on x86_64, we need to force sign
@@ -65,11 +42,9 @@ void
 print_dirfd(struct tcb *tcp, int fd)
 {
 	if (fd == AT_FDCWD)
-		tprints("AT_FDCWD, ");
-	else {
+		print_xlat_d(AT_FDCWD);
+	else
 		printfd(tcp, fd);
-		tprints(", ");
-	}
 }
 
 /*
@@ -79,11 +54,10 @@ print_dirfd(struct tcb *tcp, int fd)
 const char *
 sprint_open_modes(unsigned int flags)
 {
-	static char outstr[(1 + ARRAY_SIZE(open_mode_flags)) * sizeof("O_LARGEFILE")];
+	static char outstr[sizeof("flags O_ACCMODE")];
 	char *p;
 	char sep;
 	const char *str;
-	const struct xlat *x;
 
 	sep = ' ';
 	p = stpcpy(outstr, "flags");
@@ -96,35 +70,18 @@ sprint_open_modes(unsigned int flags)
 			return outstr;
 		sep = '|';
 	}
+	*p = '\0';
 
-	for (x = open_mode_flags; x->str; x++) {
-		if ((flags & x->val) == x->val) {
-			*p++ = sep;
-			p = stpcpy(p, x->str);
-			flags &= ~x->val;
-			if (!flags)
-				return outstr;
-			sep = '|';
-		}
-	}
-	/* flags is still nonzero */
-	*p++ = sep;
-	sprintf(p, "%#x", flags);
-	return outstr;
+	return sprintflags_ex(outstr, open_mode_flags, flags, sep,
+			      XLAT_STYLE_ABBREV) ?: outstr;
 }
 
 void
 tprint_open_modes(unsigned int flags)
 {
-	tprints(sprint_open_modes(flags) + sizeof("flags"));
+	print_xlat_ex(flags, sprint_open_modes(flags) + sizeof("flags"),
+		      XLAT_STYLE_DEFAULT);
 }
-
-#ifdef O_TMPFILE
-/* The kernel & C libraries often inline O_DIRECTORY. */
-# define STRACE_O_TMPFILE (O_TMPFILE & ~O_DIRECTORY)
-#else /* !O_TMPFILE */
-# define STRACE_O_TMPFILE 0
-#endif
 
 static int
 decode_open(struct tcb *tcp, int offset)
@@ -133,7 +90,7 @@ decode_open(struct tcb *tcp, int offset)
 	tprints(", ");
 	/* flags */
 	tprint_open_modes(tcp->u_arg[offset + 1]);
-	if (tcp->u_arg[offset + 1] & (O_CREAT | STRACE_O_TMPFILE)) {
+	if (tcp->u_arg[offset + 1] & (O_CREAT | __O_TMPFILE)) {
 		/* mode */
 		tprints(", ");
 		print_numeric_umode_t(tcp->u_arg[offset + 2]);
@@ -150,6 +107,7 @@ SYS_FUNC(open)
 SYS_FUNC(openat)
 {
 	print_dirfd(tcp, tcp->u_arg[0]);
+	tprints(", ");
 	return decode_open(tcp, 1);
 }
 

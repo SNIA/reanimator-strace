@@ -2,29 +2,10 @@
  * Check decoding of timeout argument of recvmmsg syscall.
  *
  * Copyright (c) 2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2016-2018 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
@@ -50,13 +31,15 @@ main(void)
 			.msg_iovlen = 1
 		}
 	};
-	struct timespec t = { .tv_sec = 0, .tv_nsec = 12345678 };
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct timespec, ts);
+	ts->tv_sec = 0;
+	ts->tv_nsec = 12345678;
 
-	int rc = recv_mmsg(-1, &mh, 1, 0, &t);
+	int rc = recv_mmsg(-1, &mh, 1, 0, ts);
 	printf("recvmmsg(-1, %p, 1, 0, {tv_sec=0, tv_nsec=12345678})"
-	       " = %d %s (%m)\n", &mh, rc, errno2name());
+	       " = %s\n", &mh, sprintrc(rc));
 
-	rc = recv_mmsg(fds[0], &mh, 1, 0, &t);
+	rc = recv_mmsg(fds[0], &mh, 1, 0, ts);
 	if (rc < 0)
 		perror_msg_and_skip("recvmmsg");
 	printf("recvmmsg(%d, [{msg_hdr={msg_name=NULL, msg_namelen=0"
@@ -64,7 +47,23 @@ main(void)
 	       ", msg_controllen=0, msg_flags=0}, msg_len=1}], 1, 0"
 	       ", {tv_sec=0, tv_nsec=12345678}) = "
 	       "%d (left {tv_sec=0, tv_nsec=%d})\n",
-	       fds[0], rc, (int) t.tv_nsec);
+	       fds[0], rc, (int) ts->tv_nsec);
+
+	ts->tv_sec = 0xdeadbeefU;
+	ts->tv_nsec = 0xfacefeedU;
+
+	rc = recv_mmsg(fds[0], &mh, 1, 0, ts);
+	printf("recvmmsg(%d, %p, 1, 0, {tv_sec=%lld, tv_nsec=%llu}) = %s\n",
+	       fds[0], &mh, (long long) ts->tv_sec,
+	       zero_extend_signed_to_ull(ts->tv_nsec), sprintrc(rc));
+
+	ts->tv_sec = (time_t) 0xcafef00ddeadbeefLL;
+	ts->tv_nsec = (long) 0xbadc0dedfacefeedLL;
+
+	rc = recv_mmsg(fds[0], &mh, 1, 0, ts);
+	printf("recvmmsg(%d, %p, 1, 0, {tv_sec=%lld, tv_nsec=%llu}) = %s\n",
+	       fds[0], &mh, (long long) ts->tv_sec,
+	       zero_extend_signed_to_ull(ts->tv_nsec), sprintrc(rc));
 
 	puts("+++ exited with 0 +++");
 	return 0;

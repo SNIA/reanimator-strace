@@ -2,29 +2,10 @@
  * This file is part of ioctl_rtc strace test.
  *
  * Copyright (c) 2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2016-2018 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
@@ -36,18 +17,7 @@
 #include <linux/rtc.h>
 #include "xlat.h"
 
-static const unsigned int magic = 0xdeadbeef;
 static const unsigned long lmagic = (unsigned long) 0xdeadbeefbadc0dedULL;
-
-static void
-init_magic(void *addr, const unsigned int size)
-{
-	unsigned int *p = addr;
-	const unsigned int *end = addr + size - sizeof(int);
-
-	for (; p <= end; ++p)
-		*(unsigned int *) p = magic;
-}
 
 static void
 print_rtc_time(const struct rtc_time *rt)
@@ -64,7 +34,7 @@ print_rtc_time(const struct rtc_time *rt)
 #endif
 }
 
-static struct xlat rtc_argless[] = {
+static struct xlat_data rtc_argless[] = {
 	XLAT(RTC_AIE_OFF),
 	XLAT(RTC_PIE_ON),
 	XLAT(RTC_PIE_OFF),
@@ -82,16 +52,16 @@ main(void)
 	const unsigned int size = get_page_size();
 
 	void *const page = tail_alloc(size);
-	init_magic(page, size);
+	fill_memory(page, size);
 
-	struct rtc_time *rt = tail_alloc(sizeof(*rt));
-	init_magic(rt, sizeof(*rt));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct rtc_time, rt);
+	fill_memory(rt, sizeof(*rt));
 
-	struct rtc_wkalrm *wk = tail_alloc(sizeof(*wk));
-	init_magic(wk, sizeof(*wk));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct rtc_wkalrm, wk);
+	fill_memory(wk, sizeof(*wk));
 
-	struct rtc_pll_info *pll = tail_alloc(sizeof(*pll));
-	init_magic(pll, sizeof(*pll));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct rtc_pll_info, pll);
+	fill_memory(pll, sizeof(*pll));
 
 	/* RTC_ALM_READ */
 	ioctl(-1, RTC_ALM_READ, 0);

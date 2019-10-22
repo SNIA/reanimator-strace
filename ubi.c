@@ -1,46 +1,23 @@
 /*
  * Copyright (c) 2012 Mike Frysinger <vapier@gentoo.org>
+ * Copyright (c) 2012-2018 The strace developers.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "defs.h"
 
-#include <linux/ioctl.h>
+#ifdef HAVE_STRUCT_UBI_ATTACH_REQ_MAX_BEB_PER1024
 
-/* The UBI api changes, so we have to keep a local copy */
-#include <linux/version.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 7, 0)
-# include "ubi-user.h"
-#else
+# include <linux/ioctl.h>
 # include <mtd/ubi-user.h>
-#endif
 
-#include "xlat/ubi_volume_types.h"
-#include "xlat/ubi_volume_props.h"
+# include "xlat/ubi_volume_types.h"
+# include "xlat/ubi_volume_props.h"
 
 int
-ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
+ubi_ioctl(struct tcb *const tcp, const unsigned int code,
+	  const kernel_ulong_t arg)
 {
 	if (!verbose(tcp))
 		return RVAL_DECODED;
@@ -59,14 +36,13 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 				mkvol.alignment, (int64_t)mkvol.bytes);
 			printxval(ubi_volume_types,
 				    (uint8_t) mkvol.vol_type, "UBI_???_VOLUME");
-			tprintf(", name_len=%" PRIi16 ", name=", mkvol.name_len);
-			if (print_quoted_string(mkvol.name,
-					CLAMP(mkvol.name_len, 0, UBI_MAX_VOLUME_NAME),
-					QUOTE_0_TERMINATED) > 0) {
-				tprints("...");
-			}
+			tprintf(", name_len=%" PRIi16 ", name=",
+				mkvol.name_len);
+			print_quoted_cstring(mkvol.name,
+					CLAMP(mkvol.name_len, 0,
+					      UBI_MAX_VOLUME_NAME));
 			tprints("}");
-			return 1;
+			return 0;
 		}
 		if (!syserror(tcp)) {
 			tprints(" => ");
@@ -101,11 +77,9 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			tprintf("{vol_id=%" PRIi32 ", name_len=%" PRIi16
 				", name=", rnvol.ents[c].vol_id,
 				rnvol.ents[c].name_len);
-			if (print_quoted_string(rnvol.ents[c].name,
-					CLAMP(rnvol.ents[c].name_len, 0, UBI_MAX_VOLUME_NAME),
-					QUOTE_0_TERMINATED) > 0) {
-				tprints("...");
-			}
+			print_quoted_cstring(rnvol.ents[c].name,
+					CLAMP(rnvol.ents[c].name_len, 0,
+					      UBI_MAX_VOLUME_NAME));
 			tprints("}");
 		}
 		tprints("]}");
@@ -136,7 +110,7 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 				", max_beb_per1024=%" PRIi16 "}",
 				attach.ubi_num, attach.mtd_num,
 				attach.vid_hdr_offset, attach.max_beb_per1024);
-			return 1;
+			return 0;
 		}
 		if (!syserror(tcp)) {
 			tprints(" => ");
@@ -184,12 +158,12 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		printnum_int(tcp, arg, "%d");
 		break;
 
-#ifdef UBI_IOCVOLCRBLK
+# ifdef UBI_IOCVOLCRBLK
 	case UBI_IOCVOLCRBLK:
-#endif
-#ifdef UBI_IOCVOLRMBLK
+# endif
+# ifdef UBI_IOCVOLRMBLK
 	case UBI_IOCVOLRMBLK:
-#endif
+# endif
 		/* no arguments */
 		break;
 
@@ -197,5 +171,7 @@ ubi_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		return RVAL_DECODED;
 	}
 
-	return RVAL_DECODED | 1;
+	return RVAL_IOCTL_DECODED;
 }
+
+#endif /* HAVE_STRUCT_UBI_ATTACH_REQ_MAX_BEB_PER1024 */

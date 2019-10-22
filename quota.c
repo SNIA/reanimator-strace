@@ -4,32 +4,15 @@
  * Copyright (c) 1993, 1994, 1995, 1996 Rick Sladkey <jrs@world.std.com>
  * Copyright (c) 1996-1999 Wichert Akkerman <wichert@cistron.nl>
  * Copyright (c) 2005-2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2006-2018 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "defs.h"
+#include "print_fields.h"
+#include "xfs_quota_stat.h"
 
 #define SUBCMDMASK  0x00ff
 #define SUBCMDSHIFT 8
@@ -55,8 +38,7 @@
  * leads to problems when it is used on 32-bit tracee which does not have such
  * padding.
  */
-struct if_dqblk
-{
+struct if_dqblk {
 	uint64_t dqb_bhardlimit;
 	uint64_t dqb_bsoftlimit;
 	uint64_t dqb_curspace;
@@ -81,10 +63,9 @@ struct if_nextdqblk {
 	uint32_t dqb_id;
 };
 
-struct xfs_dqblk
-{
+struct xfs_dqblk {
 	int8_t  d_version;		/* version of this structure */
-	int8_t  d_flags;		/* XFS_{USER,PROJ,GROUP}_QUOTA */
+	uint8_t  d_flags;		/* XFS_{USER,PROJ,GROUP}_QUOTA */
 	uint16_t d_fieldmask;		/* field specifier */
 	uint32_t d_id;			/* user, project, or group ID */
 	uint64_t d_blk_hardlimit;	/* absolute limit on disk blks */
@@ -107,34 +88,11 @@ struct xfs_dqblk
 	char    d_padding4[8];		/* yet more padding */
 };
 
-struct if_dqinfo
-{
+struct if_dqinfo {
 	uint64_t dqi_bgrace;
 	uint64_t dqi_igrace;
 	uint32_t dqi_flags;
 	uint32_t dqi_valid;
-};
-
-typedef struct fs_qfilestat
-{
-	uint64_t qfs_ino;	/* inode number */
-	uint64_t qfs_nblks;	/* number of BBs 512-byte-blks */
-	uint32_t qfs_nextents;	/* number of extents */
-} fs_qfilestat_t;
-
-struct xfs_dqstats
-{
-	int8_t  qs_version;		/* version number for future changes */
-	uint16_t qs_flags;		/* XFS_QUOTA_{U,P,G}DQ_{ACCT,ENFD} */
-	int8_t  qs_pad;			/* unused */
-	fs_qfilestat_t qs_uquota;	/* user quota storage information */
-	fs_qfilestat_t qs_gquota;	/* group quota storage information */
-	uint32_t qs_incoredqs;		/* number of dquots incore */
-	int32_t qs_btimelimit;		/* limit for blks timer */
-	int32_t qs_itimelimit;		/* limit for inodes timer */
-	int32_t qs_rtbtimelimit;	/* limit for rt blks timer */
-	uint16_t qs_bwarnlimit;		/* limit for num warnings */
-	uint16_t qs_iwarnlimit;		/* limit for num warnings */
 };
 
 struct fs_qfilestatv {
@@ -158,20 +116,8 @@ struct fs_quota_statv {
 	uint64_t qs_pad2[8];
 };
 
-#define PRINT_FIELD_D(prefix, where, field)	\
-	tprintf("%s%s=%lld", (prefix), #field,	\
-		sign_extend_unsigned_to_ll((where).field))
-
-#define PRINT_FIELD_U(prefix, where, field)	\
-	tprintf("%s%s=%llu", (prefix), #field,	\
-		zero_extend_signed_to_ull((where).field))
-
-#define PRINT_FIELD_X(prefix, where, field)	\
-	tprintf("%s%s=%#llx", (prefix), #field,	\
-		zero_extend_signed_to_ull((where).field))
-
 static int
-decode_cmd_data(struct tcb *tcp, uint32_t id, uint32_t cmd, unsigned long data)
+decode_cmd_data(struct tcb *tcp, uint32_t id, uint32_t cmd, kernel_ulong_t data)
 {
 	switch (cmd) {
 	case Q_QUOTAOFF:
@@ -192,7 +138,7 @@ decode_cmd_data(struct tcb *tcp, uint32_t id, uint32_t cmd, unsigned long data)
 			return 0;
 		}
 
-		/* Fall-through */
+		ATTRIBUTE_FALLTHROUGH;
 	case Q_SETQUOTA:
 	{
 		struct if_dqblk dq;
@@ -213,9 +159,8 @@ decode_cmd_data(struct tcb *tcp, uint32_t id, uint32_t cmd, unsigned long data)
 		if (!abbrev(tcp)) {
 			PRINT_FIELD_U(", ", dq, dqb_btime);
 			PRINT_FIELD_U(", ", dq, dqb_itime);
-			tprints(", dqb_valid=");
-			printflags(if_dqblk_valid,
-				   dq.dqb_valid, "QIF_???");
+			PRINT_FIELD_FLAGS(", ", dq, dqb_valid,
+					  if_dqblk_valid, "QIF_???");
 		} else {
 			tprints(", ...");
 		}
@@ -244,9 +189,8 @@ decode_cmd_data(struct tcb *tcp, uint32_t id, uint32_t cmd, unsigned long data)
 		if (!abbrev(tcp)) {
 			PRINT_FIELD_U(", ", dq, dqb_btime);
 			PRINT_FIELD_U(", ", dq, dqb_itime);
-			tprints(", dqb_valid=");
-			printflags(if_dqblk_valid,
-				   dq.dqb_valid, "QIF_???");
+			PRINT_FIELD_FLAGS(", ", dq, dqb_valid,
+					  if_dqblk_valid, "QIF_???");
 			PRINT_FIELD_U(", ", dq, dqb_id);
 		} else {
 			PRINT_FIELD_U(", ", dq, dqb_id);
@@ -264,7 +208,7 @@ decode_cmd_data(struct tcb *tcp, uint32_t id, uint32_t cmd, unsigned long data)
 			return 0;
 		}
 
-		/* Fall-through */
+		ATTRIBUTE_FALLTHROUGH;
 	case Q_XSETQLIM:
 	{
 		struct xfs_dqblk dq;
@@ -277,9 +221,8 @@ decode_cmd_data(struct tcb *tcp, uint32_t id, uint32_t cmd, unsigned long data)
 		if (umove_or_printaddr(tcp, data, &dq))
 			break;
 		PRINT_FIELD_D("{", dq, d_version);
-		tprints(", d_flags=");
-		printflags(xfs_dqblk_flags,
-			   (uint8_t) dq.d_flags, "XFS_???_QUOTA");
+		PRINT_FIELD_FLAGS(", ", dq, d_flags,
+				  xfs_dqblk_flags, "XFS_???_QUOTA");
 		PRINT_FIELD_X(", ", dq, d_fieldmask);
 		PRINT_FIELD_U(", ", dq, d_id);
 		PRINT_FIELD_U(", ", dq, d_blk_hardlimit);
@@ -328,7 +271,7 @@ decode_cmd_data(struct tcb *tcp, uint32_t id, uint32_t cmd, unsigned long data)
 			return 0;
 		}
 
-		/* Fall-through */
+		ATTRIBUTE_FALLTHROUGH;
 	case Q_SETINFO:
 	{
 		struct if_dqinfo dq;
@@ -340,10 +283,8 @@ decode_cmd_data(struct tcb *tcp, uint32_t id, uint32_t cmd, unsigned long data)
 			break;
 		PRINT_FIELD_U("{", dq, dqi_bgrace);
 		PRINT_FIELD_U(", ", dq, dqi_igrace);
-		tprints(", dqi_flags=");
-		printflags(if_dqinfo_flags, dq.dqi_flags, "DQF_???");
-		tprints(", dqi_valid=");
-		printflags(if_dqinfo_valid, dq.dqi_valid, "IIF_???");
+		PRINT_FIELD_FLAGS(", ", dq, dqi_flags, if_dqinfo_flags, "DQF_???");
+		PRINT_FIELD_FLAGS(", ", dq, dqi_valid, if_dqinfo_valid, "IIF_???");
 		tprints("}");
 		break;
 	}
@@ -356,30 +297,28 @@ decode_cmd_data(struct tcb *tcp, uint32_t id, uint32_t cmd, unsigned long data)
 
 			return 0;
 		}
-
-		if (umove_or_printaddr(tcp, data, &dq))
-			break;
-		PRINT_FIELD_D("{", dq, qs_version);
-		if (!abbrev(tcp)) {
-			tprints(", qs_flags=");
-			printflags(xfs_quota_flags,
-				   dq.qs_flags, "XFS_QUOTA_???");
-			PRINT_FIELD_U(", ", dq, qs_incoredqs);
-			PRINT_FIELD_U(", qs_uquota={", dq.qs_uquota, qfs_ino);
-			PRINT_FIELD_U(", ", dq.qs_uquota, qfs_nblks);
-			PRINT_FIELD_U(", ", dq.qs_uquota, qfs_nextents);
-			PRINT_FIELD_U("}, qs_gquota={", dq.qs_gquota, qfs_ino);
-			PRINT_FIELD_U(", ", dq.qs_gquota, qfs_nblks);
-			PRINT_FIELD_U(", ", dq.qs_gquota, qfs_nextents);
-			PRINT_FIELD_D("}, ", dq, qs_btimelimit);
-			PRINT_FIELD_D(", ", dq, qs_itimelimit);
-			PRINT_FIELD_D(", ", dq, qs_rtbtimelimit);
-			PRINT_FIELD_U(", ", dq, qs_bwarnlimit);
-			PRINT_FIELD_U(", ", dq, qs_iwarnlimit);
-		} else {
-			tprints(", ...");
+		if (fetch_struct_quotastat(tcp, data, &dq)) {
+			PRINT_FIELD_D("{", dq, qs_version);
+			if (!abbrev(tcp)) {
+				PRINT_FIELD_FLAGS(", ", dq, qs_flags,
+						  xfs_quota_flags, "XFS_QUOTA_???");
+				PRINT_FIELD_U(", qs_uquota={", dq.qs_uquota, qfs_ino);
+				PRINT_FIELD_U(", ", dq.qs_uquota, qfs_nblks);
+				PRINT_FIELD_U(", ", dq.qs_uquota, qfs_nextents);
+				PRINT_FIELD_U("}, qs_gquota={", dq.qs_gquota, qfs_ino);
+				PRINT_FIELD_U(", ", dq.qs_gquota, qfs_nblks);
+				PRINT_FIELD_U(", ", dq.qs_gquota, qfs_nextents);
+				PRINT_FIELD_U("}, ", dq, qs_incoredqs);
+				PRINT_FIELD_D(", ", dq, qs_btimelimit);
+				PRINT_FIELD_D(", ", dq, qs_itimelimit);
+				PRINT_FIELD_D(", ", dq, qs_rtbtimelimit);
+				PRINT_FIELD_U(", ", dq, qs_bwarnlimit);
+				PRINT_FIELD_U(", ", dq, qs_iwarnlimit);
+			} else {
+				tprints(", ...");
+			}
+			tprints("}");
 		}
-		tprints("}");
 		break;
 	}
 	case Q_XGETQSTATV:
@@ -396,9 +335,8 @@ decode_cmd_data(struct tcb *tcp, uint32_t id, uint32_t cmd, unsigned long data)
 			break;
 		PRINT_FIELD_D("{", dq, qs_version);
 		if (!abbrev(tcp)) {
-			tprints(", qs_flags=");
-			printflags(xfs_quota_flags,
-				   dq.qs_flags, "XFS_QUOTA_???");
+			PRINT_FIELD_FLAGS(", ", dq, qs_flags,
+					  xfs_quota_flags, "XFS_QUOTA_???");
 			PRINT_FIELD_U(", ", dq, qs_incoredqs);
 			PRINT_FIELD_U(", qs_uquota={", dq.qs_uquota, qfs_ino);
 			PRINT_FIELD_U(", ", dq.qs_uquota, qfs_nblks);
@@ -456,6 +394,31 @@ decode_cmd_data(struct tcb *tcp, uint32_t id, uint32_t cmd, unsigned long data)
 	return RVAL_DECODED;
 }
 
+static void
+print_qcmd(const uint32_t qcmd)
+{
+	const uint32_t cmd = QCMD_CMD(qcmd);
+	const uint32_t type = QCMD_TYPE(qcmd);
+
+	if (xlat_verbose(xlat_verbosity) != XLAT_STYLE_ABBREV)
+		tprintf("%u", qcmd);
+
+	if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_RAW)
+		return;
+
+	if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_VERBOSE)
+		tprints(" /* ");
+
+	tprints("QCMD(");
+	printxvals_ex(cmd, "Q_???", XLAT_STYLE_ABBREV, quotacmds, NULL);
+	tprints(", ");
+	printxvals_ex(type, "???QUOTA", XLAT_STYLE_ABBREV, quotatypes, NULL);
+	tprints(")");
+
+	if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_VERBOSE)
+		tprints(" */");
+}
+
 SYS_FUNC(quotactl)
 {
 	/*
@@ -466,15 +429,11 @@ SYS_FUNC(quotactl)
 	 */
 	uint32_t qcmd = tcp->u_arg[0];
 	uint32_t cmd = QCMD_CMD(qcmd);
-	uint32_t type = QCMD_TYPE(qcmd);
 	uint32_t id = tcp->u_arg[2];
 
 	if (entering(tcp)) {
-		tprints("QCMD(");
-		printxval(quotacmds, cmd, "Q_???");
+		print_qcmd(qcmd);
 		tprints(", ");
-		printxval(quotatypes, type, "???QUOTA");
-		tprints("), ");
 		printpath(tcp, tcp->u_arg[1]);
 	}
 	return decode_cmd_data(tcp, id, cmd, tcp->u_arg[3]);

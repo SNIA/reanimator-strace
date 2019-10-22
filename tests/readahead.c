@@ -1,43 +1,33 @@
 /*
  * Copyright (c) 2016 Eugene Syromyatnikov <evgsyr@gmail.com>
+ * Copyright (c) 2016-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
-#include <asm/unistd.h>
+#include "scno.h"
 
 #ifdef HAVE_READAHEAD
+/* Check for glibc readahead argument passing bugs. */
 # ifdef __GLIBC__
 /*
- * Check for glibc readahead off64_t argument passing bug,
+ * glibc < 2.8 had an incorrect order of higher and lower parts of offset,
  * see https://sourceware.org/bugzilla/show_bug.cgi?id=5208
  */
 #  if !(defined __GLIBC_MINOR__ && \
-        (__GLIBC__ << 16) + __GLIBC_MINOR__ >= (2 << 16) + 8)
+	(__GLIBC__ << 16) + __GLIBC_MINOR__ >= (2 << 16) + 8)
 #   undef HAVE_READAHEAD
-#  endif
+#  endif /* glibc < 2.8 */
+/*
+ * glibc < 2.25 had an incorrect implementation on mips n64,
+ * see https://sourceware.org/bugzilla/show_bug.cgi?id=21026
+ */
+#  if defined LINUX_MIPSN64 && !(defined __GLIBC_MINOR__ && \
+	(__GLIBC__ << 16) + __GLIBC_MINOR__ >= (2 << 16) + 25)
+#   undef HAVE_READAHEAD
+#  endif /* LINUX_MIPSN64 && glibc < 2.25 */
 # endif /* __GLIBC__ */
 #endif /* HAVE_READAHEAD */
 

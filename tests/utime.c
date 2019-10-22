@@ -2,33 +2,14 @@
  * Check decoding of utime syscall.
  *
  * Copyright (c) 2015-2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2015-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
-#include <asm/unistd.h>
+#include "scno.h"
 
 #ifdef __NR_utime
 
@@ -37,17 +18,6 @@
 # include <errno.h>
 # include <stdio.h>
 # include <unistd.h>
-
-
-static void
-print_tm(const struct tm * const p)
-{
-	char buf[256];
-
-	strftime(buf, sizeof(buf), "%FT%T%z", p);
-
-	printf("%s", buf);
-}
 
 static long
 k_utime(const void *const filename, const void *const times)
@@ -60,10 +30,9 @@ main(void)
 {
 	static const char *const dummy_str = "dummy filename";
 
-	const time_t t = time(NULL);
-	const struct tm * const p = localtime(&t);
+	const time_t t = 1492350678;
 	const struct utimbuf u = { .actime = t, .modtime = t };
-	const struct utimbuf const *tail_u = tail_memdup(&u, sizeof(u));
+	const struct utimbuf *const tail_u = tail_memdup(&u, sizeof(u));
 	const char *const dummy_filename =
 		tail_memdup(dummy_str, sizeof(dummy_str) - 1);
 
@@ -80,10 +49,10 @@ main(void)
 
 	rc = k_utime("utime\nfilename", tail_u);
 	const char *errstr = sprintrc(rc);
-	printf("utime(\"utime\\nfilename\", {actime=");
-	print_tm(p);
-	printf(", modtime=");
-	print_tm(p);
+	printf("utime(\"utime\\nfilename\", {actime=%lld", (long long) t);
+	print_time_t_nsec(t, 0, 1);
+	printf(", modtime=%lld", (long long) t);
+	print_time_t_nsec(t, 0, 1);
 	printf("}) = %s\n", errstr);
 
 	puts("+++ exited with 0 +++");

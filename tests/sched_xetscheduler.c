@@ -1,5 +1,12 @@
+/*
+ * Copyright (c) 2016-2019 The strace developers.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
 #include "tests.h"
-#include <asm/unistd.h>
+#include "scno.h"
 
 #if defined __NR_sched_getscheduler && defined __NR_sched_setscheduler
 
@@ -10,7 +17,7 @@
 int
 main(void)
 {
-	struct sched_param *const param = tail_alloc(sizeof(struct sched_param));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct sched_param, param);
 	long rc = syscall(__NR_sched_getscheduler, 0);
 	const char *scheduler;
 	switch (rc) {

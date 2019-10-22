@@ -2,29 +2,10 @@
  * This file is part of ioctl_block strace test.
  *
  * Copyright (c) 2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2016-2018 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
@@ -43,19 +24,7 @@
 static const unsigned int magic = 0xdeadbeef;
 static const unsigned long lmagic = (unsigned long) 0xdeadbeefbadc0dedULL;
 
-#if defined BLKTRACESETUP && defined HAVE_STRUCT_BLK_USER_TRACE_SETUP
-static void
-init_magic(void *addr, const unsigned int size)
-{
-	unsigned int *p = addr;
-	const unsigned int *end = addr + size - sizeof(int);
-
-	for (; p <= end; ++p)
-		*(unsigned int *) p = magic + (p - (unsigned int *) addr);
-}
-#endif
-
-static struct xlat block_argless[] = {
+static struct xlat_data block_argless[] = {
 	XLAT(BLKRRPART),
 	XLAT(BLKFLSBUF),
 #ifdef BLKTRACESTART
@@ -69,9 +38,11 @@ static struct xlat block_argless[] = {
 #endif
 };
 
-#define TEST_NULL_ARG(cmd) \
-	ioctl(-1, cmd, 0); \
-	printf("ioctl(-1, %s, NULL) = -1 EBADF (%m)\n", #cmd)
+#define TEST_NULL_ARG(cmd)						\
+	do {								\
+		ioctl(-1, cmd, 0);					\
+		printf("ioctl(-1, %s, NULL) = -1 EBADF (%m)\n", #cmd);	\
+	} while (0)
 
 int
 main(void)
@@ -125,7 +96,7 @@ main(void)
 	ioctl(-1, BLKFRASET, lmagic);
 	printf("ioctl(-1, BLKFRASET, %lu) = -1 EBADF (%m)\n", lmagic);
 
-	int *const val_int = tail_alloc(sizeof(*val_int));
+	TAIL_ALLOC_OBJECT_CONST_PTR(int, val_int);
 	*val_int = magic;
 
 	ioctl(-1, BLKROSET, val_int);
@@ -156,19 +127,19 @@ main(void)
 	       " = -1 EBADF (%m)\n", pair_int64[0], pair_int64[1]);
 #endif
 
-	struct blkpg_ioctl_arg *const blkpg = tail_alloc(sizeof(*blkpg));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct blkpg_ioctl_arg, blkpg);
 	blkpg->op = 3;
 	blkpg->flags = 0xdeadbeef;
 	blkpg->datalen = 0xbadc0ded;
 	blkpg->data = (void *) (unsigned long) 0xcafef00dfffffeedULL;
 
 	ioctl(-1, BLKPG, blkpg);
-	printf("ioctl(-1, BLKPG, {%s, flags=%d, datalen=%d"
+	printf("ioctl(-1, BLKPG, {op=%s, flags=%d, datalen=%d"
 	       ", data=%#lx}) = -1 EBADF (%m)\n",
 	       "BLKPG_RESIZE_PARTITION", blkpg->flags, blkpg->datalen,
 	       (unsigned long) blkpg->data);
 
-	struct blkpg_partition *const bp = tail_alloc(sizeof(*bp));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct blkpg_partition, bp);
 	bp->start = 0xfac1fed2dad3bef4ULL;
 	bp->length = 0xfac5fed6dad7bef8ULL;
 	bp->pno = magic;
@@ -178,9 +149,9 @@ main(void)
 	blkpg->data = bp;
 
 	ioctl(-1, BLKPG, blkpg);
-	printf("ioctl(-1, BLKPG, {%s, flags=%d, datalen=%d"
+	printf("ioctl(-1, BLKPG, {op=%s, flags=%d, datalen=%d"
 	       ", data={start=%lld, length=%lld, pno=%d"
-	       ", devname=\"%.*s\", volname=\"%.*s\"}})"
+	       ", devname=\"%.*s\"..., volname=\"%.*s\"...}})"
 	       " = -1 EBADF (%m)\n",
 	       "BLKPG_ADD_PARTITION",
 	       blkpg->flags, blkpg->datalen,
@@ -189,8 +160,8 @@ main(void)
 	       (int) sizeof(bp->volname) - 1, bp->volname);
 
 #if defined BLKTRACESETUP && defined HAVE_STRUCT_BLK_USER_TRACE_SETUP
-	struct blk_user_trace_setup *const buts = tail_alloc(sizeof(*buts));
-	init_magic(buts, sizeof(*buts));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct blk_user_trace_setup, buts);
+	fill_memory(buts, sizeof(*buts));
 
 	ioctl(-1, BLKTRACESETUP, buts);
 	printf("ioctl(-1, BLKTRACESETUP, {act_mask=%hu, buf_size=%u, buf_nr=%u"

@@ -1,47 +1,21 @@
 /*
  * Copyright (c) 2015 Etienne Gemsa <etienne.gemsa@lse.epita.fr>
  * Copyright (c) 2015-2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2015-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "defs.h"
 
-#ifdef HAVE_LINUX_INPUT_H
+#include "xlat/evdev_abs.h"
+#include "xlat/evdev_ev.h"
 
-#include DEF_MPERS_TYPE(struct_ff_effect)
+#ifdef HAVE_LINUX_INPUT_H
 
 # include <linux/ioctl.h>
 # include <linux/input.h>
-
-typedef struct ff_effect struct_ff_effect;
-
-#endif /* HAVE_LINUX_INPUT_H */
-
-#include MPERS_DEFS
-
-#ifdef HAVE_LINUX_INPUT_H
 
 # include "xlat/evdev_autorepeat.h"
 # include "xlat/evdev_ff_status.h"
@@ -54,110 +28,13 @@ typedef struct ff_effect struct_ff_effect;
 # include "xlat/evdev_relative_axes.h"
 # include "xlat/evdev_snd.h"
 # include "xlat/evdev_switch.h"
-# include "xlat/evdev_sync.h"
 
 # ifndef SYN_MAX
 #  define SYN_MAX 0xf
 # endif
 
-static void
-decode_envelope(void *const data)
-{
-	const struct ff_envelope *const envelope = data;
-
-	tprintf(", envelope={attack_length=%" PRIu16
-		", attack_level=%" PRIu16
-		", fade_length=%" PRIu16
-		", fade_level=%#x}",
-		envelope->attack_length,
-		envelope->attack_level,
-		envelope->fade_length,
-		envelope->fade_level);
-}
-
 static int
-ff_effect_ioctl(struct tcb *tcp, long arg)
-{
-	tprints(", ");
-
-	struct_ff_effect ffe;
-
-#ifdef ENABLE_DATASERIES
-       DS_SET_IOCTL_SIZE(struct_ff_effect);
-#endif /* ENABLE_DATASERIES */
-	if (umove_or_printaddr(tcp, arg, &ffe))
-		return 1;
-
-	tprints("{type=");
-	printxval(evdev_ff_types, ffe.type, "FF_???");
-	tprintf(", id=%" PRIu16
-		", direction=%" PRIu16 ", ",
-		ffe.id,
-		ffe.direction);
-
-	if (abbrev(tcp)) {
-		tprints("...}");
-		return 1;
-	}
-
-	tprintf("trigger={button=%" PRIu16
-		", interval=%" PRIu16 "}"
-		", replay={length=%" PRIu16
-		", delay=%" PRIu16 "}",
-		ffe.trigger.button,
-		ffe.trigger.interval,
-		ffe.replay.length,
-		ffe.replay.delay);
-
-	switch (ffe.type) {
-		case FF_CONSTANT:
-			tprintf(", constant={level=%" PRId16,
-				ffe.u.constant.level);
-			decode_envelope(&ffe.u.constant.envelope);
-			tprints("}");
-			break;
-		case FF_RAMP:
-			tprintf(", ramp={start_level=%" PRId16
-				", end_level=%" PRId16,
-				ffe.u.ramp.start_level,
-				ffe.u.ramp.end_level);
-			decode_envelope(&ffe.u.ramp.envelope);
-			tprints("}");
-			break;
-		case FF_PERIODIC:
-			tprintf(", periodic={waveform=%" PRIu16
-				", period=%" PRIu16
-				", magnitude=%" PRId16
-				", offset=%" PRId16
-				", phase=%" PRIu16,
-				ffe.u.periodic.waveform,
-				ffe.u.periodic.period,
-				ffe.u.periodic.magnitude,
-				ffe.u.periodic.offset,
-				ffe.u.periodic.phase);
-			decode_envelope(&ffe.u.periodic.envelope);
-			tprintf(", custom_len=%u, custom_data=",
-				ffe.u.periodic.custom_len);
-			printaddr((unsigned long) ffe.u.periodic.custom_data);
-			tprints("}");
-			break;
-		case FF_RUMBLE:
-			tprintf(", rumble={strong_magnitude=%" PRIu16
-				", weak_magnitude=%" PRIu16 "}",
-				ffe.u.rumble.strong_magnitude,
-				ffe.u.rumble.weak_magnitude);
-			break;
-		default:
-			break;
-	}
-
-	tprints("}");
-
-	return 1;
-}
-
-static int
-abs_ioctl(struct tcb *tcp, long arg)
+abs_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 {
 	tprints(", ");
 
@@ -190,11 +67,11 @@ abs_ioctl(struct tcb *tcp, long arg)
 		tprints("}");
 	}
 
-	return 1;
+	return RVAL_IOCTL_DECODED;
 }
 
 static int
-keycode_ioctl(struct tcb *tcp, long arg)
+keycode_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 {
 	tprints(", ");
 
@@ -209,12 +86,12 @@ keycode_ioctl(struct tcb *tcp, long arg)
 		tprints("]");
 	}
 
-	return 1;
+	return RVAL_IOCTL_DECODED;
 }
 
 # ifdef EVIOCGKEYCODE_V2
 static int
-keycode_V2_ioctl(struct tcb *tcp, long arg)
+keycode_V2_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 {
 	tprints(", ");
 
@@ -224,7 +101,7 @@ keycode_V2_ioctl(struct tcb *tcp, long arg)
        DS_SET_IOCTL_SIZE(struct input_keymap_entry);
 #endif /* ENABLE_DATASERIES */
 	if (umove_or_printaddr(tcp, arg, &ike))
-		return 1;
+		return RVAL_IOCTL_DECODED;
 
 	tprintf("{flags=%" PRIu8
 		", len=%" PRIu8 ", ",
@@ -249,12 +126,12 @@ keycode_V2_ioctl(struct tcb *tcp, long arg)
 
 	tprints("}");
 
-	return 1;
+	return RVAL_IOCTL_DECODED;
 }
 # endif /* EVIOCGKEYCODE_V2 */
 
 static int
-getid_ioctl(struct tcb *tcp, long arg)
+getid_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 {
 	tprints(", ");
 
@@ -273,63 +150,93 @@ getid_ioctl(struct tcb *tcp, long arg)
 			id.product,
 			id.version);
 
-	return 1;
+	return RVAL_IOCTL_DECODED;
 }
 
 static int
-decode_bitset(struct tcb *tcp, long arg, const struct xlat decode_nr[],
-	      const unsigned int max_nr, const char *dflt)
+decode_bitset(struct tcb *const tcp, const kernel_ulong_t arg,
+	      const struct xlat *decode_nr, const unsigned int max_nr,
+	      const char *const dflt)
 {
 	tprints(", ");
 
 	unsigned int size;
-	if ((unsigned long) tcp->u_rval > max_nr)
-		size = max_nr;
+	unsigned int size_bits;
+
+	if ((kernel_ulong_t) tcp->u_rval > max_nr / 8)
+		size_bits = max_nr;
 	else
-		size = tcp->u_rval;
+		size_bits = tcp->u_rval * 8;
+
+	size = ROUNDUP(ROUNDUP_DIV(size_bits, 8), current_wordsize);
+
+	if (syserror(tcp) || !size) {
+		printaddr(arg);
+
+		return RVAL_IOCTL_DECODED;
+	}
+
 	char decoded_arg[size];
 
 #ifdef ENABLE_DATASERIES
        DS_SET_IOCTL_SIZE(decoded_arg);
 #endif /* ENABLE_DATASERIES */
 	if (umove_or_printaddr(tcp, arg, &decoded_arg))
-		return 1;
+		return RVAL_IOCTL_DECODED;
 
-	tprints("[");
+	if (xlat_verbose(xlat_verbosity) != XLAT_STYLE_RAW) {
+		tprints("[");
 
-	int bit_displayed = 0;
-	int i = next_set_bit(decoded_arg, 0, size);
-	if (i < 0) {
-		tprints(" 0 ");
-	} else {
-		printxval(decode_nr, i, dflt);
-
-		while ((i = next_set_bit(decoded_arg, i + 1, size)) > 0) {
-			if (abbrev(tcp) && bit_displayed >= 3) {
-				tprints(", ...");
-				break;
-			}
-			tprints(", ");
+		int bit_displayed = 0;
+		int i = next_set_bit(decoded_arg, 0, size_bits);
+		if (i < 0) {
+			tprints(" 0 ");
+		} else {
 			printxval(decode_nr, i, dflt);
-			bit_displayed++;
+
+			while ((i = next_set_bit(decoded_arg, i + 1,
+						 size_bits)) > 0) {
+				if (abbrev(tcp) && bit_displayed >= 3) {
+					tprints(", ...");
+					break;
+				}
+				tprints(", ");
+				printxval(decode_nr, i, dflt);
+				bit_displayed++;
+			}
 		}
+
+		tprints("]");
 	}
 
-	tprints("]");
+	if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_VERBOSE)
+		tprints(" /* ");
 
-	return 1;
+	if (xlat_verbose(xlat_verbosity) != XLAT_STYLE_ABBREV) {
+		uint64_t elem;
+
+		print_local_array(tcp, decoded_arg, size / current_wordsize,
+				  &elem, current_wordsize,
+				  print_xlong_array_member, NULL, 0);
+	}
+
+	if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_VERBOSE)
+		tprints(" */");
+
+	return RVAL_IOCTL_DECODED;
 }
 
 # ifdef EVIOCGMTSLOTS
 static int
-mtslots_ioctl(struct tcb *tcp, const unsigned int code, long arg)
+mtslots_ioctl(struct tcb *const tcp, const unsigned int code,
+	      const kernel_ulong_t arg)
 {
 	tprints(", ");
 
 	const size_t size = _IOC_SIZE(code) / sizeof(int);
 	if (!size) {
 		printaddr(arg);
-		return 1;
+		return RVAL_IOCTL_DECODED;
 	}
 
 	int buffer[size];
@@ -338,7 +245,7 @@ mtslots_ioctl(struct tcb *tcp, const unsigned int code, long arg)
        DS_SET_IOCTL_SIZE(buffer);
 #endif /* ENABLE_DATASERIES */
 	if (umove_or_printaddr(tcp, arg, &buffer))
-		return 1;
+		return RVAL_IOCTL_DECODED;
 
 	tprints("{code=");
 	printxval(evdev_mtslots, buffer[0], "ABS_MT_???");
@@ -351,30 +258,31 @@ mtslots_ioctl(struct tcb *tcp, const unsigned int code, long arg)
 
 	tprints("]}");
 
-	return 1;
+	return RVAL_IOCTL_DECODED;
 }
 # endif /* EVIOCGMTSLOTS */
 
 # if defined EVIOCGREP || defined EVIOCSREP
 static int
-repeat_ioctl(struct tcb *tcp, long arg)
+repeat_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 {
 	tprints(", ");
 #ifdef ENABLE_DATASERIES
 	DS_SET_IOCTL_SIZEN(unsigned int, 2);
 #endif /* ENABLE_DATASERIES */
 	printpair_int(tcp, arg, "%u");
-	return 1;
+	return RVAL_IOCTL_DECODED;
 }
 # endif /* EVIOCGREP || EVIOCSREP */
 
 static int
-bit_ioctl(struct tcb *tcp, const unsigned int ev_nr, const long arg)
+bit_ioctl(struct tcb *const tcp, const unsigned int ev_nr,
+	  const kernel_ulong_t arg)
 {
 	switch (ev_nr) {
-		case EV_SYN:
-			return decode_bitset(tcp, arg, evdev_sync,
-					     SYN_MAX, "SYN_???");
+		case 0:
+			return decode_bitset(tcp, arg, evdev_ev,
+					     EV_MAX, "EV_???");
 		case EV_KEY:
 			return decode_bitset(tcp, arg, evdev_keycode,
 					     KEY_MAX, "KEY_???");
@@ -387,11 +295,9 @@ bit_ioctl(struct tcb *tcp, const unsigned int ev_nr, const long arg)
 		case EV_MSC:
 			return decode_bitset(tcp, arg, evdev_misc,
 					     MSC_MAX, "MSC_???");
-# ifdef EV_SW
 		case EV_SW:
 			return decode_bitset(tcp, arg, evdev_switch,
 					     SW_MAX, "SW_???");
-# endif
 		case EV_LED:
 			return decode_bitset(tcp, arg, evdev_leds,
 					     LED_MAX, "LED_???");
@@ -410,30 +316,31 @@ bit_ioctl(struct tcb *tcp, const unsigned int ev_nr, const long arg)
 			DS_SET_IOCTL_SIZE(int);
 #endif /* ENABLE_DATASERIES */
 			printnum_int(tcp, arg, "%d");
-			return 1;
+			return RVAL_IOCTL_DECODED;
 		case EV_FF_STATUS:
 			return decode_bitset(tcp, arg, evdev_ff_status,
 					     FF_STATUS_MAX, "FF_STATUS_???");
 		default:
 			tprints(", ");
 			printaddr(arg);
-			return 1;
+			return RVAL_IOCTL_DECODED;
 	}
 }
 
 static int
-evdev_read_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
+evdev_read_ioctl(struct tcb *const tcp, const unsigned int code,
+		 const kernel_ulong_t arg)
 {
 	/* fixed-number fixed-length commands */
 	switch (code) {
 		case EVIOCGVERSION:
 			tprints(", ");
 			printnum_int(tcp, arg, "%#x");
-			return 1;
+			return RVAL_IOCTL_DECODED;
 		case EVIOCGEFFECTS:
 			tprints(", ");
 			printnum_int(tcp, arg, "%u");
-			return 1;
+			return RVAL_IOCTL_DECODED;
 		case EVIOCGID:
 			return getid_ioctl(tcp, arg);
 # ifdef EVIOCGREP
@@ -461,8 +368,8 @@ evdev_read_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			if (syserror(tcp))
 				printaddr(arg);
 			else
-				printstr(tcp, arg, tcp->u_rval);
-			return 1;
+				printstrn(tcp, arg, tcp->u_rval);
+			return RVAL_IOCTL_DECODED;
 # ifdef EVIOCGPROP
 		case _IOC_NR(EVIOCGPROP(0)):
 			return decode_bitset(tcp, arg, evdev_prop,
@@ -496,7 +403,8 @@ evdev_read_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 }
 
 static int
-evdev_write_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
+evdev_write_ioctl(struct tcb *const tcp, const unsigned int code,
+		  const kernel_ulong_t arg)
 {
 	/* fixed-number fixed-length commands */
 	switch (code) {
@@ -510,23 +418,27 @@ evdev_write_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		case EVIOCSKEYCODE_V2:
 			return keycode_V2_ioctl(tcp, arg);
 # endif
-		case EVIOCSFF:
-			return ff_effect_ioctl(tcp, arg);
 		case EVIOCRMFF:
 			tprintf(", %d", (int) arg);
-			return 1;
+			return RVAL_IOCTL_DECODED;
 		case EVIOCGRAB:
 # ifdef EVIOCREVOKE
 		case EVIOCREVOKE:
 # endif
-			tprintf(", %lu", arg);
-			return 1;
+			tprintf(", %" PRI_klu, arg);
+			return RVAL_IOCTL_DECODED;
 # ifdef EVIOCSCLOCKID
 		case EVIOCSCLOCKID:
 			tprints(", ");
 			printnum_int(tcp, arg, "%u");
-			return 1;
+			return RVAL_IOCTL_DECODED;
 # endif
+		default: {
+			int rc = evdev_write_ioctl_mpers(tcp, code, arg);
+
+			if (rc != RVAL_DECODED)
+				return rc;
+		}
 	}
 
 	/* multi-number fixed-length commands */
@@ -536,10 +448,17 @@ evdev_write_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	return 0;
 }
 
-MPERS_PRINTER_DECL(int, evdev_ioctl, struct tcb *tcp,
-		   const unsigned int code, const long arg)
+void
+print_evdev_ff_type(const kernel_ulong_t val)
 {
-	switch(_IOC_DIR(code)) {
+	printxval(evdev_ff_types, val, "FF_???");
+}
+
+int
+evdev_ioctl(struct tcb *const tcp,
+	    const unsigned int code, const kernel_ulong_t arg)
+{
+	switch (_IOC_DIR(code)) {
 		case _IOC_READ:
 			if (entering(tcp))
 				return 0;

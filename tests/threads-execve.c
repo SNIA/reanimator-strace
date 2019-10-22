@@ -2,33 +2,14 @@
  * Check decoding of threads when a non-leader thread invokes execve.
  *
  * Copyright (c) 2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2016-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
-#include <asm/unistd.h>
+#include "scno.h"
 #include <errno.h>
 #include <pthread.h>
 #include <signal.h>
@@ -136,31 +117,31 @@ thread(void *arg)
 	switch (action % NUMBER_OF_ACTIONS) {
 		case ACTION_exit:
 			printf("%-5d execve(\"%s\", [\"%s\", \"%s\", \"%s\"]"
-			       ", [/* %u vars */] <pid changed to %u ...>\n",
+			       ", %p /* %u vars */ <pid changed to %u ...>\n",
 			       tid, argv[0], argv[0], argv[1], argv[2],
-			       arglen(environ), leader);
+			       environ, arglen(environ), leader);
 			break;
 		case ACTION_rt_sigsuspend:
 			printf("%-5d execve(\"%s\", [\"%s\", \"%s\", \"%s\"]"
-			       ", [/* %u vars */] <unfinished ...>\n"
+			       ", %p /* %u vars */ <unfinished ...>\n"
 			       "%-5d <... rt_sigsuspend resumed>) = ?\n",
 			       tid, argv[0], argv[0], argv[1], argv[2],
-			       arglen(environ),
+			       environ, arglen(environ),
 			       leader);
 			break;
 		case ACTION_nanosleep:
 			printf("%-5d execve(\"%s\", [\"%s\", \"%s\", \"%s\"]"
-			       ", [/* %u vars */] <unfinished ...>\n"
+			       ", %p /* %u vars */ <unfinished ...>\n"
 			       "%-5d <... nanosleep resumed> <unfinished ...>)"
 			       " = ?\n",
 			       tid, argv[0], argv[0], argv[1], argv[2],
-			       arglen(environ),
+			       environ, arglen(environ),
 			       leader);
 			break;
 	}
 
 	printf("%-5d +++ superseded by execve in pid %u +++\n"
-	       "%-5d <... execve resumed> ) = 0\n",
+	       "%-5d <... execve resumed>) = 0\n",
 	       leader, tid,
 	       leader);
 
@@ -180,18 +161,15 @@ main(int ac, char **av)
 		if (clock_nanosleep(CLOCK_REALTIME, 0, &ts, NULL))
 			perror_msg_and_skip("clock_nanosleep CLOCK_REALTIME");
 
-		printf("%-5d execve(\"%s\", [\"%s\"], [/* %u vars */]) = 0\n",
-		       leader, av[0], av[0], arglen(environ));
-
 		get_sigsetsize();
 		static char buf[sizeof(sigsetsize) * 3];
 		sprintf(buf, "%u", sigsetsize);
 
 		char *argv[] = { av[0], buf, (char *) "0", NULL };
 		printf("%-5d execve(\"%s\", [\"%s\", \"%s\", \"%s\"]"
-		       ", [/* %u vars */]) = 0\n",
+		       ", %p /* %u vars */) = 0\n",
 		       leader, argv[0], argv[0], argv[1], argv[2],
-		       arglen(environ));
+		       environ, arglen(environ));
 		execve(argv[0], argv, environ);
 		perror_msg_and_fail("execve");
 	}
@@ -216,22 +194,27 @@ main(int ac, char **av)
 	sigset_t mask;
 	sigemptyset(&mask);
 
+	static char leader_str[sizeof(leader) * 3];
+	int leader_str_len =
+		snprintf(leader_str, sizeof(leader_str), "%-5d", leader);
+
 	switch (action % NUMBER_OF_ACTIONS) {
 		case ACTION_exit:
-			printf("%-5d exit(42)       = ?\n", leader);
+			printf("%s exit(42)%*s= ?\n", leader_str,
+			       (int) sizeof(leader_str) - leader_str_len, " ");
 			close(fds[1]);
 			(void) syscall(__NR_exit, 42);
 			break;
 		case ACTION_rt_sigsuspend:
-			printf("%-5d rt_sigsuspend([], %u <unfinished ...>\n",
-			       leader, sigsetsize);
+			printf("%s rt_sigsuspend([], %u <unfinished ...>\n",
+			       leader_str, sigsetsize);
 			close(fds[1]);
 			(void) k_sigsuspend(&mask);
 			break;
 		case ACTION_nanosleep:
-			printf("%-5d nanosleep({tv_sec=%u, tv_nsec=0}"
+			printf("%s nanosleep({tv_sec=%u, tv_nsec=0}"
 			       ",  <unfinished ...>\n",
-			       leader, (unsigned int) ts.tv_sec);
+			       leader_str, (unsigned int) ts.tv_sec);
 			close(fds[1]);
 			(void) nanosleep(&ts, 0);
 			break;

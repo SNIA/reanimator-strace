@@ -1,6 +1,11 @@
 #!/bin/sh
-
+#
 # Check execve syscall decoding.
+#
+# Copyright (c) 2015-2018 The strace developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 . "${srcdir=.}/init.sh"
 
@@ -11,5 +16,3 @@ run_strace -eexecve $args > "$EXP"
 # Filter out execve() call made by strace.
 grep -F test.execve < "$LOG" > "$OUT"
 match_diff "$OUT" "$EXP"
-
-rm -f "$EXP" "$OUT"

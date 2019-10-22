@@ -1,20 +1,32 @@
-#ifndef HAVE_GETREGS_OLD
-# define arch_set_error i386_set_error
-# include "i386/set_error.c"
-# undef arch_set_error
-#endif /* !HAVE_GETREGS_OLD */
+/*
+ * Copyright (c) 2016-2018 The strace developers.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
 
 static int
 arch_set_error(struct tcb *tcp)
 {
-#ifdef HAVE_GETREGS_OLD
-	x86_64_regs.rax = - (long long) tcp->u_error;
-	return upoke(tcp->pid, 8 * RAX, x86_64_regs.rax);
-#else
-	if (x86_io.iov_len == sizeof(i386_regs))
-		return i386_set_error(tcp);
+	kernel_ulong_t	rval = -(long) tcp->u_error;
 
-	x86_64_regs.rax = - (long long) tcp->u_error;
-	return set_regs(tcp->pid);
-#endif
+	if (tcp->currpers == 1)
+		i386_regs.eax = rval;
+	else
+		x86_64_regs.rax = rval;
+
+	return upoke(tcp, 8 * RAX, rval);
+}
+
+static int
+arch_set_success(struct tcb *tcp)
+{
+	kernel_ulong_t  rval = (kernel_ulong_t) tcp->u_rval;
+
+	if (tcp->currpers == 1)
+		i386_regs.eax = rval;
+	else
+		x86_64_regs.rax = rval;
+
+	return upoke(tcp, 8 * RAX, rval);
 }

@@ -2,34 +2,15 @@
  * Check decoding of delete_module syscall.
  *
  * Copyright (c) 2016 Eugene Syromyatnikov <evgsyr@gmail.com>
+ * Copyright (c) 2016-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
 
-#include <asm/unistd.h>
+#include "scno.h"
 
 #if defined(__NR_delete_module)
 
@@ -48,8 +29,7 @@ main(void)
 		unsigned int val_prefix, val_suffix;
 	} flags[] = {
 		{ ARG_STR(0), 0, 0 },
-		{ (kernel_ulong_t) 0xffffffff00000000ULL | O_NONBLOCK,
-			"O_NONBLOCK", 0, 0 },
+		{ F8ILL_KULONG_MASK | O_NONBLOCK, "O_NONBLOCK", 0, 0 },
 		{ (kernel_ulong_t) 0xbadc0dedfacef157ULL & ~(O_NONBLOCK | O_TRUNC),
 			" /* O_??? */", 0xfacef157U & ~(O_NONBLOCK | O_TRUNC), 0},
 		{ (kernel_ulong_t) (0xfacef157deade71cULL & ~O_NONBLOCK) | O_TRUNC,
@@ -65,7 +45,7 @@ main(void)
 	fill_memory_ex(bogus_param1, PARAM1_LEN, PARAM1_BASE, PARAM1_LEN);
 	fill_memory_ex(bogus_param2, PARAM2_LEN, PARAM2_BASE, PARAM2_LEN);
 
-	rc = syscall(__NR_delete_module, NULL, bogus_zero);
+	rc = syscall(__NR_delete_module, NULL, F8ILL_KULONG_MASK);
 	printf("delete_module(NULL, 0) = %s\n", sprintrc(rc));
 
 	rc = syscall(__NR_delete_module, bogus_param1, flags[0].val);

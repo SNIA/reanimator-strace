@@ -4,42 +4,27 @@
  * Copyright (c) 1993, 1994, 1995, 1996 Rick Sladkey <jrs@world.std.com>
  * Copyright (c) 1996-2000 Wichert Akkerman <wichert@cistron.nl>
  * Copyright (c) 2005-2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2016-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "defs.h"
+#include "print_fields.h"
 #include "msghdr.h"
 #include <limits.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+#define XLAT_MACROS_ONLY
+#include "xlat/sock_options.h"
+#undef XLAT_MACROS_ONLY
 #include "xlat/msg_flags.h"
 #include "xlat/scmvals.h"
 #include "xlat/ip_cmsg_types.h"
 
-#if SUPPORTED_PERSONALITIES > 1 && SIZEOF_LONG > 4
+#ifndef current_wordsize
 struct cmsghdr32 {
 	uint32_t cmsg_len;
 	int cmsg_level;
@@ -50,17 +35,18 @@ struct cmsghdr32 {
 typedef union {
 	char *ptr;
 	struct cmsghdr *cmsg;
-#if SUPPORTED_PERSONALITIES > 1 && SIZEOF_LONG > 4
+#ifndef current_wordsize
 	struct cmsghdr32 *cmsg32;
 #endif
 } union_cmsghdr;
 
 static void
-print_scm_rights(struct tcb *tcp, const void *cmsg_data, const size_t data_len)
+print_scm_rights(struct tcb *tcp, const void *cmsg_data,
+		 const unsigned int data_len)
 {
 	const int *fds = cmsg_data;
-	const size_t nfds = data_len / sizeof(*fds);
-	size_t i;
+	const unsigned int nfds = data_len / sizeof(*fds);
+	unsigned int i;
 
 	tprints("[");
 
@@ -78,37 +64,81 @@ print_scm_rights(struct tcb *tcp, const void *cmsg_data, const size_t data_len)
 }
 
 static void
-print_scm_creds(struct tcb *tcp, const void *cmsg_data, const size_t data_len)
+print_scm_creds(struct tcb *tcp, const void *cmsg_data,
+		const unsigned int data_len)
 {
 	const struct ucred *uc = cmsg_data;
 
-	tprintf("{pid=%u, uid=%u, gid=%u}",
-		(unsigned) uc->pid, (unsigned) uc->uid, (unsigned) uc->gid);
+	PRINT_FIELD_U("{", *uc, pid);
+	PRINT_FIELD_UID(", ", *uc, uid);
+	PRINT_FIELD_UID(", ", *uc, gid);
+	tprints("}");
 }
 
 static void
 print_scm_security(struct tcb *tcp, const void *cmsg_data,
-		   const size_t data_len)
+		   const unsigned int data_len)
 {
 	print_quoted_string(cmsg_data, data_len, 0);
 }
 
 static void
-print_cmsg_ip_pktinfo(struct tcb *tcp, const void *cmsg_data,
-		      const size_t data_len)
+print_scm_timestamp_old(struct tcb *tcp, const void *cmsg_data,
+			const unsigned int data_len)
 {
-	const struct in_pktinfo *info = cmsg_data;
-
-	tprints("{ipi_ifindex=");
-	print_ifindex(info->ipi_ifindex);
-	tprintf(", ipi_spec_dst=inet_addr(\"%s\")",
-		inet_ntoa(info->ipi_spec_dst));
-	tprintf(", ipi_addr=inet_addr(\"%s\")}",
-		inet_ntoa(info->ipi_addr));
+	print_struct_timeval_data_size(cmsg_data, data_len);
 }
 
 static void
-print_cmsg_uint(struct tcb *tcp, const void *cmsg_data, const size_t data_len)
+print_scm_timestampns_old(struct tcb *tcp, const void *cmsg_data,
+			  const unsigned int data_len)
+{
+	print_struct_timespec_data_size(cmsg_data, data_len);
+}
+
+static void
+print_scm_timestamping_old(struct tcb *tcp, const void *cmsg_data,
+			   const unsigned int data_len)
+{
+	print_struct_timespec_array_data_size(cmsg_data, 3, data_len);
+}
+
+static void
+print_scm_timestamp_new(struct tcb *tcp, const void *cmsg_data,
+			const unsigned int data_len)
+{
+	print_timeval64_data_size(cmsg_data, data_len);
+}
+
+static void
+print_scm_timestampns_new(struct tcb *tcp, const void *cmsg_data,
+			const unsigned int data_len)
+{
+	print_timespec64_data_size(cmsg_data, data_len);
+}
+
+static void
+print_scm_timestamping_new(struct tcb *tcp, const void *cmsg_data,
+			   const unsigned int data_len)
+{
+	print_timespec64_array_data_size(cmsg_data, 3, data_len);
+}
+
+static void
+print_cmsg_ip_pktinfo(struct tcb *tcp, const void *cmsg_data,
+		      const unsigned int data_len)
+{
+	const struct in_pktinfo *info = cmsg_data;
+
+	PRINT_FIELD_IFINDEX("{", *info, ipi_ifindex);
+	PRINT_FIELD_INET_ADDR(", ", *info, ipi_spec_dst, AF_INET);
+	PRINT_FIELD_INET_ADDR(", ", *info, ipi_addr, AF_INET);
+	tprints("}");
+}
+
+static void
+print_cmsg_uint(struct tcb *tcp, const void *cmsg_data,
+		const unsigned int data_len)
 {
 	const unsigned int *p = cmsg_data;
 
@@ -117,7 +147,7 @@ print_cmsg_uint(struct tcb *tcp, const void *cmsg_data, const size_t data_len)
 
 static void
 print_cmsg_uint8_t(struct tcb *tcp, const void *cmsg_data,
-		   const size_t data_len)
+		   const unsigned int data_len)
 {
 	const uint8_t *p = cmsg_data;
 
@@ -126,10 +156,10 @@ print_cmsg_uint8_t(struct tcb *tcp, const void *cmsg_data,
 
 static void
 print_cmsg_ip_opts(struct tcb *tcp, const void *cmsg_data,
-		   const size_t data_len)
+		   const unsigned int data_len)
 {
 	const unsigned char *opts = cmsg_data;
-	size_t i;
+	unsigned int i;
 
 	tprints("[");
 	for (i = 0; i < data_len; ++i) {
@@ -157,38 +187,46 @@ struct sock_ee {
 
 static void
 print_cmsg_ip_recverr(struct tcb *tcp, const void *cmsg_data,
-		      const size_t data_len)
+		      const unsigned int data_len)
 {
 	const struct sock_ee *const err = cmsg_data;
 
-	tprintf("{ee_errno=%u, ee_origin=%u, ee_type=%u, ee_code=%u"
-		", ee_info=%u, ee_data=%u, offender=",
-		err->ee_errno, err->ee_origin, err->ee_type,
-		err->ee_code, err->ee_info, err->ee_data);
-	print_sockaddr(tcp, &err->offender, sizeof(err->offender));
+	PRINT_FIELD_U("{", *err, ee_errno);
+	PRINT_FIELD_U(", ", *err, ee_origin);
+	PRINT_FIELD_U(", ", *err, ee_type);
+	PRINT_FIELD_U(", ", *err, ee_code);
+	PRINT_FIELD_U(", ", *err, ee_info);
+	PRINT_FIELD_U(", ", *err, ee_data);
+	PRINT_FIELD_SOCKADDR(", ", *err, offender);
 	tprints("}");
 }
 
 static void
 print_cmsg_ip_origdstaddr(struct tcb *tcp, const void *cmsg_data,
-			  const size_t data_len)
+			  const unsigned int data_len)
 {
-	const int addr_len =
+	const unsigned int addr_len =
 		data_len > sizeof(struct sockaddr_storage)
 		? sizeof(struct sockaddr_storage) : data_len;
 
-	print_sockaddr(tcp, cmsg_data, addr_len);
+	print_sockaddr(cmsg_data, addr_len);
 }
 
-typedef void (* const cmsg_printer)(struct tcb *, const void *, size_t);
+typedef void (* const cmsg_printer)(struct tcb *, const void *, unsigned int);
 
 static const struct {
 	const cmsg_printer printer;
-	const size_t min_len;
+	const unsigned int min_len;
 } cmsg_socket_printers[] = {
 	[SCM_RIGHTS] = { print_scm_rights, sizeof(int) },
 	[SCM_CREDENTIALS] = { print_scm_creds, sizeof(struct ucred) },
-	[SCM_SECURITY] = { print_scm_security, 1 }
+	[SCM_SECURITY] = { print_scm_security, 1 },
+	[SO_TIMESTAMP_OLD] = { print_scm_timestamp_old, 1 },
+	[SO_TIMESTAMPNS_OLD] = { print_scm_timestampns_old, 1 },
+	[SO_TIMESTAMPING_OLD] = { print_scm_timestamping_old, 1 },
+	[SO_TIMESTAMP_NEW] = { print_scm_timestamp_new, 1 },
+	[SO_TIMESTAMPNS_NEW] = { print_scm_timestampns_new, 1 },
+	[SO_TIMESTAMPING_NEW] = { print_scm_timestamping_new, 1 }
 }, cmsg_ip_printers[] = {
 	[IP_PKTINFO] = { print_cmsg_ip_pktinfo, sizeof(struct in_pktinfo) },
 	[IP_TTL] = { print_cmsg_uint, sizeof(unsigned int) },
@@ -203,7 +241,7 @@ static const struct {
 
 static void
 print_cmsg_type_data(struct tcb *tcp, const int cmsg_level, const int cmsg_type,
-		     const void *cmsg_data, const size_t data_len)
+		     const void *cmsg_data, const unsigned int data_len)
 {
 	const unsigned int utype = cmsg_type;
 	switch (cmsg_level) {
@@ -231,12 +269,12 @@ print_cmsg_type_data(struct tcb *tcp, const int cmsg_level, const int cmsg_type,
 }
 
 static unsigned int
-get_optmem_max(void)
+get_optmem_max(struct tcb *tcp)
 {
 	static int optmem_max;
 
 	if (!optmem_max) {
-		if (read_int_from_file("/proc/sys/net/core/optmem_max",
+		if (read_int_from_file(tcp, "/proc/sys/net/core/optmem_max",
 				       &optmem_max) || optmem_max <= 0) {
 			optmem_max = sizeof(long long) * (2 * IOV_MAX + 512);
 		} else {
@@ -249,23 +287,22 @@ get_optmem_max(void)
 }
 
 static void
-decode_msg_control(struct tcb *tcp, unsigned long addr,
-		   const size_t in_control_len)
+decode_msg_control(struct tcb *const tcp, const kernel_ulong_t addr,
+		   const kernel_ulong_t in_control_len)
 {
 	if (!in_control_len)
 		return;
 	tprints(", msg_control=");
 
-	const size_t cmsg_size =
-#if SUPPORTED_PERSONALITIES > 1 && SIZEOF_LONG > 4
+	const unsigned int cmsg_size =
+#ifndef current_wordsize
 		(current_wordsize < sizeof(long)) ? sizeof(struct cmsghdr32) :
 #endif
 			sizeof(struct cmsghdr);
 
-	size_t control_len =
-		in_control_len > get_optmem_max()
-		? get_optmem_max() : in_control_len;
-	size_t buf_len = control_len;
+	unsigned int control_len = in_control_len > get_optmem_max(tcp)
+				   ? get_optmem_max(tcp) : in_control_len;
+	unsigned int buf_len = control_len;
 	char *buf = buf_len < cmsg_size ? NULL : malloc(buf_len);
 	if (!buf || umoven(tcp, addr, buf_len, buf) < 0) {
 		printaddr(addr);
@@ -277,33 +314,33 @@ decode_msg_control(struct tcb *tcp, unsigned long addr,
 
 	tprints("[");
 	while (buf_len >= cmsg_size) {
-		const size_t cmsg_len =
-#if SUPPORTED_PERSONALITIES > 1 && SIZEOF_LONG > 4
+		const kernel_ulong_t cmsg_len =
+#ifndef current_wordsize
 			(current_wordsize < sizeof(long)) ? u.cmsg32->cmsg_len :
 #endif
 				u.cmsg->cmsg_len;
 		const int cmsg_level =
-#if SUPPORTED_PERSONALITIES > 1 && SIZEOF_LONG > 4
+#ifndef current_wordsize
 			(current_wordsize < sizeof(long)) ? u.cmsg32->cmsg_level :
 #endif
 				u.cmsg->cmsg_level;
 		const int cmsg_type =
-#if SUPPORTED_PERSONALITIES > 1 && SIZEOF_LONG > 4
+#ifndef current_wordsize
 			(current_wordsize < sizeof(long)) ? u.cmsg32->cmsg_type :
 #endif
 				u.cmsg->cmsg_type;
 
 		if (u.ptr != buf)
 			tprints(", ");
-		tprintf("{cmsg_len=%lu, cmsg_level=", (unsigned long) cmsg_len);
+		tprintf("{cmsg_len=%" PRI_klu ", cmsg_level=", cmsg_len);
 		printxval(socketlayers, cmsg_level, "SOL_???");
 		tprints(", cmsg_type=");
 
-		size_t len = cmsg_len > buf_len ? buf_len : cmsg_len;
+		kernel_ulong_t len = cmsg_len > buf_len ? buf_len : cmsg_len;
 
 		print_cmsg_type_data(tcp, cmsg_level, cmsg_type,
 				     (const void *) (u.ptr + cmsg_size),
-				     len > cmsg_size ? len - cmsg_size: 0);
+				     len > cmsg_size ? len - cmsg_size : 0);
 		tprints("}");
 
 		if (len < cmsg_size) {
@@ -311,7 +348,7 @@ decode_msg_control(struct tcb *tcp, unsigned long addr,
 			break;
 		}
 		len = (cmsg_len + current_wordsize - 1) &
-			(size_t) ~(current_wordsize - 1);
+			~((kernel_ulong_t) current_wordsize - 1);
 		if (len >= buf_len) {
 			buf_len = 0;
 			break;
@@ -320,8 +357,8 @@ decode_msg_control(struct tcb *tcp, unsigned long addr,
 		buf_len -= len;
 	}
 	if (buf_len) {
-		tprints(", ");
-		printaddr(addr + (control_len - buf_len));
+		tprints(", ...");
+		printaddr_comment(addr + (control_len - buf_len));
 	} else if (control_len < in_control_len) {
 		tprints(", ...");
 	}
@@ -332,7 +369,7 @@ decode_msg_control(struct tcb *tcp, unsigned long addr,
 void
 print_struct_msghdr(struct tcb *tcp, const struct msghdr *msg,
 		    const int *const p_user_msg_namelen,
-		    const unsigned long data_size)
+		    const kernel_ulong_t data_size)
 {
 	const int msg_namelen =
 		p_user_msg_namelen && (int) msg->msg_namelen > *p_user_msg_namelen
@@ -340,7 +377,7 @@ print_struct_msghdr(struct tcb *tcp, const struct msghdr *msg,
 
 	tprints("{msg_name=");
 	const int family =
-		decode_sockaddr(tcp, (long) msg->msg_name, msg_namelen);
+		decode_sockaddr(tcp, ptr_to_kulong(msg->msg_name), msg_namelen);
 	const enum iov_decode decode =
 		(family == AF_NETLINK) ? IOV_DECODE_NETLINK : IOV_DECODE_STR;
 
@@ -350,22 +387,21 @@ print_struct_msghdr(struct tcb *tcp, const struct msghdr *msg,
 	tprintf("%d", msg->msg_namelen);
 
 	tprints(", msg_iov=");
+	tprint_iov_upto(tcp, msg->msg_iovlen,
+			ptr_to_kulong(msg->msg_iov), decode, data_size);
+	PRINT_FIELD_U(", ", *msg, msg_iovlen);
 
-	tprint_iov_upto(tcp, (unsigned long) msg->msg_iovlen,
-			(unsigned long) msg->msg_iov, decode, data_size);
-	tprintf(", msg_iovlen=%lu", (unsigned long) msg->msg_iovlen);
-
-	decode_msg_control(tcp, (unsigned long) msg->msg_control,
+	decode_msg_control(tcp, ptr_to_kulong(msg->msg_control),
 			   msg->msg_controllen);
-	tprintf(", msg_controllen=%lu", (unsigned long) msg->msg_controllen);
+	PRINT_FIELD_U(", ", *msg, msg_controllen);
 
-	tprints(", msg_flags=");
-	printflags(msg_flags, msg->msg_flags, "MSG_???");
+	PRINT_FIELD_FLAGS(", ", *msg, msg_flags, msg_flags, "MSG_???");
 	tprints("}");
 }
 
 static bool
-fetch_msghdr_namelen(struct tcb *tcp, const long addr, int *const p_msg_namelen)
+fetch_msghdr_namelen(struct tcb *const tcp, const kernel_ulong_t addr,
+		     int *const p_msg_namelen)
 {
 	struct msghdr msg;
 
@@ -378,8 +414,8 @@ fetch_msghdr_namelen(struct tcb *tcp, const long addr, int *const p_msg_namelen)
 }
 
 static void
-decode_msghdr(struct tcb *tcp, const int *const p_user_msg_namelen,
-	      const long addr, const unsigned long data_size)
+decode_msghdr(struct tcb *const tcp, const int *const p_user_msg_namelen,
+	      const kernel_ulong_t addr, const kernel_ulong_t data_size)
 {
 	struct msghdr msg;
 
@@ -390,19 +426,22 @@ decode_msghdr(struct tcb *tcp, const int *const p_user_msg_namelen,
 }
 
 void
-dumpiov_in_msghdr(struct tcb *tcp, long addr, unsigned long data_size)
+dumpiov_in_msghdr(struct tcb *const tcp, const kernel_ulong_t addr,
+		  const kernel_ulong_t data_size)
 {
 	struct msghdr msg;
 
-	if (fetch_struct_msghdr(tcp, addr, &msg))
-		dumpiov_upto(tcp, msg.msg_iovlen, (long)msg.msg_iov, data_size);
+	if (fetch_struct_msghdr(tcp, addr, &msg)) {
+		dumpiov_upto(tcp, msg.msg_iovlen,
+			     ptr_to_kulong(msg.msg_iov), data_size);
+	}
 }
 
 SYS_FUNC(sendmsg)
 {
 	printfd(tcp, tcp->u_arg[0]);
 	tprints(", ");
-	decode_msghdr(tcp, 0, tcp->u_arg[1], (unsigned long) -1L);
+	decode_msghdr(tcp, 0, tcp->u_arg[1], -1);
 	/* flags */
 	tprints(", ");
 	printflags(msg_flags, tcp->u_arg[2], "MSG_???");

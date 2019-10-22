@@ -1,28 +1,9 @@
 /*
  * Copyright (c) 2016 Jeff Mahoney <jeffm@suse.com>
+ * Copyright (c) 2016-2018 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "defs.h"
@@ -36,11 +17,11 @@
 #endif
 
 #ifndef FICLONE
-# define FICLONE         _IOW(0x94, 9, int)
+# define FICLONE	_IOW(0x94, 9, int)
 #endif
 
 #ifndef FICLONERANGE
-# define FICLONERANGE    _IOW(0x94, 13, struct file_clone_range)
+# define FICLONERANGE	_IOW(0x94, 13, struct file_clone_range)
 struct file_clone_range {
 	int64_t src_fd;
 	uint64_t src_offset;
@@ -50,7 +31,7 @@ struct file_clone_range {
 #endif
 
 #ifndef FIDEDUPERANGE
-# define FIDEDUPERANGE   _IOWR(0x94, 54, struct file_dedupe_range)
+# define FIDEDUPERANGE	_IOWR(0x94, 54, struct file_dedupe_range)
 struct file_dedupe_range_info {
 	int64_t dest_fd;	/* in - destination file */
 	uint64_t dest_offset;	/* in - start of extent in destination */
@@ -123,7 +104,8 @@ print_fiemap_extent(struct tcb *tcp, void *elem_buf, size_t elem_size, void *dat
 #endif /* HAVE_LINUX_FIEMAP_H */
 
 int
-file_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
+file_ioctl(struct tcb *const tcp, const unsigned int code,
+	   const kernel_ulong_t arg)
 {
 	switch (code) {
 	case FICLONE:	/* W */
@@ -183,7 +165,7 @@ file_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 
 		rc = print_array(tcp, arg + offsetof(typeof(args), info),
 				 args.dest_count, &info, sizeof(info),
-				 umoven_or_printaddr,
+				 tfetch_mem,
 				 print_file_dedupe_range_info, limit);
 
 		tprints("}");
@@ -223,15 +205,15 @@ file_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 			     "FIEMAP_FLAG_???");
 		tprintf(", fm_mapped_extents=%u",
 			args.fm_mapped_extents);
-		tprints(", fm_extents=");
 		if (abbrev(tcp)) {
-			tprints("...");
+			tprints(", ...");
 		} else {
 			struct fiemap_extent fe;
+			tprints(", fm_extents=");
 			print_array(tcp,
 				    arg + offsetof(typeof(args), fm_extents),
 				    args.fm_mapped_extents, &fe, sizeof(fe),
-				    umoven_or_printaddr,
+				    tfetch_mem,
 				    print_fiemap_extent, 0);
 		}
 		tprints("}");
@@ -244,5 +226,5 @@ file_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		return RVAL_DECODED;
 	};
 
-	return RVAL_DECODED | 1;
+	return RVAL_IOCTL_DECODED;
 }

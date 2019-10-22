@@ -2,11 +2,9 @@ language: c
 
 dist: trusty
 
-before_install: ./travis-install.sh
+before_install: ci/install-dependencies.sh
 
-script: ./travis-build.sh
-
-after_success: ./travis-success.sh
+script: ci/run-build-and-tests.sh
 
 sudo: required
 
@@ -22,23 +20,56 @@ matrix:
   include:
     - compiler: gcc
       env:
+        - TARGET=x86
+        - STACKTRACE=no
+    - compiler: gcc
+      env:
         - TARGET=x86_64
-        - COVERAGE=true
+        - STACKTRACE=libunwind
+        - CHECK=coverage
+        - KHEADERS=torvalds/linux
+    - compiler: gcc-8
+      env:
+        - TARGET=x86_64
+        - STACKTRACE=libunwind
+        - KHEADERS=torvalds/linux
+    - compiler: gcc
+      env:
+        - TARGET=x86_64
+        - STACKTRACE=libunwind
     - compiler: gcc
       env:
         - TARGET=x32
+        - STACKTRACE=no
+    - compiler: clang
+      env:
+        - TARGET=x86_64
+        - STACKTRACE=libunwind
+    - compiler: musl-gcc
+      env:
+        - TARGET=x86_64
+        - STACKTRACE=no
+    - compiler: clang
+      env:
+        - TARGET=x86
+        - STACKTRACE=no
+    - compiler: musl-gcc
+      env:
+        - TARGET=x86
+        - STACKTRACE=no
+    - compiler: gcc-8
+      env:
+        - TARGET=x86_64
+        - STACKTRACE=libunwind
+    - compiler: gcc-8
+      env:
+        - TARGET=x32
+        - STACKTRACE=no
+    - compiler: gcc-8
+      env:
+        - TARGET=x86
+        - STACKTRACE=no
     - compiler: gcc
       env:
-        - TARGET=x86
-    - compiler: clang-3.6
-      env:
         - TARGET=x86_64
-    - compiler: musl-gcc
-      env:
-        - TARGET=x86_64
-    - compiler: clang-3.6
-      env:
-        - TARGET=x86
-    - compiler: musl-gcc
-      env:
-        - TARGET=x86
+        - STACKTRACE=no

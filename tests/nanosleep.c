@@ -1,28 +1,11 @@
 /*
+ * Check decoding of nanosleep syscall.
+ *
  * Copyright (c) 2015-2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2015-2018 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
@@ -57,40 +40,62 @@ main(void)
 
 	if (nanosleep(&req.ts, NULL))
 		perror_msg_and_fail("nanosleep");
-	printf("nanosleep({tv_sec=%jd, tv_nsec=%jd}, NULL) = 0\n",
-	       (intmax_t) req.ts.tv_sec, (intmax_t) req.ts.tv_nsec);
+	printf("nanosleep({tv_sec=%lld, tv_nsec=%llu}, NULL) = 0\n",
+	       (long long) req.ts.tv_sec,
+	       zero_extend_signed_to_ull(req.ts.tv_nsec));
 
 	assert(nanosleep(NULL, &rem.ts) == -1);
 	printf("nanosleep(NULL, %p) = -1 EFAULT (%m)\n", &rem.ts);
 
 	if (nanosleep(&req.ts, &rem.ts))
 		perror_msg_and_fail("nanosleep");
-	printf("nanosleep({tv_sec=%jd, tv_nsec=%jd}, %p) = 0\n",
-	       (intmax_t) req.ts.tv_sec, (intmax_t) req.ts.tv_nsec, &rem.ts);
+	printf("nanosleep({tv_sec=%lld, tv_nsec=%llu}, %p) = 0\n",
+	       (long long) req.ts.tv_sec,
+	       zero_extend_signed_to_ull(req.ts.tv_nsec), &rem.ts);
 
 	req.ts.tv_nsec = 1000000000;
 	assert(nanosleep(&req.ts, &rem.ts) == -1);
-	printf("nanosleep({tv_sec=%jd, tv_nsec=%jd}, %p) = -1 EINVAL (%m)\n",
-	       (intmax_t) req.ts.tv_sec, (intmax_t) req.ts.tv_nsec, &rem.ts);
+	printf("nanosleep({tv_sec=%lld, tv_nsec=%llu}, %p) = -1 EINVAL (%m)\n",
+	       (long long) req.ts.tv_sec,
+	       zero_extend_signed_to_ull(req.ts.tv_nsec), &rem.ts);
+
+	req.ts.tv_sec = 0xdeadbeefU;
+	req.ts.tv_nsec = 0xfacefeedU;
+	assert(nanosleep(&req.ts, &rem.ts) == -1);
+	printf("nanosleep({tv_sec=%lld, tv_nsec=%llu}, %p) = -1 EINVAL (%m)\n",
+	       (long long) req.ts.tv_sec,
+	       zero_extend_signed_to_ull(req.ts.tv_nsec), &rem.ts);
+
+	req.ts.tv_sec = (time_t) 0xcafef00ddeadbeefLL;
+	req.ts.tv_nsec = (long) 0xbadc0dedfacefeedLL;
+	assert(nanosleep(&req.ts, &rem.ts) == -1);
+	printf("nanosleep({tv_sec=%lld, tv_nsec=%llu}, %p) = -1 EINVAL (%m)\n",
+	       (long long) req.ts.tv_sec,
+	       zero_extend_signed_to_ull(req.ts.tv_nsec), &rem.ts);
+
+	req.ts.tv_sec = -1;
+	req.ts.tv_nsec = -1;
+	assert(nanosleep(&req.ts, &rem.ts) == -1);
+	printf("nanosleep({tv_sec=%lld, tv_nsec=%llu}, %p) = -1 EINVAL (%m)\n",
+	       (long long) req.ts.tv_sec,
+	       zero_extend_signed_to_ull(req.ts.tv_nsec), &rem.ts);
 
 	assert(sigaction(SIGALRM, &act, NULL) == 0);
 	assert(sigprocmask(SIG_SETMASK, &set, NULL) == 0);
 
 	if (setitimer(ITIMER_REAL, &itv, NULL))
 		perror_msg_and_skip("setitimer");
-	printf("setitimer(ITIMER_REAL, {it_interval={tv_sec=%jd, tv_usec=%jd}"
-	       ", it_value={tv_sec=%jd, tv_usec=%jd}}, NULL) = 0\n",
-	       (intmax_t) itv.it_interval.tv_sec,
-	       (intmax_t) itv.it_interval.tv_usec,
-	       (intmax_t) itv.it_value.tv_sec,
-	       (intmax_t) itv.it_value.tv_usec);
 
+	req.ts.tv_sec = 0;
 	req.ts.tv_nsec = 999999999;
 	assert(nanosleep(&req.ts, &rem.ts) == -1);
-	printf("nanosleep({tv_sec=%jd, tv_nsec=%jd}, {tv_sec=%jd, tv_nsec=%jd})"
+	printf("nanosleep({tv_sec=%lld, tv_nsec=%llu}"
+	       ", {tv_sec=%lld, tv_nsec=%llu})"
 	       " = ? ERESTART_RESTARTBLOCK (Interrupted by signal)\n",
-	       (intmax_t) req.ts.tv_sec, (intmax_t) req.ts.tv_nsec,
-	       (intmax_t) rem.ts.tv_sec, (intmax_t) rem.ts.tv_nsec);
+	       (long long) req.ts.tv_sec,
+	       zero_extend_signed_to_ull(req.ts.tv_nsec),
+	       (long long) rem.ts.tv_sec,
+	       zero_extend_signed_to_ull(rem.ts.tv_nsec));
 	puts("--- SIGALRM {si_signo=SIGALRM, si_code=SI_KERNEL} ---");
 
 	puts("+++ exited with 0 +++");

@@ -3,62 +3,12 @@
 # Check strace options syntax.
 #
 # Copyright (c) 2016 Dmitry V. Levin <ldv@altlinux.org>
+# Copyright (c) 2016-2019 The strace developers.
 # All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions
-# are met:
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. The name of the author may not be used to endorse or promote products
-#    derived from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
-# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# SPDX-License-Identifier: GPL-2.0-or-later
 
-. "${srcdir=.}/init.sh"
-
-check_exit_status_and_stderr()
-{
-	$STRACE "$@" 2> "$LOG" &&
-		dump_log_and_fail_with \
-			"strace $* failed to handle the error properly"
-	match_diff "$LOG" "$EXP" ||
-		dump_log_and_fail_with \
-			"strace $* failed to print expected diagnostics"
-}
-
-strace_exp="${STRACE##* }"
-
-check_e()
-{
-	local pattern="$1"; shift
-	cat > "$EXP" << __EOF__
-$strace_exp: $pattern
-__EOF__
-	check_exit_status_and_stderr "$@"
-}
-
-check_h()
-{
-	local pattern="$1"; shift
-	cat > "$EXP" << __EOF__
-$strace_exp: $pattern
-Try '$strace_exp -h' for more information.
-__EOF__
-	check_exit_status_and_stderr "$@"
-}
+. "${srcdir=.}/syntax.sh"
 
 check_e "Invalid process id: '0'" -p 0
 check_e "Invalid process id: '-42'" -p -42
@@ -67,26 +17,10 @@ check_e "Invalid process id: 'a'" -p 1,a
 check_e "Syscall 'chdir' for -b isn't supported" -b chdir
 check_e "Syscall 'chdir' for -b isn't supported" -b execve -b chdir
 
-check_e "invalid system call '-1'" -e-1
-check_e "invalid system call '-2'" -e -2
-check_e "invalid system call '-3'" -etrace=-3
-check_e "invalid system call '-4'" -e trace=-4
-check_e "invalid system call '-5'" -e trace=1,-5
-check_e "invalid system call '2147483647'" -e 2147483647
-check_e "invalid system call '2147483648'" -e 2147483648
-check_e "invalid system call '4294967295'" -e 4294967295
-check_e "invalid system call '4294967296'" -e 4294967296
+check_e_using_grep 'exec: File *name too long' "$(printf '%4096s' ' ')"
 
-check_e "invalid descriptor '-1'" -eread=-1
-check_e "invalid descriptor '-42'" -ewrite=-42
-check_e "invalid descriptor '2147483648'" -eread=2147483648
-check_e "invalid descriptor '4294967296'" -ewrite=4294967296
-check_e "invalid descriptor 'foo'" -eread=foo
-check_e "invalid descriptor ''" -ewrite=
-check_e "invalid descriptor ','" -eread=,
-check_e "invalid descriptor '!'" -ewrite='!'
-check_e "invalid descriptor '!'" -eread='0,!'
-check_e "invalid descriptor '!,'" -ewrite='!,'
+ff_name="$(printf '%4084s' ' ')"
+check_e_using_grep "$ff_name: File *name too long" -ff -o "$ff_name" true
 
 check_h 'must have PROG [ARGS] or -p PID'
 check_h 'PROG [ARGS] must be specified with -D' -D -p $$
@@ -100,10 +34,63 @@ check_h 'piping the output and -ff are mutually exclusive' -o '!' -ff true
 check_h "invalid -a argument: '-42'" -a -42
 check_h "invalid -O argument: '-42'" -O -42
 check_h "invalid -s argument: '-42'" -s -42
+check_h "invalid -s argument: '1073741824'" -s 1073741824
 check_h "invalid -I argument: '5'" -I 5
+check_h "invalid -X argument: 'test'" -Xtest
+check_h "invalid -X argument: 'a'" -Xa
+check_h "invalid -X argument: 'abbreviated'" -X abbreviated
 
-if [ -n "${UID-}" ]; then
-	if [ "${UID-}" = 0 ]; then
+check_h "incorrect personality designator '' in qualification 'getcwd@'" -e trace=getcwd@
+check_h "incorrect personality designator '42' in qualification 'getcwd@42'" -e trace=getcwd@42
+check_h "incorrect personality designator '42' in qualification 'getcwd@42'" -e trace=gettid,getcwd@42
+check_h "incorrect personality designator '42' in qualification '23@42'" -e trace=23@42,123
+
+check_e "invalid system call '/getcwd@ohmy'" -e trace=/getcwd@ohmy
+check_e "invalid -e kvm= argument: 'chdir'" -e kvm=chdir
+
+case "$STRACE_NATIVE_ARCH" in
+x86_64)
+	check_h "must have PROG [ARGS] or -p PID" -e trace=getcwd@64
+	check_h "must have PROG [ARGS] or -p PID" -e trace=getcwd@32
+	check_h "must have PROG [ARGS] or -p PID" -e trace=getcwd@x32
+	;;
+x32)
+	check_h "incorrect personality designator '64' in qualification 'getcwd@64'" -e trace=getcwd@64
+	check_h "must have PROG [ARGS] or -p PID" -e trace=getcwd@32
+	check_h "must have PROG [ARGS] or -p PID" -e trace=getcwd@x32
+	;;
+aarch64|powerpc64|s390x|sparc64|tile)
+	check_h "must have PROG [ARGS] or -p PID" -e trace=getcwd@64
+	check_h "must have PROG [ARGS] or -p PID" -e trace=getcwd@32
+	check_h "incorrect personality designator 'x32' in qualification 'getcwd@x32'" -e trace=getcwd@x32
+	;;
+*)
+	pers="$((SIZEOF_LONG * 8))"
+	inv_pers="$((96 - pers))"
+	check_h "must have PROG [ARGS] or -p PID" -e trace=getcwd@"$pers"
+	check_h "incorrect personality designator '$inv_pers' in qualification 'getcwd@$inv_pers'" -e trace=getcwd@"$inv_pers"
+	check_h "incorrect personality designator 'x32' in qualification 'getcwd@x32'" -e trace=getcwd@x32
+esac
+
+../zeroargc "$STRACE_EXE" /bin/true 2> "$LOG" &&
+	dump_log_and_fail_with \
+		'zeroargc strace failed to handle the error properly'
+cat > "$EXP" << __EOF__
+$STRACE_EXE: must have PROG [ARGS] or -p PID
+Try '$STRACE_EXE -h' for more information.
+__EOF__
+diff -u -- "$EXP" "$LOG" > /dev/null || {
+	cat > "$EXP" <<- '__EOF__'
+	strace: must have PROG [ARGS] or -p PID
+	Try 'strace -h' for more information.
+	__EOF__
+	match_diff "$LOG" "$EXP" \
+		"zeroargc $STRACE $args output mismatch"
+}
+
+uid="${UID:-`id -u`}"
+if [ "$uid" -ge 0 ]; then
+	if [ "$uid" -eq 0 ]; then
 		umsg="Cannot find user ':nosuchuser:'"
 	else
 		umsg='You must be root to use the -u option'
@@ -113,17 +100,14 @@ if [ -n "${UID-}" ]; then
 
 	for c in i r t T y; do
 		check_e "-$c has no effect with -c
-$strace_exp: $umsg" -u :nosuchuser: -c -$c true
+$STRACE_EXE: $umsg" -u :nosuchuser: -c -$c true
 	done
 		check_e "-i has no effect with -c
-$strace_exp: -r has no effect with -c
-$strace_exp: -t has no effect with -c
-$strace_exp: -T has no effect with -c
-$strace_exp: -y has no effect with -c
-$strace_exp: $umsg" -u :nosuchuser: -cirtTy true
-
-	check_e "-tt has no effect with -r
-$strace_exp: $umsg" -u :nosuchuser: -r -tt true
+$STRACE_EXE: -r has no effect with -c
+$STRACE_EXE: -t has no effect with -c
+$STRACE_EXE: -T has no effect with -c
+$STRACE_EXE: -y has no effect with -c
+$STRACE_EXE: $umsg" -u :nosuchuser: -cirtTy true
 fi
 
 args='-p 2147483647'
@@ -133,7 +117,7 @@ $STRACE $args 2> "$LOG" &&
 
 for cmd in PTRACE_SEIZE PTRACE_ATTACH; do
 	cat > "$EXP" << __EOF__
-$strace_exp: attach: ptrace($cmd, 2147483647): No such process
+$STRACE_EXE: attach: ptrace($cmd, 2147483647): No such process
 __EOF__
 	diff -- "$EXP" "$LOG" ||
 		continue
@@ -144,5 +128,3 @@ done
 [ -z "$args" ] ||
 	dump_log_and_fail_with \
 		"strace $args failed to print expected diagnostics"
-
-rm -f "$EXP"

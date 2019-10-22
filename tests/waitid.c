@@ -2,29 +2,10 @@
  * Check decoding of waitid syscall.
  *
  * Copyright (c) 2015-2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2016-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
@@ -35,15 +16,15 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/resource.h>
-#include <asm/unistd.h>
+#include "scno.h"
 
 static const char *
 sprint_rusage(const struct rusage *const ru)
 {
 	static char buf[1024];
 	snprintf(buf, sizeof(buf),
-		 "{ru_utime={tv_sec=%lld, tv_usec=%lld}"
-		 ", ru_stime={tv_sec=%lld, tv_usec=%lld}"
+		 "{ru_utime={tv_sec=%lld, tv_usec=%llu}"
+		 ", ru_stime={tv_sec=%lld, tv_usec=%llu}"
 #if VERBOSE
 		 ", ru_maxrss=%llu"
 		 ", ru_ixrss=%llu"
@@ -63,9 +44,9 @@ sprint_rusage(const struct rusage *const ru)
 		 ", ...}"
 #endif
 		 , (long long) ru->ru_utime.tv_sec
-		 , (long long) ru->ru_utime.tv_usec
+		 , zero_extend_signed_to_ull(ru->ru_utime.tv_usec)
 		 , (long long) ru->ru_stime.tv_sec
-		 , (long long) ru->ru_stime.tv_usec
+		 , zero_extend_signed_to_ull(ru->ru_stime.tv_usec)
 #if VERBOSE
 		 , zero_extend_signed_to_ull(ru->ru_maxrss)
 		 , zero_extend_signed_to_ull(ru->ru_ixrss)
@@ -110,7 +91,8 @@ si_code_2_name(const int code)
 #ifdef CLD_CONTINUED
 	CASE(CLD_CONTINUED);
 #endif
-	default: perror_msg_and_fail("unknown si_code %d", code);
+	default:
+		perror_msg_and_fail("unknown si_code %d", code);
 	}
 }
 
@@ -144,7 +126,7 @@ poison(unsigned int v)
 static long
 do_waitid(const unsigned int idtype,
 	  const unsigned int id,
-	  const siginfo_t const *infop,
+	  const siginfo_t *const infop,
 	  const unsigned int options,
 	  const struct rusage *const rusage)
 {
@@ -185,9 +167,9 @@ main(void)
 		perror_msg_and_fail("waitid #1");
 	tprintf("waitid(P_PID, %d, NULL, WNOHANG|WEXITED, NULL) = 0\n", pid);
 
-	siginfo_t *const sinfo = tail_alloc(sizeof(*sinfo));
+	TAIL_ALLOC_OBJECT_CONST_PTR(siginfo_t, sinfo);
 	memset(sinfo, 0, sizeof(*sinfo));
-	struct rusage *const rusage = tail_alloc(sizeof(*rusage));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct rusage, rusage);
 	if (do_waitid(P_PID, pid, sinfo, WNOHANG|WEXITED|WSTOPPED, rusage))
 		perror_msg_and_fail("waitid #2");
 	tprintf("waitid(P_PID, %d, {}, WNOHANG|WEXITED|WSTOPPED, %s) = 0\n",

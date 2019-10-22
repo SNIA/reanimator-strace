@@ -3,46 +3,24 @@
  * Copyright (c) 2012-2013 Denys Vlasenko <vda.linux@googlemail.com>
  * Copyright (c) 2014 Masatake YAMATO <yamato@redhat.com>
  * Copyright (c) 2010-2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2016-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "defs.h"
 #include "msghdr.h"
+#include "xstring.h"
 #include <limits.h>
 
-static int
-fetch_struct_mmsghdr_or_printaddr(struct tcb *tcp, const long addr,
+static bool
+fetch_struct_mmsghdr_for_print(struct tcb *const tcp,
+				  const kernel_ulong_t addr,
 				  const unsigned int len, void *const mh)
 {
-	if ((entering(tcp) || !syserror(tcp))
-	    && fetch_struct_mmsghdr(tcp, addr, mh)) {
-		return 0;
-	} else {
-		printaddr(addr);
-		return -1;
-	}
+	return (entering(tcp) || !syserror(tcp)) &&
+	       fetch_struct_mmsghdr(tcp, addr, mh);
 }
 
 struct print_struct_mmsghdr_config {
@@ -67,7 +45,7 @@ print_struct_mmsghdr(struct tcb *tcp, void *elem_buf,
 
 	tprints("{msg_hdr=");
 	print_struct_msghdr(tcp, &mmsg->msg_hdr, c->p_user_msg_namelen,
-			    c->use_msg_len ? mmsg->msg_len : -1UL);
+			    c->use_msg_len ? mmsg->msg_len : (kernel_ulong_t) -1);
 	if (c->msg_len_vlen) {
 		tprintf(", msg_len=%u", mmsg->msg_len);
 		--c->msg_len_vlen;
@@ -97,7 +75,7 @@ struct mmsgvec_data {
 };
 
 static void
-save_mmsgvec_namelen(struct tcb *tcp, unsigned long addr,
+save_mmsgvec_namelen(struct tcb *const tcp, kernel_ulong_t addr,
 		     unsigned int len, const char *const timeout)
 {
 	if (len > IOV_MAX)
@@ -124,7 +102,7 @@ save_mmsgvec_namelen(struct tcb *tcp, unsigned long addr,
 }
 
 static void
-decode_mmsgvec(struct tcb *tcp, const unsigned long addr,
+decode_mmsgvec(struct tcb *const tcp, const kernel_ulong_t addr,
 	       const unsigned int vlen, const unsigned int msg_len_vlen,
 	       const bool use_msg_len)
 {
@@ -143,12 +121,12 @@ decode_mmsgvec(struct tcb *tcp, const unsigned long addr,
 	}
 
 	print_array(tcp, addr, vlen, &mmsg, sizeof_struct_mmsghdr(),
-		    fetch_struct_mmsghdr_or_printaddr,
+		    fetch_struct_mmsghdr_for_print,
 		    print_struct_mmsghdr, &c);
 }
 
 void
-dumpiov_in_mmsghdr(struct tcb *tcp, long addr)
+dumpiov_in_mmsghdr(struct tcb *const tcp, kernel_ulong_t addr)
 {
 	unsigned int len = tcp->u_rval;
 	unsigned int i, fetched;
@@ -158,10 +136,11 @@ dumpiov_in_mmsghdr(struct tcb *tcp, long addr)
 		fetched = fetch_struct_mmsghdr(tcp, addr, &mmsg);
 		if (!fetched)
 			break;
-		tprintf(" = %lu buffers in vector %u\n",
-			(unsigned long) mmsg.msg_hdr.msg_iovlen, i);
+		tprintf(" = %" PRI_klu " buffers in vector %u\n",
+			(kernel_ulong_t) mmsg.msg_hdr.msg_iovlen, i);
 		dumpiov_upto(tcp, mmsg.msg_hdr.msg_iovlen,
-			(long) mmsg.msg_hdr.msg_iov, mmsg.msg_len);
+			     ptr_to_kulong(mmsg.msg_hdr.msg_iov),
+			     mmsg.msg_len);
 	}
 }
 
@@ -196,14 +175,16 @@ SYS_FUNC(sendmmsg)
 	return 0;
 }
 
-SYS_FUNC(recvmmsg)
+static int
+do_recvmmsg(struct tcb *const tcp, const print_obj_by_addr_fn print_ts,
+	    const sprint_obj_by_addr_fn sprint_ts)
 {
 	if (entering(tcp)) {
 		printfd(tcp, tcp->u_arg[0]);
 		tprints(", ");
 		if (verbose(tcp)) {
 			save_mmsgvec_namelen(tcp, tcp->u_arg[1], tcp->u_arg[2],
-					     sprint_timespec(tcp, tcp->u_arg[4]));
+					     sprint_ts(tcp, tcp->u_arg[4]));
 		} else {
 			/* msgvec */
 			printaddr(tcp->u_arg[1]);
@@ -212,7 +193,7 @@ SYS_FUNC(recvmmsg)
 			/* flags */
 			printflags(msg_flags, tcp->u_arg[3], "MSG_???");
 			tprints(", ");
-			print_timespec(tcp, tcp->u_arg[4]);
+			print_ts(tcp, tcp->u_arg[4]);
 		}
 		return 0;
 	} else {
@@ -238,9 +219,20 @@ SYS_FUNC(recvmmsg)
 			return 0;
 		/* timeout on exit */
 		static char str[sizeof("left") + TIMESPEC_TEXT_BUFSIZE];
-		snprintf(str, sizeof(str), "left %s",
-			 sprint_timespec(tcp, tcp->u_arg[4]));
+		xsprintf(str, "left %s", sprint_ts(tcp, tcp->u_arg[4]));
 		tcp->auxstr = str;
 		return RVAL_STR;
 	}
+}
+
+#if HAVE_ARCH_TIME32_SYSCALLS
+SYS_FUNC(recvmmsg_time32)
+{
+	return do_recvmmsg(tcp, print_timespec32, sprint_timespec32);
+}
+#endif
+
+SYS_FUNC(recvmmsg_time64)
+{
+	return do_recvmmsg(tcp, print_timespec64, sprint_timespec64);
 }

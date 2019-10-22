@@ -1,33 +1,14 @@
 /*
  * Copyright (c) 2015-2016 Dmitry V. Levin <ldv@altlinux.org>
  * Copyright (c)      2016 Red Hat, Inc.
+ * Copyright (c) 2016-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
-#include <asm/unistd.h>
+#include "scno.h"
 
 #if defined __NR_userfaultfd && defined HAVE_LINUX_USERFAULTFD_H
 
@@ -43,6 +24,9 @@
 # include <linux/ioctl.h>
 # include <linux/userfaultfd.h>
 
+# include "xlat.h"
+# include "xlat/uffd_api_features.h"
+
 int
 main(void)
 {
@@ -54,7 +38,7 @@ main(void)
 		perror_msg_and_skip("userfaultfd");
 
 	/* ---- API ---- */
-	struct uffdio_api *api_struct = tail_alloc(sizeof(*api_struct));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct uffdio_api, api_struct);
 
 	/* With a bad fd */
 	memset(api_struct, 0, sizeof(*api_struct));
@@ -69,10 +53,14 @@ main(void)
 	api_struct->api = UFFD_API;
 	api_struct->features = 0;
 	rc = ioctl(fd, UFFDIO_API, api_struct);
-	printf("ioctl(%d, UFFDIO_API, {api=0xaa, features=0, "
-	       "features.out=%#" PRIx64 ", " "ioctls=1<<_UFFDIO_REGISTER|"
-	       "1<<_UFFDIO_UNREGISTER|1<<_UFFDIO_API",
-	       fd, (uint64_t)api_struct->features);
+	printf("ioctl(%d, UFFDIO_API, {api=0xaa, features=0", fd);
+	if (api_struct->features) {
+		printf(" => features=");
+		printflags(uffd_api_features, api_struct->features,
+			   "UFFD_FEATURE_???");
+	}
+	printf(", ioctls=1<<_UFFDIO_REGISTER|"
+	       "1<<_UFFDIO_UNREGISTER|1<<_UFFDIO_API");
 	api_struct->ioctls &= ~(1ull<<_UFFDIO_REGISTER|
 				1ull<<_UFFDIO_UNREGISTER|
 				1ull<<_UFFDIO_API);
@@ -127,7 +115,7 @@ main(void)
 	 * userfaultfd will cause us to stall.
 	 */
 	/* ---- COPY ---- */
-	struct uffdio_copy *copy_struct = tail_alloc(sizeof(*copy_struct));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct uffdio_copy, copy_struct);
 
 	memset(copy_struct, 0, sizeof(*copy_struct));
 	rc = ioctl(-1, UFFDIO_COPY, copy_struct);
@@ -148,7 +136,7 @@ main(void)
 	       fd, area2, area1, pagesize, pagesize, rc);
 
 	/* ---- ZEROPAGE ---- */
-	struct uffdio_zeropage *zero_struct = tail_alloc(sizeof(*zero_struct));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct uffdio_zeropage, zero_struct);
 	madvise(area2, pagesize, MADV_DONTNEED);
 
 	memset(zero_struct, 0, sizeof(*zero_struct));
@@ -169,7 +157,7 @@ main(void)
 	       fd, area2, pagesize, pagesize, rc);
 
 	/* ---- WAKE ---- */
-	struct uffdio_range *range_struct = tail_alloc(sizeof(*range_struct));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct uffdio_range, range_struct);
 	memset(range_struct, 0, sizeof(*range_struct));
 
 	rc = ioctl(-1, UFFDIO_WAKE, range_struct);

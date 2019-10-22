@@ -2,38 +2,16 @@
  * Check decoding of process_vm_readv/process_vm_writev syscall.
  *
  * Copyright (c) 2016 Eugene Syromyatnikov <evgsyr@gmail.com>
+ * Copyright (c) 2016-2018 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include <inttypes.h>
 #include <stdio.h>
 #include <unistd.h>
-
 #include <sys/uio.h>
-
-#include "kernel_types.h"
 
 #if OP_WR
 # define in_iovec  rmt_iovec
@@ -54,7 +32,7 @@ enum { MAX_SEGM_COUNT = 2, MAX_STR_LEN = 5 };
 struct print_iov_arg {
 	uint32_t count;
 	uint32_t valid    :1,
-	         string   :1,
+		 string   :1,
 		 addr_term:1,
 		 check_rc :1;
 	uint32_t str_segms;
@@ -137,7 +115,7 @@ print_iov(const struct iovec *iov, const void *arg_ptr, long rc)
 	}
 
 	if (arg->addr_term)
-		printf(", %p", iov + arg->count);
+		printf(", ... /* %p */", iov + arg->count);
 
 	printf("]");
 }
@@ -250,14 +228,15 @@ main(void)
 		2, {SEGM1_BASE, SEGM2_BASE}, {SIZE_1, SIZE_2} };
 	struct print_iov_arg rmt_arg     = { ARRAY_SIZE(rmt_iovec), 1 };
 
-	struct print_iov_arg bogus_arg_cut =
-		{ ARRAY_SIZE(bogus_iovec) - 2, 1, 0, 1 };
-	struct print_iov_arg lcl_arg_cut =
-		{ ARRAY_SIZE(lcl_iovec) - 2, 1, 1, 1, 0, 2,
-			{SEGM1_BASE + SIZE_11 + SIZE_12, SEGM2_BASE},
-			{SIZE_13, SIZE_2} };
-	struct print_iov_arg rmt_arg_cut =
-		{ ARRAY_SIZE(rmt_iovec) - 2, 1 };
+	struct print_iov_arg bogus_arg_cut = {
+		ARRAY_SIZE(bogus_iovec) - 2, 1, 0, 1
+	};
+	struct print_iov_arg lcl_arg_cut = {
+		ARRAY_SIZE(lcl_iovec) - 2, 1, 1, 1, 0, 2,
+		{ SEGM1_BASE + SIZE_11 + SIZE_12, SEGM2_BASE },
+		{SIZE_13, SIZE_2}
+	};
+	struct print_iov_arg rmt_arg_cut = { ARRAY_SIZE(rmt_iovec) - 2, 1 };
 
 
 	fill_memory_ex(data1_out, SIZE_1, SEGM1_BASE, SIZE_1);

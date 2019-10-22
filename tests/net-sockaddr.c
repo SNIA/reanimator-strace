@@ -2,29 +2,10 @@
  * Check decoding of sockaddr structures
  *
  * Copyright (c) 2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2016-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
@@ -36,11 +17,13 @@
 #include <sys/un.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include "netlink.h"
+#include <linux/ax25.h>
 #include <linux/if_arp.h>
 #include <linux/if_ether.h>
 #include <linux/if_packet.h>
+#include <linux/x25.h>
 #include <linux/ipx.h>
-#include <linux/netlink.h>
 #ifdef HAVE_BLUETOOTH_BLUETOOTH_H
 # include <bluetooth/bluetooth.h>
 # include <bluetooth/hci.h>
@@ -49,15 +32,10 @@
 # include <bluetooth/sco.h>
 #endif
 
-#ifdef HAVE_IF_INDEXTONAME
-/* <linux/if.h> used to conflict with <net/if.h> */
-extern unsigned int if_nametoindex(const char *);
-#endif
-
 static void
 check_un(void)
 {
-	struct sockaddr_un *un = tail_alloc(sizeof(*un));
+	TAIL_ALLOC_OBJECT_VAR_PTR(struct sockaddr_un, un);
 	un->sun_family = AF_UNIX;
 	memset(un->sun_path, '0', sizeof(un->sun_path));
 	unsigned int len = sizeof(*un);
@@ -133,7 +111,7 @@ check_in(void)
 	const unsigned short h_port = 12345;
 	static const char h_addr[] = "12.34.56.78";
 
-	struct sockaddr_in *in = tail_alloc(sizeof(*in));
+	TAIL_ALLOC_OBJECT_VAR_PTR(struct sockaddr_in, in);
 	in->sin_family = AF_INET;
 	in->sin_port = htons(h_port);
 	in->sin_addr.s_addr = inet_addr(h_addr);
@@ -178,26 +156,24 @@ check_in6_linklocal(struct sockaddr_in6 *const in6, const char *const h_addr)
 	unsigned int len = sizeof(*in6);
 	int ret = connect(-1, (void *) in6, len);
 	printf("connect(-1, {sa_family=AF_INET6, sin6_port=htons(%hu)"
-	       ", inet_pton(AF_INET6, \"%s\", &sin6_addr)"
 	       ", sin6_flowinfo=htonl(%u)"
+	       ", inet_pton(AF_INET6, \"%s\", &sin6_addr)"
 	       ", sin6_scope_id=%u}, %u)"
 	       " = %d EBADF (%m)\n",
-	       ntohs(in6->sin6_port), h_addr,
-	       ntohl(in6->sin6_flowinfo), in6->sin6_scope_id, len, ret);
+	       ntohs(in6->sin6_port), ntohl(in6->sin6_flowinfo),
+	       h_addr, in6->sin6_scope_id, len, ret);
 
-#ifdef HAVE_IF_INDEXTONAME
-	in6->sin6_scope_id = if_nametoindex("lo");
+	in6->sin6_scope_id = ifindex_lo();
 	if (in6->sin6_scope_id) {
 		ret = connect(-1, (void *) in6, len);
 		printf("connect(-1, {sa_family=AF_INET6, sin6_port=htons(%hu)"
-		       ", inet_pton(AF_INET6, \"%s\", &sin6_addr)"
 		       ", sin6_flowinfo=htonl(%u)"
-		       ", sin6_scope_id=if_nametoindex(\"lo\")}, %u)"
+		       ", inet_pton(AF_INET6, \"%s\", &sin6_addr)"
+		       ", sin6_scope_id=%s}, %u)"
 		       " = %d EBADF (%m)\n",
-		       ntohs(in6->sin6_port), h_addr,
-		       ntohl(in6->sin6_flowinfo), len, ret);
+		       ntohs(in6->sin6_port), ntohl(in6->sin6_flowinfo), h_addr,
+		       IFINDEX_LO_STR, len, ret);
 	}
-#endif
 }
 
 static void
@@ -207,7 +183,7 @@ check_in6(void)
 	const unsigned int h_flowinfo = 1234567890;
 	static const char h_addr[] = "12:34:56:78:90:ab:cd:ef";
 
-	struct sockaddr_in6 *in6 = tail_alloc(sizeof(*in6));
+	TAIL_ALLOC_OBJECT_VAR_PTR(struct sockaddr_in6, in6);
 	in6->sin6_family = AF_INET6;
 	in6->sin6_port = htons(h_port);
 	in6->sin6_flowinfo = htonl(h_flowinfo);
@@ -216,10 +192,11 @@ check_in6(void)
 	unsigned int len = sizeof(*in6);
 	int ret = connect(-1, (void *) in6, len);
 	printf("connect(-1, {sa_family=AF_INET6, sin6_port=htons(%hu)"
+	       ", sin6_flowinfo=htonl(%u)"
 	       ", inet_pton(AF_INET6, \"%s\", &sin6_addr)"
-	       ", sin6_flowinfo=htonl(%u), sin6_scope_id=%u}, %u)"
+	       ", sin6_scope_id=%u}, %u)"
 	       " = %d EBADF (%m)\n",
-	       h_port, h_addr, h_flowinfo, in6->sin6_scope_id, len, ret);
+	       h_port, h_flowinfo, h_addr, in6->sin6_scope_id, len, ret);
 
 	check_in6_linklocal(in6, "fe80::");
 	check_in6_linklocal(in6, "ff42::");
@@ -233,10 +210,11 @@ check_in6(void)
 	len = sizeof(*in6) + 4;
 	ret = connect(-1, (void *) in6, len);
 	printf("connect(-1, {sa_family=AF_INET6, sin6_port=htons(%hu)"
+	       ", sin6_flowinfo=htonl(%u)"
 	       ", inet_pton(AF_INET6, \"%s\", &sin6_addr)"
-	       ", sin6_flowinfo=htonl(%u), sin6_scope_id=%u}, %u)"
+	       ", sin6_scope_id=%u}, %u)"
 	       " = %d EBADF (%m)\n",
-	       h_port, h_addr, h_flowinfo, in6->sin6_scope_id, len, ret);
+	       h_port, h_flowinfo, h_addr, in6->sin6_scope_id, len, ret);
 
 	in6 = ((void *) in6) + 4 + sizeof(in6->sin6_scope_id);
 	in6->sin6_family = AF_INET6;
@@ -246,10 +224,10 @@ check_in6(void)
 	len = sizeof(*in6) - sizeof(in6->sin6_scope_id);
 	ret = connect(-1, (void *) in6, len);
 	printf("connect(-1, {sa_family=AF_INET6, sin6_port=htons(%hu)"
-	       ", inet_pton(AF_INET6, \"%s\", &sin6_addr)"
-	       ", sin6_flowinfo=htonl(%u)}, %u)"
+	       ", sin6_flowinfo=htonl(%u)"
+	       ", inet_pton(AF_INET6, \"%s\", &sin6_addr)}, %u)"
 	       " = %d EBADF (%m)\n",
-	       h_port, h_addr, h_flowinfo, len, ret);
+	       h_port, h_flowinfo, h_addr, len, ret);
 
 	in6 = ((void *) in6) + 4;
 	in6->sin6_family = AF_INET6;
@@ -295,10 +273,185 @@ check_ipx(void)
 	       c_ipx.sipx_type, len, ret);
 }
 
+/* for a bit more compact AX.25 address definitions */
+#define AX25_ADDR(c_, s_) \
+	{ { (c_)[0] << 1, (c_)[1] << 1, (c_)[2] << 1, \
+	    (c_)[3] << 1, (c_)[4] << 1, (c_)[5] << 1, (s_) << 1 } } \
+	/* End of AX25_ADDR definition */
+
+static void
+check_ax25(void)
+{
+	const struct full_sockaddr_ax25 ax25 = {
+		.fsa_ax25 = {
+			.sax25_family = AF_AX25,
+			.sax25_call = AX25_ADDR("VALID ", 13),
+			.sax25_ndigis = 8,
+		},
+		.fsa_digipeater = {
+			AX25_ADDR("SPA CE", 0),
+			AX25_ADDR("SSID  ", 16),
+			AX25_ADDR("      ", 0),
+			AX25_ADDR("NULL\0", 3),
+			AX25_ADDR("A-B-C", 4),
+			AX25_ADDR(",}]\"\\'", 5),
+			AX25_ADDR("DASH-0", 6),
+			AX25_ADDR("\n\tABCD", 7),
+		},
+	};
+	const ax25_address aux_addrs[] = {
+		AX25_ADDR("VALID2", 7),
+		AX25_ADDR("OK    ", 15),
+		AX25_ADDR("FINE  ", 2),
+		AX25_ADDR("smalls", 9),
+	};
+
+	enum { AX25_ALIGN = ALIGNOF(struct full_sockaddr_ax25), };
+	size_t size = sizeof(ax25);
+	size_t surplus = ROUNDUP(sizeof(ax25_address), AX25_ALIGN);
+	void *sax_void = midtail_alloc(size, surplus);
+	struct full_sockaddr_ax25 *sax = sax_void;
+	long rc;
+
+	fill_memory(sax, size);
+	sax->fsa_ax25.sax25_family = AF_AX25;
+	rc = connect(-1, sax_void, sizeof(struct sockaddr_ax25) - 1);
+	printf("connect(-1, {sa_family=AF_AX25, sa_data=\"\\202\\203\\204\\205"
+	       "\\206\\207\\210\\211\\212\\213\\214\\215\\216\"}, %zu) = %s\n",
+	       sizeof(struct sockaddr_ax25) - 1, sprintrc(rc));
+
+	memcpy(sax, &ax25, sizeof(ax25));
+	rc = connect(-1, sax_void, sizeof(struct sockaddr_ax25));
+	printf("connect(-1, {sa_family=AF_AX25, fsa_ax25={sax25_call=VALID-13"
+	       ", sax25_ndigis=8}, fsa_digipeater=[/* ??? */]}, %zu) = %s\n",
+	       sizeof(struct sockaddr_ax25), sprintrc(rc));
+
+	sax->fsa_ax25.sax25_ndigis = 0;
+	rc = connect(-1, sax_void, sizeof(struct sockaddr_ax25));
+	printf("connect(-1, {sa_family=AF_AX25, sax25_call=VALID-13"
+	       ", sax25_ndigis=0}, %zu) = %s\n",
+	       sizeof(struct sockaddr_ax25), sprintrc(rc));
+
+	sax->fsa_ax25.sax25_ndigis = 8;
+	size = sizeof(struct sockaddr_ax25) + sizeof(ax25_address) * 3 + 1;
+	rc = connect(-1, sax_void, size);
+	printf("connect(-1, {sa_family=AF_AX25, fsa_ax25={sax25_call=VALID-13"
+	       ", sax25_ndigis=8}, fsa_digipeater"
+	       "=[{ax25_call=\"\\xa6\\xa0\\x82\\x40\\x86\\x8a\\x00\""
+		   "} /* SPA CE-0 */"
+	       ", {ax25_call=\"\\xa6\\xa6\\x92\\x88\\x40\\x40\\x20\""
+	           "} /* SSID-0 */"
+	       ", *"
+	       ", /* ??? */], ...}, %zu) = %s\n",
+	       size, sprintrc(rc));
+
+	sax->fsa_digipeater[2].ax25_call[6] = 0x4;
+	size = sizeof(struct sockaddr_ax25) + sizeof(ax25_address) * 4;
+	rc = connect(-1, sax_void, size);
+	printf("connect(-1, {sa_family=AF_AX25, fsa_ax25={sax25_call=VALID-13"
+	       ", sax25_ndigis=8}, fsa_digipeater"
+	       "=[{ax25_call=\"\\xa6\\xa0\\x82\\x40\\x86\\x8a\\x00\""
+		   "} /* SPA CE-0 */"
+	       ", {ax25_call=\"\\xa6\\xa6\\x92\\x88\\x40\\x40\\x20\""
+	           "} /* SSID-0 */"
+	       ", {ax25_call=\"\\x40\\x40\\x40\\x40\\x40\\x40\\x04\"} /* -2 */"
+	       ", {ax25_call=\"\\x9c\\xaa\\x98\\x98\\x00\\x00\\x06\"}"
+	       ", /* ??? */]}, %zu) = %s\n",
+	       size, sprintrc(rc));
+
+	memcpy(sax->fsa_digipeater, aux_addrs, sizeof(aux_addrs));
+	sax->fsa_digipeater[2].ax25_call[6] = 0xa5;
+	sax->fsa_digipeater[4].ax25_call[5] = 0x40;
+	for (size_t i = 0; i < 3; i++) {
+		size = sizeof(ax25) + sizeof(ax25_address) * (i / 2);
+		rc = connect(-1, sax_void, size);
+		printf("connect(-1, {sa_family=AF_AX25"
+		       ", fsa_ax25={sax25_call=VALID-13, sax25_ndigis=%d}"
+		       ", fsa_digipeater=[VALID2-7, OK-15, %s /* FINE-2 */"
+		       ", {ax25_call=\"\\xe6\\xda\\xc2\\xd8\\xd8\\xe6\\x12\""
+		           "} /* smalls-9 */"
+		       ", {ax25_call=\"\\x%s\\x%s\\x84\\x5a\\x86\\x40\\x08\""
+		           "} /* %sB-C-4 */"
+		       ", {ax25_call=\"\\x58\\xfa\\xba\\x44\\x%s\\x%s\\x0a\""
+		           "}%s"
+		       ", {ax25_call=\"\\x88\\x82\\xa6\\x90\\x5a\\x%s\\x0c\""
+		           "}%s"
+		       "%s]%s}, %zu) = %s\n"
+		       , sax->fsa_ax25.sax25_ndigis
+		       , i
+		       ? "{ax25_call=\"\\x8c\\x92\\x9c\\x8a\\x40\\x41\\x04\"}"
+		       : "{ax25_call=\"\\x8c\\x92\\x9c\\x8a\\x40\\x40\\xa5\"}"
+		       , i ? "40" : "82"
+		       , i ? "40" : "5a"
+		       , i ? "  " : "A-"
+		       , i ? "54" : "b8"
+		       , i ? "5e" : "4e"
+		       , i ? "" : " /* ,}]\"\\'-5 */"
+		       , i ? "fe" : "60"
+		       , i ? "" : " /* DASH-0-6 */"
+		       , i == 1
+		       ? ""
+		       : ", {ax25_call=\"\\x14\\x12\\x82\\x84\\x86\\x88\\x0e\"}"
+		       , i > 1 ? ", ..." : ""
+		       , size, sprintrc(rc));
+
+		if (i == 1) {
+			sax_void = (char *) sax_void - surplus;
+			memmove(sax_void, sax, sizeof(ax25));
+			sax = sax_void;
+		}
+
+		sax->fsa_ax25.sax25_ndigis = 7 + 2 * i;
+
+		sax->fsa_digipeater[2].ax25_call[5] = 0x41;
+		sax->fsa_digipeater[2].ax25_call[6] = 0x4;
+
+		sax->fsa_digipeater[4].ax25_call[0] = 0x40;
+		sax->fsa_digipeater[4].ax25_call[1] = 0x40;
+
+		sax->fsa_digipeater[5].ax25_call[4] = '*' << 1;
+		sax->fsa_digipeater[5].ax25_call[5] = '/' << 1;
+
+		sax->fsa_digipeater[6].ax25_call[5] = 0xfe;
+	}
+}
+
+static void
+check_x25(void)
+{
+	static const struct sockaddr_x25 c_x25 = {
+		.sx25_family = AF_X25,
+		.sx25_addr = { "0123456789abcdef" },
+	};
+	void *x25_void = tail_memdup(&c_x25, sizeof(c_x25) + 1);
+	struct sockaddr_x25 *x25 = x25_void;
+	long rc;
+
+	rc = connect(-1, x25, sizeof(c_x25) - 1);
+	printf("connect(-1, {sa_family=AF_X25"
+	       ", sa_data=\"0123456789abcde\"}, %zu) = %s\n",
+	       sizeof(c_x25) - 1, sprintrc(rc));
+
+	for (size_t i = 0; i < 2; i++) {
+		rc = connect(-1, x25, sizeof(c_x25) + i);
+		printf("connect(-1, {sa_family=AF_X25"
+		       ", sx25_addr={x25_addr=\"0123456789abcde\"...}"
+		       "}, %zu) = %s\n",
+		       sizeof(c_x25) + i, sprintrc(rc));
+	}
+
+	x25->sx25_addr.x25_addr[10] = '\0';
+	rc = connect(-1, x25, sizeof(c_x25));
+	printf("connect(-1, {sa_family=AF_X25"
+	       ", sx25_addr={x25_addr=\"0123456789\"}"
+	       "}, %zu) = %s\n",
+	       sizeof(c_x25), sprintrc(rc));
+}
+
 static void
 check_nl(void)
 {
-	struct sockaddr_nl *nl = tail_alloc(sizeof(*nl));
+	TAIL_ALLOC_OBJECT_VAR_PTR(struct sockaddr_nl, nl);
 	nl->nl_family = AF_NETLINK;
 	nl->nl_pid = 1234567890;
 	nl->nl_groups = 0xfacefeed;
@@ -370,19 +523,16 @@ check_ll(void)
 	       ", sll_pkttype=PACKET_HOST, sll_halen=0}, %u)"
 	       " = %d EBADF (%m)\n", c_ll.sll_ifindex, len, ret);
 
-#ifdef HAVE_IF_INDEXTONAME
-	const int id = if_nametoindex("lo");
-	if (id) {
-		((struct sockaddr_ll *) ll)->sll_ifindex = id;
+	((struct sockaddr_ll *) ll)->sll_ifindex = ifindex_lo();
+	if (((struct sockaddr_ll *) ll)->sll_ifindex) {
 		ret = connect(-1, ll, len);
 		printf("connect(-1, {sa_family=AF_PACKET"
 		       ", sll_protocol=htons(ETH_P_ALL)"
-		       ", sll_ifindex=if_nametoindex(\"lo\")"
+		       ", sll_ifindex=%s"
 		       ", sll_hatype=ARPHRD_ETHER"
 		       ", sll_pkttype=PACKET_HOST, sll_halen=0}, %u)"
-		       " = %d EBADF (%m)\n", len, ret);
+		       " = %d EBADF (%m)\n", IFINDEX_LO_STR, len, ret);
 	}
-#endif
 }
 
 #ifdef HAVE_BLUETOOTH_BLUETOOTH_H
@@ -390,14 +540,25 @@ static void
 check_hci(void)
 {
 	const unsigned short h_port = 12345;
-	struct sockaddr_hci *hci = tail_alloc(sizeof(*hci));
+	TAIL_ALLOC_OBJECT_VAR_PTR(struct sockaddr_hci, hci);
 	hci->hci_family = AF_BLUETOOTH;
 	hci->hci_dev = htobs(h_port);
+# ifdef HAVE_STRUCT_SOCKADDR_HCI_HCI_CHANNEL
 	hci->hci_channel = HCI_CHANNEL_RAW;
+# endif
 	unsigned int len = sizeof(*hci);
-	int ret = connect(-1, (void *) hci, len);
+
+	int ret = connect(-1, (void *) hci, 4);
 	printf("connect(-1, {sa_family=AF_BLUETOOTH, hci_dev=htobs(%hu)"
-	       ", hci_channel=HCI_CHANNEL_RAW}, %u) = %d EBADF (%m)\n",
+	       "}, 4) = %d EBADF (%m)\n",
+	       h_port, ret);
+
+	ret = connect(-1, (void *) hci, len);
+	printf("connect(-1, {sa_family=AF_BLUETOOTH, hci_dev=htobs(%hu)"
+# ifdef HAVE_STRUCT_SOCKADDR_HCI_HCI_CHANNEL
+	       ", hci_channel=HCI_CHANNEL_RAW"
+# endif
+	       "}, %u) = %d EBADF (%m)\n",
 	       h_port, len, ret);
 }
 
@@ -445,25 +606,86 @@ check_l2(void)
 {
 	const unsigned short h_psm = 12345;
 	const unsigned short h_cid = 13579;
-	const struct sockaddr_l2 c_l2 = {
+	struct sockaddr_l2 c_l2 = {
 		.l2_family = AF_BLUETOOTH,
 		.l2_psm = htobs(h_psm),
 		.l2_bdaddr.b = "abcdef",
 		.l2_cid = htobs(h_cid),
-		.l2_bdaddr_type = 42
+# ifdef HAVE_STRUCT_SOCKADDR_L2_L2_BDADDR_TYPE
+		.l2_bdaddr_type = 0xce,
+# endif
 	};
 	void *l2 = tail_memdup(&c_l2, sizeof(c_l2));
 	unsigned int len = sizeof(c_l2);
+
 	int ret = connect(-1, l2, len);
 	printf("connect(-1, {sa_family=AF_BLUETOOTH"
-	       ", l2_psm=htobs(%hu)"
+	       ", l2_psm=htobs(L2CAP_PSM_DYN_START + %hu)"
 	       ", l2_bdaddr=%02x:%02x:%02x:%02x:%02x:%02x"
-	       ", l2_cid=htobs(%hu), l2_bdaddr_type=%u}"
-	       ", %u) = %d EBADF (%m)\n", h_psm,
+	       ", l2_cid=htobs(L2CAP_CID_DYN_START + %hu)"
+# ifdef HAVE_STRUCT_SOCKADDR_L2_L2_BDADDR_TYPE
+	       ", l2_bdaddr_type=0xce /* BDADDR_??? */"
+# endif
+	       "}, %u) = %d EBADF (%m)\n",
+	       (short) (h_psm - 0x1001),
 	       c_l2.l2_bdaddr.b[0], c_l2.l2_bdaddr.b[1],
 	       c_l2.l2_bdaddr.b[2], c_l2.l2_bdaddr.b[3],
 	       c_l2.l2_bdaddr.b[4], c_l2.l2_bdaddr.b[5],
-	       h_cid, c_l2.l2_bdaddr_type, len, ret);
+	       (short) (h_cid - 0x40), len, ret);
+
+	c_l2.l2_psm = htobs(1);
+	c_l2.l2_cid = htobs(1);
+# ifdef HAVE_STRUCT_SOCKADDR_L2_L2_BDADDR_TYPE
+	c_l2.l2_bdaddr_type = BDADDR_LE_RANDOM;
+# endif
+	memcpy(l2, &c_l2, sizeof(c_l2));
+	ret = connect(-1, l2, len);
+	printf("connect(-1, {sa_family=AF_BLUETOOTH"
+	       ", l2_psm=htobs(L2CAP_PSM_SDP)"
+	       ", l2_bdaddr=%02x:%02x:%02x:%02x:%02x:%02x"
+	       ", l2_cid=htobs(L2CAP_CID_SIGNALING)"
+# ifdef HAVE_STRUCT_SOCKADDR_L2_L2_BDADDR_TYPE
+	       ", l2_bdaddr_type=BDADDR_LE_RANDOM"
+# endif
+	       "}, %u) = %d EBADF (%m)\n",
+	       c_l2.l2_bdaddr.b[0], c_l2.l2_bdaddr.b[1],
+	       c_l2.l2_bdaddr.b[2], c_l2.l2_bdaddr.b[3],
+	       c_l2.l2_bdaddr.b[4], c_l2.l2_bdaddr.b[5],
+	       len, ret);
+
+	c_l2.l2_psm = htobs(0xbad);
+	c_l2.l2_cid = htobs(8);
+# ifdef HAVE_STRUCT_SOCKADDR_L2_L2_BDADDR_TYPE
+	c_l2.l2_bdaddr_type = 3;
+# endif
+	memcpy(l2, &c_l2, sizeof(c_l2));
+	ret = connect(-1, l2, len);
+	printf("connect(-1, {sa_family=AF_BLUETOOTH"
+	       ", l2_psm=htobs(0xbad /* L2CAP_PSM_??? */)"
+	       ", l2_bdaddr=%02x:%02x:%02x:%02x:%02x:%02x"
+	       ", l2_cid=htobs(0x8 /* L2CAP_CID_??? */)"
+# ifdef HAVE_STRUCT_SOCKADDR_L2_L2_BDADDR_TYPE
+	       ", l2_bdaddr_type=0x3 /* BDADDR_??? */"
+# endif
+	       "}, %u) = %d EBADF (%m)\n",
+	       c_l2.l2_bdaddr.b[0], c_l2.l2_bdaddr.b[1],
+	       c_l2.l2_bdaddr.b[2], c_l2.l2_bdaddr.b[3],
+	       c_l2.l2_bdaddr.b[4], c_l2.l2_bdaddr.b[5],
+	       len, ret);
+
+	c_l2.l2_psm = htobs(0x10ff);
+	c_l2.l2_cid = htobs(0xffff);
+	memcpy(l2, &c_l2, 12);
+	ret = connect(-1, l2, 12);
+	printf("connect(-1, {sa_family=AF_BLUETOOTH"
+	       ", l2_psm=htobs(L2CAP_PSM_AUTO_END)"
+	       ", l2_bdaddr=%02x:%02x:%02x:%02x:%02x:%02x"
+	       ", l2_cid=htobs(L2CAP_CID_DYN_END)"
+	       "}, 12) = %d EBADF (%m)\n",
+	       c_l2.l2_bdaddr.b[0], c_l2.l2_bdaddr.b[1],
+	       c_l2.l2_bdaddr.b[2], c_l2.l2_bdaddr.b[3],
+	       c_l2.l2_bdaddr.b[4], c_l2.l2_bdaddr.b[5],
+	       ret);
 }
 #endif
 
@@ -489,9 +711,8 @@ check_raw(void)
 	       " = %d EBADF (%m)\n", len, ret);
 
 	u.sa->sa_family = AF_BLUETOOTH;
-	++len;
 	ret = connect(-1, (void *) u.st, len);
-	printf("connect(-1, {sa_family=AF_BLUETOOTH, sa_data=\"00\"}, %u)"
+	printf("connect(-1, {sa_family=AF_BLUETOOTH, sa_data=\"0\"}, %u)"
 	       " = %d EBADF (%m)\n", len, ret);
 }
 
@@ -502,6 +723,8 @@ main(void)
 	check_in();
 	check_in6();
 	check_ipx();
+	check_ax25();
+	check_x25();
 	check_nl();
 	check_ll();
 #ifdef HAVE_BLUETOOTH_BLUETOOTH_H

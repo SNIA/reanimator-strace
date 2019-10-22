@@ -1,7 +1,12 @@
-#ifndef STRACE_ASM_STAT_H
-#define STRACE_ASM_STAT_H
+/*
+ * Copyright (c) 2015-2018 The strace developers.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
 
-# include "kernel_types.h"
+#ifndef STRACE_ASM_STAT_H
+# define STRACE_ASM_STAT_H
 
 # undef dev_t
 # undef gid_t

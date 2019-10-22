@@ -1,5 +1,12 @@
+/*
+ * Copyright (c) 2016-2019 The strace developers.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
 #include "tests.h"
-#include <asm/unistd.h>
+#include "scno.h"
 
 #if defined(__NR_sched_get_priority_min) \
  && defined(__NR_sched_get_priority_max)
@@ -24,6 +31,6 @@ main(void)
 #else
 
 SKIP_MAIN_UNDEFINED("__NR_sched_get_priority_min"
-                    " && defined __NR_sched_get_priority_max");
+		    " && defined __NR_sched_get_priority_max");
 
 #endif

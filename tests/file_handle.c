@@ -3,33 +3,14 @@
  *
  * Copyright (c) 2015-2016 Dmitry V. Levin <ldv@altlinux.org>
  * Copyright (c) 2016 Eugene Syromyatnikov <evgsyr@gmail.com>
+ * Copyright (c) 2015-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
-#include <asm/unistd.h>
+#include "scno.h"
 
 #if defined __NR_name_to_handle_at && defined __NR_open_by_handle_at
 
@@ -38,10 +19,7 @@
 # include <inttypes.h>
 # include <fcntl.h>
 # include <stdio.h>
-# include <stdbool.h>
 # include <unistd.h>
-
-# include "kernel_types.h"
 
 enum assert_rc {
 	ASSERT_NONE,
@@ -159,8 +137,8 @@ struct strval {
 	const char *str;
 };
 
-#define STR16 "0123456789abcdef"
-#define STR64 STR16 STR16 STR16 STR16
+# define STR16 "0123456789abcdef"
+# define STR64 STR16 STR16 STR16 STR16
 
 int
 main(void)
@@ -189,7 +167,7 @@ main(void)
 		(kernel_ulong_t) 0x12345678ffffff9cULL,
 	};
 	static const struct strval open_flags[] = {
-		{ (kernel_ulong_t) 0xffffffff00000000ULL, "O_RDONLY" },
+		{ F8ILL_KULONG_MASK, "O_RDONLY" },
 		{ (kernel_ulong_t) 0xdeadbeef80000001ULL,
 			"O_WRONLY|0x80000000" }
 	};
@@ -210,7 +188,7 @@ main(void)
 		tail_alloc(sizeof(struct file_handle) + 128);
 	struct file_handle *handle_256 =
 		tail_alloc(sizeof(struct file_handle) + 256);
-	int *bogus_mount_id = tail_alloc(sizeof(*bogus_mount_id));
+	TAIL_ALLOC_OBJECT_CONST_PTR(int, bogus_mount_id);
 
 	char handle_0_addr[sizeof("0x") + sizeof(void *) * 2];
 

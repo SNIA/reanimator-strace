@@ -2,41 +2,20 @@
  * Check decoding of kexec_load syscall.
  *
  * Copyright (c) 2016 Eugene Syromyatnikov <evgsyr@gmail.com>
+ * Copyright (c) 2016-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
 
-#include <asm/unistd.h>
+#include "scno.h"
 
 #ifdef __NR_kexec_load
 
 # include <stdio.h>
 # include <unistd.h>
-
-# include "kernel_types.h"
 
 struct strval {
 	kernel_ulong_t val;
@@ -64,8 +43,7 @@ main(void)
 	};
 
 	static const kernel_ulong_t bogus_zero =
-		sizeof(long) < sizeof(kernel_long_t) ?
-			(kernel_ulong_t) 0xffffffff00000000ULL : 0;
+		sizeof(long) < sizeof(kernel_long_t) ? F8ILL_KULONG_MASK : 0;
 	static const kernel_ulong_t bogus_entry =
 		(kernel_ulong_t) 0xdeadca57badda7a1ULL;
 	static const kernel_ulong_t bogus_nsegs =
@@ -87,7 +65,7 @@ main(void)
 	struct segm *segms = tail_alloc(SEGMS_ARRAY_SIZE);
 	unsigned int i;
 
-	fill_memory((char *) segms, SEGMS_ARRAY_SIZE);
+	fill_memory(segms, SEGMS_ARRAY_SIZE);
 	segms[0].buf = segms[0].mem = NULL;
 
 	rc = syscall(__NR_kexec_load, bogus_zero, bogus_zero, bogus_zero,
@@ -131,7 +109,7 @@ main(void)
 		printf("{buf=%p, bufsz=%zu, mem=%p, memsz=%zu}, ",
 		       segms[i].buf, segms[i].bufsz,
 		       segms[i].mem, segms[i].memsz);
-	printf("%p], %s%s) = %s\n",
+	printf("... /* %p */], %s%s) = %s\n",
 	       segms + NUM_SEGMS,
 	       sizeof(long) == 8 ? flags[0].str64 : flags[0].str32,
 	       flags[0].str, errstr);
