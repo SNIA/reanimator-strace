@@ -27,7 +27,7 @@ LIBS="-lstrace2ds -lLintel -lDataSeries"
 # show configure command than run it
 echo CPPFLAGS="$CPPFLAGS" LDFLAGS="$LDFLAGS" ../configure --enable-dataseries
 CPPFLAGS="$CPPFLAGS" LDFLAGS="$LDFLAGS" \
-    ../configure --enable-dataseries || exit $?
+    ../configure --enable-mpers=check --enable-dataseries || exit $?
 
 # no need to make clean if you only changed source code here
 runcmd make clean

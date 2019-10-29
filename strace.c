@@ -11,6 +11,7 @@
 
 #include "defs.h"
 #include <stdarg.h>
+#include <sys/param.h>
 #include <limits.h>
 #include <fcntl.h>
 #include "ptrace.h"

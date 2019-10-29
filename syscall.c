@@ -588,19 +588,6 @@ int
 syscall_entering_decode(struct tcb *tcp)
 {
 	int res = get_scno(tcp);
-#ifdef ENABLE_DATASERIES
-	/*
-	 * Arguments such as pathname or read/write buffer passed to
-	 * system calls cannot be referenced directly from tcp->u_args.
-	 * These arguments are copied from the address space of actual
-	 * process being traced and stored in an array of pointers
-	 * named as v_args.
-	 */
-	void *v_args[DS_MAX_ARGS];
-	void *common_fields[DS_NUM_COMMON_FIELDS];
-	bool exit_generated = false;
-	int continuation_number;
-#endif /* ENABLE_DATASERIES */
 	if (res == 0)
 		return res;
 	if (res != 1 || (res = get_syscall_args(tcp)) != 1) {
@@ -700,6 +687,17 @@ syscall_entering_finish(struct tcb *tcp, int res)
 	tcp->sys_func_rval = res;
 
 #ifdef ENABLE_DATASERIES
+	/*
+	 * Arguments such as pathname or read/write buffer passed to
+	 * system calls cannot be referenced directly from tcp->u_args.
+	 * These arguments are copied from the address space of actual
+	 * process being traced and stored in an array of pointers
+	 * named as v_args.
+	 */
+	void *v_args[DS_MAX_ARGS];
+	void *common_fields[DS_NUM_COMMON_FIELDS];
+	bool exit_generated = false;
+	int continuation_number;
 	/*
 	 * Get a timestamp for time_called and store it as a timeval
 	 * in tcp->etime.
@@ -832,19 +830,6 @@ int
 syscall_exiting_decode(struct tcb *tcp, struct timespec *pts)
 {
 #ifdef ENABLE_DATASERIES
-	/*
-	 * Arguments such as pathname or read/write buffer passed to
-	 * system calls cannot be referenced directly from tcp->u_args.
-	 * These arguments are copied from the address space of actual
-	 * process being traced and stored in an array of pointers
-	 * named as v_args.
-	 */
-	void *v_args[DS_MAX_ARGS];
-	void *common_fields[DS_NUM_COMMON_FIELDS];
-	int i, iov_number, continuation_number;
-	socklen_t ulen;
-	struct msghdr *msg;
-
 	/* Get a time stamp for time_returned and store as in a timeval tv. */
 	if (ds_module) {
 		clock_gettime(CLOCK_MONOTONIC, pts);
@@ -898,6 +883,21 @@ print_syscall_resume(struct tcb *tcp)
 int
 syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 {
+	int i;
+#ifdef ENABLE_DATASERIES
+	/*
+	 * Arguments such as pathname or read/write buffer passed to
+	 * system calls cannot be referenced directly from tcp->u_args.
+	 * These arguments are copied from the address space of actual
+	 * process being traced and stored in an array of pointers
+	 * named as v_args.
+	 */
+	void *v_args[DS_MAX_ARGS];
+	void *common_fields[DS_NUM_COMMON_FIELDS];
+	int iov_number, continuation_number;
+	socklen_t ulen;
+	struct msghdr *msg;
+#endif /* ENABLE_DATASERIES */
 	if (syscall_tampered(tcp) || inject_delay_exit(tcp))
 		tamper_with_syscall_exiting(tcp);
 
@@ -1086,749 +1086,752 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 #endif
 
 #ifdef ENABLE_DATASERIES
-	if (!ds_module)
-		goto ret;
+	if (ds_module) {
+		/*
+		 * Write record in dataseries file for the system call which
+		 * is being traced.
+		 */
 
-	/*
-	 * Write record in dataseries file for the system call which
-	 * is being traced.
-	 */
+		// First, initialize v_args and common_fields with NULL arguments.
+		memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
+		memset(common_fields, 0, sizeof(void *) * DS_NUM_COMMON_FIELDS);
 
-	// First, initialize v_args and common_fields with NULL arguments.
-	memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
-	memset(common_fields, 0, sizeof(void *) * DS_NUM_COMMON_FIELDS);
-
-	/* Then, store the common field values */
-	common_fields[DS_COMMON_FIELD_TIME_CALLED] = &tcp->etime;
-	common_fields[DS_COMMON_FIELD_TIME_RETURNED] = &tv;
-	common_fields[DS_COMMON_FIELD_RETURN_VALUE] = &tcp->u_rval;
-	common_fields[DS_COMMON_FIELD_ERRNO_NUMBER] = &tcp->u_error;
-	common_fields[DS_COMMON_FIELD_EXECUTING_PID] = &tcp->pid;
-	common_fields[DS_COMMON_FIELD_SYSCALL_NUM] = &tcp->scno;
-	common_fields[DS_COMMON_FIELD_BUFFER_NOT_CAPTURED] = (void *) false;
-	/*
-	 * Linux has a unique implementation of threads. To the Linux kernel,
-	 * there is no concept of a thread. Linux implements all threads as standard processes.
-	 * Therefore, pid is same as tid.
-	 */
-	common_fields[DS_COMMON_FIELD_EXECUTING_TID] = &tcp->pid;
-	switch (tcp->s_ent->sen) {
-		case SEN_open: /* open system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			ds_write_record(ds_module, "open", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_openat: /* openat system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
-			ds_write_record(ds_module, "openat", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_close: /* close system call */
-			ds_write_record(ds_module, "close", tcp->u_arg,
-					common_fields, NULL);
-			break;
-		case SEN_read: /* read system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  tcp->u_rval);
-			ds_write_record(ds_module, "read", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_write: /* write system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  tcp->u_arg[2]);
-			ds_write_record(ds_module, "write", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_chdir: /* chdir system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			ds_write_record(ds_module, "chdir", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_chroot: /* chroot system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			ds_write_record(ds_module, "chroot", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_mkdir: /* mkdir system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			ds_write_record(ds_module, "mkdir", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_mkdirat: /* mkdirat system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
-			ds_write_record(ds_module, "mkdirat", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_rmdir: /* rmdir system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			ds_write_record(ds_module, "rmdir", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_link: /* link system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_path(tcp, tcp->u_arg[1]);
-			ds_write_record(ds_module, "link", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_linkat: /* linkat system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
-			v_args[1] = ds_get_path(tcp, tcp->u_arg[3]);
-			ds_write_record(ds_module, "linkat", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_symlink: /* symlink system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_path(tcp, tcp->u_arg[1]);
-			ds_write_record(ds_module, "symlink", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_symlinkat: /* symlinkat system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_path(tcp, tcp->u_arg[2]);
-			ds_write_record(ds_module, "symlinkat", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_unlink: /* unlink system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			ds_write_record(ds_module, "unlink", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_unlinkat: /* unlinkat system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
-			ds_write_record(ds_module, "unlinkat", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_truncate: /* truncate system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			ds_write_record(ds_module, "truncate", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_ftruncate: /* ftruncate system call */
-			ds_write_record(ds_module, "ftruncate", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_flock: /* flock system call */
-			ds_write_record(ds_module, "flock", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_creat: /* creat system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			ds_write_record(ds_module, "creat", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_access: /* access system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			ds_write_record(ds_module, "access", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_faccessat: /* faccessat system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
-			ds_write_record(ds_module, "faccessat", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_chmod: /* chmod system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			ds_write_record(ds_module, "chmod", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_umask: /* umask system call */
-			ds_write_record(ds_module, "umask", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_fchmod: /* fchmod system call */
-			ds_write_record(ds_module, "fchmod", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_fchmodat: /* fchmodat system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
-			ds_write_record(ds_module, "fchmodat", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_fchdir: /* fchmod system call */
-			ds_write_record(ds_module, "fchdir", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_lseek: /* lseek system call */
-			ds_write_record(ds_module, "lseek", tcp->u_arg,
-					common_fields, NULL);
-			break;
-		case SEN_pread: /* pread system call */
-			v_args[0] =  ds_get_buffer(tcp, tcp->u_arg[1],
-						   tcp->u_rval);
-			ds_write_record(ds_module, "pread", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_pwrite: /* pwrite system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  tcp->u_arg[2]);
-			ds_write_record(ds_module, "pwrite", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_stat: /* stat system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  sizeof(struct stat));
-			ds_write_record(ds_module, "stat", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_statfs: /* statfs system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  sizeof(struct statfs));
-			ds_write_record(ds_module, "statfs", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_fstatfs: /* fstatfs system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  sizeof(struct statfs));
-			ds_write_record(ds_module, "fstatfs", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_chown: /* chown system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			ds_write_record(ds_module, "chown", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_readlink: /* readlink system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  tcp->u_rval);
-			ds_write_record(ds_module, "readlink", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_readv: /* readv system call */
-			/* iov_number equals to '-1' denotes first record. */
-			iov_number = -1;
-			v_args[0] = &iov_number;
-			v_args[1] = &tcp->u_rval;
-			/* First, write the first record. */
-			ds_write_record(ds_module, "readv", tcp->u_arg,
-					common_fields, v_args);
-			/*
-			 * Then, iteratively write the record for each
-			 * buffer passed in struct iovec.
-			 */
-			ds_write_iov_records(tcp, tcp->u_arg[1], "readv",
-					common_fields, v_args, tcp->u_arg[2]);
-			break;
-		case SEN_writev: /* writev system call */
-			/* iov_number equals to '-1' denotes first record. */
-			iov_number = -1;
-			v_args[0] = &iov_number;
-			v_args[1] = &tcp->u_rval;
-			/* First, write the first record. */
-			ds_write_record(ds_module, "writev", tcp->u_arg,
-					common_fields, v_args);
-			/*
-			 * Then, iteratively write the record for each
-			 * buffer passed in struct iovec.
-			 */
-			ds_write_iov_records(tcp, tcp->u_arg[1], "writev",
-					common_fields, v_args, tcp->u_arg[2]);
-			break;
-		case SEN_utime: /* utime system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  sizeof(struct utimbuf));
-			ds_write_record(ds_module, "utime", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_lstat: /* lstat system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  sizeof(struct stat));
-			ds_write_record(ds_module, "lstat", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_fstat: /* fstat system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  sizeof(struct stat));
-			ds_write_record(ds_module, "fstat", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_newfstatat: /* fstatat system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[2],
-						  sizeof(struct stat));
-			ds_write_record(ds_module, "fstatat", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_utimes: /* utimes system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  2 * sizeof(struct timeval));
-			ds_write_record(ds_module, "utimes", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_utimensat: /* utimensat system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[2],
-						2 * sizeof(struct timespec));
-			ds_write_record(ds_module, "utimensat", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_rename: /* rename system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_path(tcp, tcp->u_arg[1]);
-			ds_write_record(ds_module, "rename", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_fsync: /* fsync system call */
-			ds_write_record(ds_module, "fsync", tcp->u_arg,
-					common_fields, NULL);
-			break;
-		case SEN_fdatasync: /* fdatasync system call */
-			ds_write_record(ds_module, "fdatasync", tcp->u_arg,
-					common_fields, NULL);
-			break;
-		case SEN_fallocate: /* fallocate system call */
-			ds_write_record(ds_module, "fallocate", tcp->u_arg,
-					common_fields, NULL);
-			break;
-		case SEN_readahead: /* readahead system call */
-			ds_write_record(ds_module, "readahead", tcp->u_arg,
-					common_fields, NULL);
-			break;
-		case SEN_mknod: /* mknod system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			ds_write_record(ds_module, "mknod", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_mknodat: /* mknodat system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
-			ds_write_record(ds_module, "mknodat", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_pipe: /* pipe system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[0],
-						  2 * sizeof(int));
-			ds_write_record(ds_module, "pipe", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_dup: /* dup system call */
-			ds_write_record(ds_module, "dup", tcp->u_arg,
-					common_fields, NULL);
-			break;
-		case SEN_dup2: /* dup2 system call */
-			ds_write_record(ds_module, "dup2", tcp->u_arg,
-					common_fields, NULL);
-			break;
-		case SEN_dup3: /* dup3 system call */
-			ds_write_record(ds_module, "dup3", tcp->u_arg,
-					common_fields, NULL);
-			break;
-		case SEN_execve: /* execve system call */
-			/*
-			 * continuation number equal to '-1' denotes the
-			 * extra record which stores the common fields of
-			 * execve system call.
-			 */
-			continuation_number = -1;
-			v_args[0] = &continuation_number;
-			ds_write_record(ds_module, "execve", tcp->u_arg,
-					common_fields, v_args);
-			v_args[0] = NULL;
-			break;
-		case SEN_mmap: /* mmap system call */
-			ds_write_record(ds_module, "mmap", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_munmap: /* munmap system call */
-			ds_write_record(ds_module, "munmap", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_fcntl: /* fcntl system call */
-			if ((tcp->u_arg[1] == F_SETLK) ||
-			    (tcp->u_arg[1] == F_SETLKW) ||
-			    (tcp->u_arg[1] == F_GETLK)) {
-				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[2],
-							 sizeof(struct flock));
-			}
-			ds_write_record(ds_module, "fcntl", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_getdents: /* getdents system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  tcp->u_rval);
-			ds_write_record(ds_module, "getdents", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_ioctl: /* ioctl system call */ {
-			u_int ioctl_size = ds_get_ioctl_size(ds_module);
-			if (ioctl_size > 0) {
-				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[2],
-							  ioctl_size);
-			} else {
-				v_args[0] = NULL;
-			}
-			ds_write_record(ds_module, "ioctl", tcp->u_arg,
-					common_fields, v_args);
-			ds_set_ioctl_size(ds_module, 0);
-			break;
-		}
-		case SEN_clone: /* clone system call */ {
-			int ctid_index = ds_get_clone_ctid_index(ds_module);
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[2],
-						  sizeof(int));
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[ctid_index],
-						  sizeof(int));
-			common_fields[DS_COMMON_FIELD_UNIQUE_ID] = &tcp->clone_dsid;
-			ds_write_into_same_record(ds_module, "clone", tcp->u_arg,
-						  common_fields, v_args);
-			break;
-		}
-		case SEN_vfork: /* vfork system call */
-			common_fields[DS_COMMON_FIELD_UNIQUE_ID] = &tcp->clone_dsid;
-		        ds_write_into_same_record(ds_module, "vfork", tcp->u_arg,
-						  common_fields, v_args);
-			break;
-		case SEN_setrlimit: /* setrlimit system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-				sizeof(struct rlimit));
-			ds_write_record(ds_module, "setrlimit", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_getrlimit: /* getrlimit system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  sizeof(struct rlimit));
-			ds_write_record(ds_module, "getrlimit", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_setpgid: /* setpgid system call */
-			ds_write_record(ds_module, "setpgid", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_setsid: /* setsid system call */
-			ds_write_record(ds_module, "setsid", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_setxattr: /* lsetxattr and setxattr system calls */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_name(tcp, tcp->u_arg[1]);
-			v_args[2] = ds_get_buffer(tcp, tcp->u_arg[2],
-						  tcp->u_arg[3]);
-			if (tcp->s_ent->sys_name[0] == 'l')
-				ds_write_record(ds_module, "lsetxattr", tcp->u_arg,
+		/* Then, store the common field values */
+		common_fields[DS_COMMON_FIELD_TIME_CALLED] = &tcp->etime;
+		common_fields[DS_COMMON_FIELD_TIME_RETURNED] = ts;
+		common_fields[DS_COMMON_FIELD_RETURN_VALUE] = &tcp->u_rval;
+		common_fields[DS_COMMON_FIELD_ERRNO_NUMBER] = &tcp->u_error;
+		common_fields[DS_COMMON_FIELD_EXECUTING_PID] = &tcp->pid;
+		common_fields[DS_COMMON_FIELD_SYSCALL_NUM] = &tcp->scno;
+		common_fields[DS_COMMON_FIELD_BUFFER_NOT_CAPTURED] = (void *) false;
+		/*
+		 * Linux has a unique implementation of threads. To the Linux kernel,
+		 * there is no concept of a thread. Linux implements all threads as standard processes.
+		 * Therefore, pid is same as tid.
+		 */
+		common_fields[DS_COMMON_FIELD_EXECUTING_TID] = &tcp->pid;
+		switch (tcp->s_ent->sen) {
+			case SEN_open: /* open system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				ds_write_record(ds_module, "open", tcp->u_arg,
 						common_fields, v_args);
-			else
-				ds_write_record(ds_module, "setxattr", tcp->u_arg,
+				break;
+			case SEN_openat: /* openat system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+				ds_write_record(ds_module, "openat", tcp->u_arg,
 						common_fields, v_args);
-			break;
-		case SEN_getxattr: /* lgetxattr and getxattr system calls */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_name(tcp, tcp->u_arg[1]);
-			v_args[2] = ds_get_buffer(tcp, tcp->u_arg[2],
-						  tcp->u_rval);
-			if (tcp->s_ent->sys_name[0] == 'l')
-				ds_write_record(ds_module, "lgetxattr", tcp->u_arg,
+				break;
+			case SEN_close: /* close system call */
+				ds_write_record(ds_module, "close", tcp->u_arg,
+						common_fields, NULL);
+				break;
+			case SEN_read: /* read system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  tcp->u_rval);
+				ds_write_record(ds_module, "read", tcp->u_arg,
 						common_fields, v_args);
-			else
-				ds_write_record(ds_module, "getxattr", tcp->u_arg,
+				break;
+			case SEN_write: /* write system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  tcp->u_arg[2]);
+				ds_write_record(ds_module, "write", tcp->u_arg,
 						common_fields, v_args);
-			break;
-		case SEN_fsetxattr: /* fsetxattr system call */
-			v_args[0] = ds_get_name(tcp, tcp->u_arg[1]);
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[2],
-						  tcp->u_arg[3]);
-			ds_write_record(ds_module, "fsetxattr", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_fgetxattr: /* fgetxattr system call */
-			v_args[0] = ds_get_name(tcp, tcp->u_arg[1]);
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[2],
-						  tcp->u_rval);
-			ds_write_record(ds_module, "fgetxattr", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_listxattr: /* Listxattr and Llistxattr system call */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  tcp->u_rval);
-			if (tcp->s_ent->sys_name[1] == 'l')
-				ds_write_record(ds_module, "llistxattr",
-						tcp->u_arg, common_fields, v_args);
-			else
-				ds_write_record(ds_module, "listxattr",
-						tcp->u_arg, common_fields, v_args);
-			break;
-		case SEN_flistxattr: /* Flistxattr system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  tcp->u_rval);
-			ds_write_record(ds_module, "flistxattr", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_removexattr: /* Removexattr & LRemovexattr system calls */
-			v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
-			v_args[1] = ds_get_name(tcp, tcp->u_arg[1]);
-			if (tcp->s_ent->sys_name[0] == 'l')
-				ds_write_record(ds_module, "lremovexattr",
-						tcp->u_arg, common_fields, v_args);
-			else
-				ds_write_record(ds_module, "removexattr",
-						tcp->u_arg, common_fields, v_args);
-			break;
-		case SEN_fremovexattr: /* FRemovexattr system call */
-			v_args[0] = ds_get_name(tcp, tcp->u_arg[1]);
-			ds_write_record(ds_module, "fremovexattr", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_socket: /* Socket system call */
-			ds_write_record(ds_module, "socket", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_epoll_create: /* epoll_create system call */
-			ds_write_record(ds_module, "epoll_create", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_epoll_create1: /* epoll_create1 system call */
-			ds_write_record(ds_module, "epoll_create1", tcp->u_arg,
-					common_fields, v_args);
-			break;
-                case SEN_connect:  /* Connect system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  tcp->u_arg[2]);
-			ds_write_record(ds_module, "connect", tcp->u_arg,
-					common_fields, v_args);
-			break;
-                case SEN_bind:  /* Bind system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  tcp->u_arg[2]);
-			ds_write_record(ds_module, "bind", tcp->u_arg,
-					common_fields, v_args);
-			break;
-			/*
-			 * NOTE: support for tracing the accept(2), getsockname(2)
-			 * and getpeername(2) system calls is incomplete.  We do
-			 * not currently record the struct sockaddr buffer and it
-			 * is set as NULL in ds_module for now.  Nor do we record
-			 * the value of the buffer's original length on syscall
-			 * entry.
-			 */
-                case SEN_accept:  /* Accept system call */
-			if ((!tcp->u_arg[2]) ||
-			    (umoven(tcp, tcp->u_arg[2], sizeof(socklen_t), &ulen) < 0)) {
-			  ulen = 0;
-			}
-			v_args[0] = &ulen;
-			ds_write_record(ds_module, "accept", tcp->u_arg,
-					common_fields, v_args);
-			v_args[0] = NULL;
-			break;
-                case SEN_accept4:  /* Accept system call */
-			if ((!tcp->u_arg[2]) ||
-			    (umoven(tcp, tcp->u_arg[2], sizeof(socklen_t), &ulen) < 0)) {
-			  ulen = 0;
-			}
-			v_args[0] = &ulen;
-			ds_write_record(ds_module, "accept4", tcp->u_arg,
-					common_fields, v_args);
-			v_args[0] = NULL;
-			break;
-		case SEN_getsockname: /* Getsockname system call */
-			if ((!tcp->u_arg[2]) ||
-			    (umoven(tcp, tcp->u_arg[2], sizeof(socklen_t), &ulen) < 0)) {
-			  ulen = 0;
-			}
-			v_args[0] = &ulen;
-			ds_write_record(ds_module, "getsockname", tcp->u_arg,
-					common_fields, v_args);
-			v_args[0] = NULL;
-			break;
-		case SEN_getpeername: /* Getpeername system call*/
-			if ((!tcp->u_arg[2]) ||
-			    (umoven(tcp, tcp->u_arg[2], sizeof(socklen_t), &ulen) < 0)) {
-			  ulen = 0;
-			}
-			v_args[0] = &ulen;
-			ds_write_record(ds_module, "getpeername", tcp->u_arg,
-					common_fields, v_args);
-			v_args[0] = NULL;
-			break;
-		case SEN_listen: /* listen system call */
-			ds_write_record(ds_module, "listen", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_shutdown: /*shutdown system call */
-			ds_write_record(ds_module, "shutdown", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_socketpair: /* socketpair system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[3],
-						  2 * sizeof(int));
-			ds_write_record(ds_module, "socketpair", tcp->u_arg,
-					common_fields, v_args);
-			break;
-			/*
-			 * NOTE: support for tracing the getsockopt(2) system call is
-			 * incomplete.  We do not currently record the optval buffer
-			 * and it is set as NULL in ds_module for now.  Nor do we record
-			 * the value of the buffer's original length on syscall entry.
-			 */
-		case SEN_getsockopt: /* getsockopt system call */
-			if ((!tcp->u_arg[4]) ||
-			    (umoven(tcp, tcp->u_arg[4], sizeof(socklen_t), &ulen) < 0)) {
-			  ulen = 0;
-			}
-			v_args[0] = &ulen;
-			ds_write_record(ds_module, "getsockopt", tcp->u_arg,
-					common_fields, v_args);
-			v_args[0] = NULL;
-			break;
-		case SEN_setsockopt: /* setsockopt system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[3],
-						  tcp->u_arg[4]);
-			ds_write_record(ds_module, "setsockopt", tcp->u_arg,
-					common_fields, v_args);
-			break;
-			/*
-			 * NOTE: support for replaying the recv(2) system call is
-			 * incomplete.
-			 */
-		case SEN_recv: /* recv system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  tcp->u_arg[2]);
-			ds_write_record(ds_module,"recv", tcp->u_arg,
-					common_fields, v_args);
-			break;
-			/*
-			 * NOTE: support for replaying the recvfrom(2) system call is
-			 * incomplete.
-			 */
-		case SEN_recvfrom: /* recvfrom system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  tcp->u_arg[2]);
-			if ((!tcp->u_arg[5]) ||
-			    (umoven(tcp, tcp->u_arg[5], sizeof(socklen_t), &ulen) < 0)) {
-			  ulen = 0;
-			}
-			v_args[1] = &ulen;
-			ds_write_record(ds_module, "recvfrom", tcp->u_arg,
-					common_fields, v_args);
-			v_args[1] = NULL;
-			break;
-			/*
-			 * NOTE: support for replaying the recvmsg(2) system call is
-			 * incomplete.
-			 */
-		case SEN_recvmsg: /* recvmsg system call*/
-			msg = ds_get_buffer(tcp, tcp->u_arg[1],
-					    sizeof(struct msghdr));
-			/* iov_number equals to '-1' denotes first record */
-			iov_number = -1;
-			if (!msg) {
-			  v_args[0] = NULL;
-			  v_args[1] = NULL;
-			} else {
-			  v_args[0] = &iov_number;
-			  v_args[1] = &tcp->u_rval;
-			}
-			/* Write the first record */
-			ds_write_record(ds_module, "recvmsg", tcp->u_arg,
-					common_fields, v_args);
-			/*
-			 * Then, iteratively write the record for each
-			 * buffer passed in struct iovec.
-			 */
-			if (msg) {
-			  ds_write_iov_records(tcp, (long)msg->msg_iov,
-					       "recvmsg", common_fields,
-					       v_args, msg->msg_iovlen);
-			  free(msg);
-			}
-			break;
-		case SEN_send: /* send system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  tcp->u_arg[2]);
-			ds_write_record(ds_module, "send", tcp->u_arg,
-					common_fields, v_args);
-			break;
-		case SEN_sendto: /* sendto system call */
-			v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
-						  tcp->u_arg[2]);
-			v_args[1] = ds_get_buffer(tcp, tcp->u_arg[4],
-						  tcp->u_arg[5]);
-			ds_write_record(ds_module, "sendto", tcp->u_arg,
-					common_fields, v_args);
-			break;
-			/*
-			 * NOTE: support for tracing the sendmsg system call is
-			 * incomplete.  Currently, we do not record all the
-			 * fields in the struct msghdr.
-			 */
-		case SEN_sendmsg: /* sendmsg system call */
-			msg = ds_get_buffer(tcp, tcp->u_arg[1],
-					    sizeof(struct msghdr));
-			/* iov_number equals to '-1' denotes first record. */
-			iov_number = -1;
-			if (!msg) {
-				v_args[0] = NULL;
-				v_args[1] = NULL;
-			} else {
+				break;
+			case SEN_chdir: /* chdir system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				ds_write_record(ds_module, "chdir", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_chroot: /* chroot system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				ds_write_record(ds_module, "chroot", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_mkdir: /* mkdir system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				ds_write_record(ds_module, "mkdir", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_mkdirat: /* mkdirat system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+				ds_write_record(ds_module, "mkdirat", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_rmdir: /* rmdir system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				ds_write_record(ds_module, "rmdir", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_link: /* link system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				v_args[1] = ds_get_path(tcp, tcp->u_arg[1]);
+				ds_write_record(ds_module, "link", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_linkat: /* linkat system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+				v_args[1] = ds_get_path(tcp, tcp->u_arg[3]);
+				ds_write_record(ds_module, "linkat", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_symlink: /* symlink system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				v_args[1] = ds_get_path(tcp, tcp->u_arg[1]);
+				ds_write_record(ds_module, "symlink", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_symlinkat: /* symlinkat system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				v_args[1] = ds_get_path(tcp, tcp->u_arg[2]);
+				ds_write_record(ds_module, "symlinkat", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_unlink: /* unlink system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				ds_write_record(ds_module, "unlink", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_unlinkat: /* unlinkat system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+				ds_write_record(ds_module, "unlinkat", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_truncate: /* truncate system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				ds_write_record(ds_module, "truncate", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_ftruncate: /* ftruncate system call */
+				ds_write_record(ds_module, "ftruncate", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_flock: /* flock system call */
+				ds_write_record(ds_module, "flock", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_creat: /* creat system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				ds_write_record(ds_module, "creat", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_access: /* access system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				ds_write_record(ds_module, "access", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_faccessat: /* faccessat system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+				ds_write_record(ds_module, "faccessat", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_chmod: /* chmod system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				ds_write_record(ds_module, "chmod", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_umask: /* umask system call */
+				ds_write_record(ds_module, "umask", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_fchmod: /* fchmod system call */
+				ds_write_record(ds_module, "fchmod", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_fchmodat: /* fchmodat system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+				ds_write_record(ds_module, "fchmodat", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_fchdir: /* fchmod system call */
+				ds_write_record(ds_module, "fchdir", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_lseek: /* lseek system call */
+				ds_write_record(ds_module, "lseek", tcp->u_arg,
+						common_fields, NULL);
+				break;
+			case SEN_pread: /* pread system call */
+				v_args[0] =  ds_get_buffer(tcp, tcp->u_arg[1],
+							   tcp->u_rval);
+				ds_write_record(ds_module, "pread", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_pwrite: /* pwrite system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  tcp->u_arg[2]);
+				ds_write_record(ds_module, "pwrite", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_stat: /* stat system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  sizeof(struct stat));
+				ds_write_record(ds_module, "stat", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_statfs: /* statfs system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  sizeof(struct statfs));
+				ds_write_record(ds_module, "statfs", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_fstatfs: /* fstatfs system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  sizeof(struct statfs));
+				ds_write_record(ds_module, "fstatfs", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_chown: /* chown system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				ds_write_record(ds_module, "chown", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_readlink: /* readlink system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  tcp->u_rval);
+				ds_write_record(ds_module, "readlink", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_readv: /* readv system call */
+				/* iov_number equals to '-1' denotes first record. */
+				iov_number = -1;
 				v_args[0] = &iov_number;
 				v_args[1] = &tcp->u_rval;
+				/* First, write the first record. */
+				ds_write_record(ds_module, "readv", tcp->u_arg,
+						common_fields, v_args);
+				/*
+				 * Then, iteratively write the record for each
+				 * buffer passed in struct iovec.
+				 */
+				ds_write_iov_records(tcp, tcp->u_arg[1], "readv",
+						common_fields, v_args, tcp->u_arg[2]);
+				break;
+			case SEN_writev: /* writev system call */
+				/* iov_number equals to '-1' denotes first record. */
+				iov_number = -1;
+				v_args[0] = &iov_number;
+				v_args[1] = &tcp->u_rval;
+				/* First, write the first record. */
+				ds_write_record(ds_module, "writev", tcp->u_arg,
+						common_fields, v_args);
+				/*
+				 * Then, iteratively write the record for each
+				 * buffer passed in struct iovec.
+				 */
+				ds_write_iov_records(tcp, tcp->u_arg[1], "writev",
+						common_fields, v_args, tcp->u_arg[2]);
+				break;
+			case SEN_utime: /* utime system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  sizeof(struct utimbuf));
+				ds_write_record(ds_module, "utime", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_lstat: /* lstat system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  sizeof(struct stat));
+				ds_write_record(ds_module, "lstat", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_fstat: /* fstat system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  sizeof(struct stat));
+				ds_write_record(ds_module, "fstat", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_newfstatat: /* fstatat system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+				v_args[1] = ds_get_buffer(tcp, tcp->u_arg[2],
+							  sizeof(struct stat));
+				ds_write_record(ds_module, "fstatat", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_utimes: /* utimes system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  2 * sizeof(struct timespec));
+				ds_write_record(ds_module, "utimes", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_utimensat_time32:
+			case SEN_utimensat_time64: /* utimensat system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+				v_args[1] = ds_get_buffer(tcp, tcp->u_arg[2],
+							2 * sizeof(struct timespec));
+				ds_write_record(ds_module, "utimensat", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_rename: /* rename system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				v_args[1] = ds_get_path(tcp, tcp->u_arg[1]);
+				ds_write_record(ds_module, "rename", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_fsync: /* fsync system call */
+				ds_write_record(ds_module, "fsync", tcp->u_arg,
+						common_fields, NULL);
+				break;
+			case SEN_fdatasync: /* fdatasync system call */
+				ds_write_record(ds_module, "fdatasync", tcp->u_arg,
+						common_fields, NULL);
+				break;
+			case SEN_fallocate: /* fallocate system call */
+				ds_write_record(ds_module, "fallocate", tcp->u_arg,
+						common_fields, NULL);
+				break;
+			case SEN_readahead: /* readahead system call */
+				ds_write_record(ds_module, "readahead", tcp->u_arg,
+						common_fields, NULL);
+				break;
+			case SEN_mknod: /* mknod system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				ds_write_record(ds_module, "mknod", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_mknodat: /* mknodat system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[1]);
+				ds_write_record(ds_module, "mknodat", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_pipe: /* pipe system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[0],
+							  2 * sizeof(int));
+				ds_write_record(ds_module, "pipe", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_dup: /* dup system call */
+				ds_write_record(ds_module, "dup", tcp->u_arg,
+						common_fields, NULL);
+				break;
+			case SEN_dup2: /* dup2 system call */
+				ds_write_record(ds_module, "dup2", tcp->u_arg,
+						common_fields, NULL);
+				break;
+			case SEN_dup3: /* dup3 system call */
+				ds_write_record(ds_module, "dup3", tcp->u_arg,
+						common_fields, NULL);
+				break;
+			case SEN_execve: /* execve system call */
+				/*
+				 * continuation number equal to '-1' denotes the
+				 * extra record which stores the common fields of
+				 * execve system call.
+				 */
+				continuation_number = -1;
+				v_args[0] = &continuation_number;
+				ds_write_record(ds_module, "execve", tcp->u_arg,
+						common_fields, v_args);
+				v_args[0] = NULL;
+				break;
+			case SEN_mmap: /* mmap system call */
+				ds_write_record(ds_module, "mmap", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_munmap: /* munmap system call */
+				ds_write_record(ds_module, "munmap", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_fcntl: /* fcntl system call */
+				if ((tcp->u_arg[1] == F_SETLK) ||
+				    (tcp->u_arg[1] == F_SETLKW) ||
+				    (tcp->u_arg[1] == F_GETLK)) {
+					v_args[0] = ds_get_buffer(tcp, tcp->u_arg[2],
+								 sizeof(struct flock));
+				}
+				ds_write_record(ds_module, "fcntl", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_getdents: /* getdents system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  tcp->u_rval);
+				ds_write_record(ds_module, "getdents", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_ioctl: /* ioctl system call */ {
+				u_int ioctl_size = ds_get_ioctl_size(ds_module);
+				if (ioctl_size > 0) {
+					v_args[0] = ds_get_buffer(tcp, tcp->u_arg[2],
+								  ioctl_size);
+				} else {
+					v_args[0] = NULL;
+				}
+				ds_write_record(ds_module, "ioctl", tcp->u_arg,
+						common_fields, v_args);
+				ds_set_ioctl_size(ds_module, 0);
+				break;
 			}
-			/* Write the first record. */
-			ds_write_record(ds_module, "sendmsg", tcp->u_arg,
-					common_fields, v_args);
+			case SEN_clone: /* clone system call */ {
+				int ctid_index = ds_get_clone_ctid_index(ds_module);
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[2],
+							  sizeof(int));
+				v_args[1] = ds_get_buffer(tcp, tcp->u_arg[ctid_index],
+							  sizeof(int));
+				common_fields[DS_COMMON_FIELD_UNIQUE_ID] = &tcp->clone_dsid;
+				ds_write_into_same_record(ds_module, "clone", tcp->u_arg,
+							  common_fields, v_args);
+				break;
+			}
+			case SEN_vfork: /* vfork system call */
+				common_fields[DS_COMMON_FIELD_UNIQUE_ID] = &tcp->clone_dsid;
+				ds_write_into_same_record(ds_module, "vfork", tcp->u_arg,
+							  common_fields, v_args);
+				break;
+			case SEN_setrlimit: /* setrlimit system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+					sizeof(struct rlimit));
+				ds_write_record(ds_module, "setrlimit", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_getrlimit: /* getrlimit system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  sizeof(struct rlimit));
+				ds_write_record(ds_module, "getrlimit", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_setpgid: /* setpgid system call */
+				ds_write_record(ds_module, "setpgid", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_setsid: /* setsid system call */
+				ds_write_record(ds_module, "setsid", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_setxattr: /* lsetxattr and setxattr system calls */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				v_args[1] = ds_get_name(tcp, tcp->u_arg[1]);
+				v_args[2] = ds_get_buffer(tcp, tcp->u_arg[2],
+							  tcp->u_arg[3]);
+				if (tcp->s_ent->sys_name[0] == 'l')
+					ds_write_record(ds_module, "lsetxattr", tcp->u_arg,
+							common_fields, v_args);
+				else
+					ds_write_record(ds_module, "setxattr", tcp->u_arg,
+							common_fields, v_args);
+				break;
+			case SEN_getxattr: /* lgetxattr and getxattr system calls */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				v_args[1] = ds_get_name(tcp, tcp->u_arg[1]);
+				v_args[2] = ds_get_buffer(tcp, tcp->u_arg[2],
+							  tcp->u_rval);
+				if (tcp->s_ent->sys_name[0] == 'l')
+					ds_write_record(ds_module, "lgetxattr", tcp->u_arg,
+							common_fields, v_args);
+				else
+					ds_write_record(ds_module, "getxattr", tcp->u_arg,
+							common_fields, v_args);
+				break;
+			case SEN_fsetxattr: /* fsetxattr system call */
+				v_args[0] = ds_get_name(tcp, tcp->u_arg[1]);
+				v_args[1] = ds_get_buffer(tcp, tcp->u_arg[2],
+							  tcp->u_arg[3]);
+				ds_write_record(ds_module, "fsetxattr", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_fgetxattr: /* fgetxattr system call */
+				v_args[0] = ds_get_name(tcp, tcp->u_arg[1]);
+				v_args[1] = ds_get_buffer(tcp, tcp->u_arg[2],
+							  tcp->u_rval);
+				ds_write_record(ds_module, "fgetxattr", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_listxattr: /* Listxattr and Llistxattr system call */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				v_args[1] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  tcp->u_rval);
+				if (tcp->s_ent->sys_name[1] == 'l')
+					ds_write_record(ds_module, "llistxattr",
+							tcp->u_arg, common_fields, v_args);
+				else
+					ds_write_record(ds_module, "listxattr",
+							tcp->u_arg, common_fields, v_args);
+				break;
+			case SEN_flistxattr: /* Flistxattr system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  tcp->u_rval);
+				ds_write_record(ds_module, "flistxattr", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_removexattr: /* Removexattr & LRemovexattr system calls */
+				v_args[0] = ds_get_path(tcp, tcp->u_arg[0]);
+				v_args[1] = ds_get_name(tcp, tcp->u_arg[1]);
+				if (tcp->s_ent->sys_name[0] == 'l')
+					ds_write_record(ds_module, "lremovexattr",
+							tcp->u_arg, common_fields, v_args);
+				else
+					ds_write_record(ds_module, "removexattr",
+							tcp->u_arg, common_fields, v_args);
+				break;
+			case SEN_fremovexattr: /* FRemovexattr system call */
+				v_args[0] = ds_get_name(tcp, tcp->u_arg[1]);
+				ds_write_record(ds_module, "fremovexattr", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_socket: /* Socket system call */
+				ds_write_record(ds_module, "socket", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_epoll_create: /* epoll_create system call */
+				ds_write_record(ds_module, "epoll_create", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_epoll_create1: /* epoll_create1 system call */
+				ds_write_record(ds_module, "epoll_create1", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_connect:  /* Connect system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  tcp->u_arg[2]);
+				ds_write_record(ds_module, "connect", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_bind:  /* Bind system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  tcp->u_arg[2]);
+				ds_write_record(ds_module, "bind", tcp->u_arg,
+						common_fields, v_args);
+				break;
+				/*
+				 * NOTE: support for tracing the accept(2), getsockname(2)
+				 * and getpeername(2) system calls is incomplete.  We do
+				 * not currently record the struct sockaddr buffer and it
+				 * is set as NULL in ds_module for now.  Nor do we record
+				 * the value of the buffer's original length on syscall
+				 * entry.
+				 */
+			case SEN_accept:  /* Accept system call */
+				if ((!tcp->u_arg[2]) ||
+				    (umoven(tcp, tcp->u_arg[2], sizeof(socklen_t), &ulen) < 0)) {
+				  ulen = 0;
+				}
+				v_args[0] = &ulen;
+				ds_write_record(ds_module, "accept", tcp->u_arg,
+						common_fields, v_args);
+				v_args[0] = NULL;
+				break;
+			case SEN_accept4:  /* Accept system call */
+				if ((!tcp->u_arg[2]) ||
+				    (umoven(tcp, tcp->u_arg[2], sizeof(socklen_t), &ulen) < 0)) {
+				  ulen = 0;
+				}
+				v_args[0] = &ulen;
+				ds_write_record(ds_module, "accept4", tcp->u_arg,
+						common_fields, v_args);
+				v_args[0] = NULL;
+				break;
+			case SEN_getsockname: /* Getsockname system call */
+				if ((!tcp->u_arg[2]) ||
+				    (umoven(tcp, tcp->u_arg[2], sizeof(socklen_t), &ulen) < 0)) {
+				  ulen = 0;
+				}
+				v_args[0] = &ulen;
+				ds_write_record(ds_module, "getsockname", tcp->u_arg,
+						common_fields, v_args);
+				v_args[0] = NULL;
+				break;
+			case SEN_getpeername: /* Getpeername system call*/
+				if ((!tcp->u_arg[2]) ||
+				    (umoven(tcp, tcp->u_arg[2], sizeof(socklen_t), &ulen) < 0)) {
+				  ulen = 0;
+				}
+				v_args[0] = &ulen;
+				ds_write_record(ds_module, "getpeername", tcp->u_arg,
+						common_fields, v_args);
+				v_args[0] = NULL;
+				break;
+			case SEN_listen: /* listen system call */
+				ds_write_record(ds_module, "listen", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_shutdown: /*shutdown system call */
+				ds_write_record(ds_module, "shutdown", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_socketpair: /* socketpair system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[3],
+							  2 * sizeof(int));
+				ds_write_record(ds_module, "socketpair", tcp->u_arg,
+						common_fields, v_args);
+				break;
+				/*
+				 * NOTE: support for tracing the getsockopt(2) system call is
+				 * incomplete.  We do not currently record the optval buffer
+				 * and it is set as NULL in ds_module for now.  Nor do we record
+				 * the value of the buffer's original length on syscall entry.
+				 */
+			case SEN_getsockopt: /* getsockopt system call */
+				if ((!tcp->u_arg[4]) ||
+				    (umoven(tcp, tcp->u_arg[4], sizeof(socklen_t), &ulen) < 0)) {
+				  ulen = 0;
+				}
+				v_args[0] = &ulen;
+				ds_write_record(ds_module, "getsockopt", tcp->u_arg,
+						common_fields, v_args);
+				v_args[0] = NULL;
+				break;
+			case SEN_setsockopt: /* setsockopt system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[3],
+							  tcp->u_arg[4]);
+				ds_write_record(ds_module, "setsockopt", tcp->u_arg,
+						common_fields, v_args);
+				break;
+				/*
+				 * NOTE: support for replaying the recv(2) system call is
+				 * incomplete.
+				 */
+			case SEN_recv: /* recv system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  tcp->u_arg[2]);
+				ds_write_record(ds_module,"recv", tcp->u_arg,
+						common_fields, v_args);
+				break;
+				/*
+				 * NOTE: support for replaying the recvfrom(2) system call is
+				 * incomplete.
+				 */
+			case SEN_recvfrom: /* recvfrom system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  tcp->u_arg[2]);
+				if ((!tcp->u_arg[5]) ||
+				    (umoven(tcp, tcp->u_arg[5], sizeof(socklen_t), &ulen) < 0)) {
+				  ulen = 0;
+				}
+				v_args[1] = &ulen;
+				ds_write_record(ds_module, "recvfrom", tcp->u_arg,
+						common_fields, v_args);
+				v_args[1] = NULL;
+				break;
+				/*
+				 * NOTE: support for replaying the recvmsg(2) system call is
+				 * incomplete.
+				 */
+			case SEN_recvmsg: /* recvmsg system call*/
+				msg = ds_get_buffer(tcp, tcp->u_arg[1],
+						    sizeof(struct msghdr));
+				/* iov_number equals to '-1' denotes first record */
+				iov_number = -1;
+				if (!msg) {
+				  v_args[0] = NULL;
+				  v_args[1] = NULL;
+				} else {
+				  v_args[0] = &iov_number;
+				  v_args[1] = &tcp->u_rval;
+				}
+				/* Write the first record */
+				ds_write_record(ds_module, "recvmsg", tcp->u_arg,
+						common_fields, v_args);
+				/*
+				 * Then, iteratively write the record for each
+				 * buffer passed in struct iovec.
+				 */
+				if (msg) {
+				  ds_write_iov_records(tcp, (long)msg->msg_iov,
+						       "recvmsg", common_fields,
+						       v_args, msg->msg_iovlen);
+				  free(msg);
+				}
+				break;
+			case SEN_send: /* send system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  tcp->u_arg[2]);
+				ds_write_record(ds_module, "send", tcp->u_arg,
+						common_fields, v_args);
+				break;
+			case SEN_sendto: /* sendto system call */
+				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
+							  tcp->u_arg[2]);
+				v_args[1] = ds_get_buffer(tcp, tcp->u_arg[4],
+							  tcp->u_arg[5]);
+				ds_write_record(ds_module, "sendto", tcp->u_arg,
+						common_fields, v_args);
+				break;
+				/*
+				 * NOTE: support for tracing the sendmsg system call is
+				 * incomplete.  Currently, we do not record all the
+				 * fields in the struct msghdr.
+				 */
+			case SEN_sendmsg: /* sendmsg system call */
+				msg = ds_get_buffer(tcp, tcp->u_arg[1],
+						    sizeof(struct msghdr));
+				/* iov_number equals to '-1' denotes first record. */
+				iov_number = -1;
+				if (!msg) {
+					v_args[0] = NULL;
+					v_args[1] = NULL;
+				} else {
+					v_args[0] = &iov_number;
+					v_args[1] = &tcp->u_rval;
+				}
+				/* Write the first record. */
+				ds_write_record(ds_module, "sendmsg", tcp->u_arg,
+						common_fields, v_args);
+				/*
+				 * Then, iteratively write the record for each
+				 * buffer passed in struct iovec.
+				 */
+				if (msg) {
+					ds_write_iov_records(tcp, (long)msg->msg_iov,
+							     "sendmsg", common_fields,
+							     v_args, msg->msg_iovlen);
+					free(msg);
+				}
+				break;
 			/*
-			 * Then, iteratively write the record for each
-			 * buffer passed in struct iovec.
+			 * These system calls are chosen not be traced by
+			 * fsl-strace.
 			 */
-			if (msg) {
-				ds_write_iov_records(tcp, (long)msg->msg_iov,
-						     "sendmsg", common_fields,
-						     v_args, msg->msg_iovlen);
-				free(msg);
-			}
-			break;
-		/*
-		 * These system calls are chosen not be traced by
-		 * fsl-strace.
-		 */
-		case SEN_brk:
-		case SEN_mprotect:
-		case SEN_arch_prctl:
-		case SEN_rt_sigaction:
-		case SEN_getpid:
-		case SEN_wait4:
-		case SEN_getrusage:
-		case SEN_getcwd:
-		case SEN_rt_sigprocmask:
-		case SEN_mremap:
-		case SEN_madvise:
-		case SEN_rt_sigreturn:
-		case SEN_sigreturn:
-		case SEN_rt_sigsuspend:
-		case SEN_getuid:
-		case SEN_getgid:
-		case SEN_geteuid:
-		case SEN_getegid:
-		case SEN_uname:
-		case SEN_getppid:
-		case SEN_getpgrp:
-		case SEN_nanosleep:
-		case SEN_set_tid_address:
-		case SEN_set_robust_list:
-		case SEN_futex:
-		case SEN_getgroups:
-		case SEN_fadvise64:
-		case SEN_sched_getaffinity:
-		case SEN_sigaltstack:
-		case SEN_poll:
-		case SEN_select:
-			ds_add_to_untraced_set(ds_module,
-					       tcp->s_ent->sys_name,
-					       tcp->scno);
-			break;
-		default:
-			ds_print_warning(ds_module,
-					 tcp->s_ent->sys_name,
-					 tcp->scno);
-	}
-	/* Free memory allocated to v_args. */
-	for (i = 0; i < DS_MAX_ARGS; i++) {
-		if (v_args[i])
-			free(v_args[i]);
+			case SEN_brk:
+			case SEN_mprotect:
+			case SEN_arch_prctl:
+			case SEN_rt_sigaction:
+			case SEN_getpid:
+			case SEN_wait4:
+			case SEN_getrusage:
+			case SEN_getcwd:
+			case SEN_rt_sigprocmask:
+			case SEN_mremap:
+			case SEN_madvise:
+			case SEN_rt_sigreturn:
+			case SEN_sigreturn:
+			case SEN_rt_sigsuspend:
+			case SEN_getuid:
+			case SEN_getgid:
+			case SEN_geteuid:
+			case SEN_getegid:
+			case SEN_uname:
+			case SEN_getppid:
+			case SEN_getpgrp:
+			case SEN_nanosleep_time32:
+			case SEN_nanosleep_time64:
+			case SEN_set_tid_address:
+			case SEN_set_robust_list:
+			case SEN_futex_time32:
+			case SEN_futex_time64:
+			case SEN_getgroups:
+			case SEN_fadvise64:
+			case SEN_sched_getaffinity:
+			case SEN_sigaltstack:
+			case SEN_poll_time32:
+			case SEN_poll_time64:
+			case SEN_select:
+				ds_add_to_untraced_set(ds_module,
+						       tcp->s_ent->sys_name,
+						       tcp->scno);
+				break;
+			default:
+				ds_print_warning(ds_module,
+						 tcp->s_ent->sys_name,
+						 tcp->scno);
+		}
+		/* Free memory allocated to v_args. */
+		for (i = 0; i < DS_MAX_ARGS; i++) {
+			if (v_args[i])
+				free(v_args[i]);
+		}
 	}
 #endif /* ENABLE_DATASERIES */
 	return 0;
