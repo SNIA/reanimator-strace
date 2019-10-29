@@ -1645,7 +1645,11 @@ init(int argc, char *argv[])
 #ifdef ENABLE_STACKTRACE
 	    "k"
 #endif
-	    "a:Ab:cCdDe:E:fg:FhiI:o:O:p:P:qrs:S:tTu:vVwxX:yzZ";
+	    "a:Ab:cCdDe:E:f"
+#ifdef ENABLE_DATASERIES
+	    "g:"
+#endif /* ENABLE_DATASERIES */
+	    "FhiI:o:O:p:P:qrs:S:tTu:vVwxX:yzZ";
 
 	enum {
 		SECCOMP_OPTION = 0x100
@@ -2995,11 +2999,6 @@ timer_sighandler(int sig)
 {
 	delay_timer_expired();
 
-#ifdef ENABLE_DATASERIES
-	if (ds_module) {
-		ds_write_umask_at_start(ds_module, strace_child);
-	}
-#endif
 	if (restart_failed)
 		return;
 
@@ -3076,6 +3075,12 @@ main(int argc, char *argv[])
 {
 	setlocale(LC_ALL, "");
 	init(argc, argv);
+
+#ifdef ENABLE_DATASERIES
+	if (ds_module) {
+		ds_write_umask_at_start(ds_module, strace_child);
+	}
+#endif /* ENABLE_DATASERIES */
 
 	exit_code = !nprocs;
 
