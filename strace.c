@@ -1645,19 +1645,21 @@ init(int argc, char *argv[])
 #ifdef ENABLE_STACKTRACE
 	    "k"
 #endif
-	    "a:Ab:cCdDe:E:f"
-#ifdef ENABLE_DATASERIES
-	    "g:"
-#endif /* ENABLE_DATASERIES */
-	    "FhiI:o:O:p:P:qrs:S:tTu:vVwxX:yzZ";
+	    "a:Ab:cCdDe:E:fFhiI:o:O:p:P:qrs:S:tTu:vVwxX:yzZ";
 
 	enum {
+#ifdef ENABLE_DATASERIES 
+		DATASERIES_OPTION = 255,
+#endif /* ENABLE_DATASERIES */
 		SECCOMP_OPTION = 0x100
 	};
 	static const struct option longopts[] = {
 		{ "seccomp-bpf", no_argument, 0, SECCOMP_OPTION },
 		{ "help", no_argument, 0, 'h' },
 		{ "version", no_argument, 0, 'V' },
+#ifdef ENABLE_DATASERIES 
+		{ "dataseries", required_argument, 0, DATASERIES_OPTION},
+#endif /* ENABLE_DATASERIES */
 		{ 0, 0, 0, 0 }
 	};
 
@@ -1784,13 +1786,6 @@ init(int argc, char *argv[])
 			else
 				error_opt_arg(c, optarg);
 			break;
-#ifdef ENABLE_DATASERIES
-		case 'g':
-			// TODO: replace 'g' with 'ds'
-			ds_fname = optarg;
-			if (!ds_fname)
-				error_msg_and_die("empty dataseries filename");
-#endif /* ENABLE_DATASERIES */
 		case 'y':
 			show_fd_path++;
 			break;
@@ -1807,12 +1802,18 @@ init(int argc, char *argv[])
 		case SECCOMP_OPTION:
 			seccomp_filtering = true;
 			break;
+#ifdef ENABLE_DATASERIES
+		case DATASERIES_OPTION:
+			ds_fname = optarg;
+			if (!ds_fname)
+				error_msg_and_die("empty dataseries filename");
+			break;
+#endif /* ENABLE_DATASERIES */
 		default:
 			error_msg_and_help(NULL);
 			break;
 		}
 	}
-
 	argv += optind;
 	argc -= optind;
 
