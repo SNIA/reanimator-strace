@@ -118,7 +118,7 @@ MPERS_PRINTER_DECL(int, perf_ioctl,
 	 */
 	case PERF_EVENT_IOC_SET_FILTER:
 #ifdef ENABLE_DATASERIES
-                DS_SET_IOCTL_SIZE(byte, get_pagesize());
+                DS_SET_IOCTL_SIZEN(unsigned char, get_pagesize());
 #endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printstr_ex(tcp, arg, get_pagesize(), QUOTE_0_TERMINATED);
