@@ -22,6 +22,9 @@
 static int
 perf_ioctl_query_bpf(struct tcb *const tcp, const kernel_ulong_t arg)
 {
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(kernel_ulong_t);
+#endif /* ENABLE_DATASERIES */
 	uint32_t info;
 
 	if (entering(tcp)) {
@@ -57,6 +60,9 @@ perf_ioctl_query_bpf(struct tcb *const tcp, const kernel_ulong_t arg)
 static int
 perf_ioctl_modify_attributes(struct tcb *const tcp, const kernel_ulong_t arg)
 {
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(kernel_ulong_t);
+#endif /* ENABLE_DATASERIES */
 	tprints(", ");
 	if (!fetch_perf_event_attr(tcp, arg))
 		print_perf_event_attr(tcp, arg);
@@ -72,6 +78,9 @@ MPERS_PRINTER_DECL(int, perf_ioctl,
 	case PERF_EVENT_IOC_ENABLE:
 	case PERF_EVENT_IOC_DISABLE:
 	case PERF_EVENT_IOC_RESET:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(unsigned int);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printflags(perf_ioctl_flags, arg, "PERF_IOC_FLAG_???");
 

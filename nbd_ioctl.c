@@ -31,6 +31,9 @@ nbd_ioctl(struct tcb *const tcp, const unsigned int code,
 
 	case NBD_SET_SOCK:
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(int);
+#endif /* ENABLE_DATASERIES */
 		printfd(tcp, arg);
 		return RVAL_IOCTL_DECODED;
 
@@ -39,10 +42,16 @@ nbd_ioctl(struct tcb *const tcp, const unsigned int code,
 	case NBD_SET_SIZE_BLOCKS:
 	case NBD_SET_TIMEOUT:
 		tprints(", ");
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(kernel_ulong_t);
+#endif /* ENABLE_DATASERIES */
 		tprintf("%" PRI_klu, arg);
 		return RVAL_IOCTL_DECODED;
 
 	case NBD_SET_FLAGS:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(unsigned int);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printflags(nbd_ioctl_flags, arg, "NBD_IOC_FLAG_???");
 		return RVAL_IOCTL_DECODED;
