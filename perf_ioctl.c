@@ -78,11 +78,17 @@ MPERS_PRINTER_DECL(int, perf_ioctl,
 		return RVAL_IOCTL_DECODED;
 
 	case PERF_EVENT_IOC_REFRESH:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(int);
+#endif /* ENABLE_DATASERIES */
 		tprintf(", %d", (int) arg);
 
 		return RVAL_IOCTL_DECODED;
 
 	case PERF_EVENT_IOC_PERIOD:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(uint64_t);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printnum_int64(tcp, arg, "%" PRIu64);
 
@@ -90,12 +96,18 @@ MPERS_PRINTER_DECL(int, perf_ioctl,
 
 	case PERF_EVENT_IOC_SET_OUTPUT:
 	case PERF_EVENT_IOC_SET_BPF:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(int);
+#endif /* ENABLE_DATASERIES */
 		tprintf(", ");
 		printfd(tcp, (int) arg);
 
 		return RVAL_IOCTL_DECODED;
 
 	case PERF_EVENT_IOC_PAUSE_OUTPUT:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(kernel_ulong_t);
+#endif /* ENABLE_DATASERIES */
 		tprintf(", %" PRI_klu, arg);
 
 		return RVAL_IOCTL_DECODED;
@@ -105,6 +117,9 @@ MPERS_PRINTER_DECL(int, perf_ioctl,
 	 * due to the pointer size.
 	 */
 	case PERF_EVENT_IOC_SET_FILTER:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(byte, get_pagesize());
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printstr_ex(tcp, arg, get_pagesize(), QUOTE_0_TERMINATED);
 
@@ -117,6 +132,9 @@ MPERS_PRINTER_DECL(int, perf_ioctl,
 			return 0;
 		}
 
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(uint64_t);
+#endif /* ENABLE_DATASERIES */
 		printnum_int64(tcp, arg, "%" PRIu64);
 
 		return RVAL_IOCTL_DECODED;
