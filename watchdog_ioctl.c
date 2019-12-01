@@ -30,6 +30,9 @@ watchdog_ioctl(struct tcb *const tcp, const unsigned int code,
 		ATTRIBUTE_FALLTHROUGH;
 	case WDIOC_SETTIMEOUT:
 	case WDIOC_SETPRETIMEOUT:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(int);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printnum_int(tcp, arg, "%d");
 		break;

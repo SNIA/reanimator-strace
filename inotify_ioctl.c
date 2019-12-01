@@ -19,6 +19,9 @@ inotify_ioctl(struct tcb *const tcp, const unsigned int code,
 {
 	switch (code) {
 	case INOTIFY_IOC_SETNEXTWD:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(int);
+#endif /* ENABLE_DATASERIES */
 		tprintf(", %d", (int) arg);
 
 		return RVAL_IOCTL_DECODED;

@@ -33,11 +33,17 @@ random_ioctl(struct tcb *const tcp, const unsigned int code,
 			return 0;
 		ATTRIBUTE_FALLTHROUGH;
 	case RNDADDTOENTCNT:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(int);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printnum_int(tcp, arg, "%d");
 		break;
 
 	case RNDADDENTROPY:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(kernel_ulong_t);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (!umove_or_printaddr(tcp, arg, &info)) {
 			PRINT_FIELD_D("{", info, entropy_count);
