@@ -1,2 +1,5 @@
-REVIEWBOARD_URL = 'https://rb.fsl.cs.sunysb.edu/'
-REPOSITORY = 'fsl-strace'
+REVIEWBOARD_URL = "https://rb.fsl.cs.sunysb.edu/"
+REPOSITORY = "fsl-strace"
+REPOSITORY_TYPE = "git"
+BRANCH = "strace_integration"
+LAND_DEST_BRANCH = "strace_integration"

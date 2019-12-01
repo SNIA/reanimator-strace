@@ -22,6 +22,9 @@
 static int
 perf_ioctl_query_bpf(struct tcb *const tcp, const kernel_ulong_t arg)
 {
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(kernel_ulong_t);
+#endif /* ENABLE_DATASERIES */
 	uint32_t info;
 
 	if (entering(tcp)) {
@@ -57,6 +60,9 @@ perf_ioctl_query_bpf(struct tcb *const tcp, const kernel_ulong_t arg)
 static int
 perf_ioctl_modify_attributes(struct tcb *const tcp, const kernel_ulong_t arg)
 {
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(kernel_ulong_t);
+#endif /* ENABLE_DATASERIES */
 	tprints(", ");
 	if (!fetch_perf_event_attr(tcp, arg))
 		print_perf_event_attr(tcp, arg);
@@ -72,17 +78,26 @@ MPERS_PRINTER_DECL(int, perf_ioctl,
 	case PERF_EVENT_IOC_ENABLE:
 	case PERF_EVENT_IOC_DISABLE:
 	case PERF_EVENT_IOC_RESET:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(unsigned int);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printflags(perf_ioctl_flags, arg, "PERF_IOC_FLAG_???");
 
 		return RVAL_IOCTL_DECODED;
 
 	case PERF_EVENT_IOC_REFRESH:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(int);
+#endif /* ENABLE_DATASERIES */
 		tprintf(", %d", (int) arg);
 
 		return RVAL_IOCTL_DECODED;
 
 	case PERF_EVENT_IOC_PERIOD:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(uint64_t);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printnum_int64(tcp, arg, "%" PRIu64);
 
@@ -90,12 +105,18 @@ MPERS_PRINTER_DECL(int, perf_ioctl,
 
 	case PERF_EVENT_IOC_SET_OUTPUT:
 	case PERF_EVENT_IOC_SET_BPF:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(int);
+#endif /* ENABLE_DATASERIES */
 		tprintf(", ");
 		printfd(tcp, (int) arg);
 
 		return RVAL_IOCTL_DECODED;
 
 	case PERF_EVENT_IOC_PAUSE_OUTPUT:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(kernel_ulong_t);
+#endif /* ENABLE_DATASERIES */
 		tprintf(", %" PRI_klu, arg);
 
 		return RVAL_IOCTL_DECODED;
@@ -105,6 +126,9 @@ MPERS_PRINTER_DECL(int, perf_ioctl,
 	 * due to the pointer size.
 	 */
 	case PERF_EVENT_IOC_SET_FILTER:
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZEN(unsigned char, get_pagesize());
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printstr_ex(tcp, arg, get_pagesize(), QUOTE_0_TERMINATED);
 
@@ -117,6 +141,9 @@ MPERS_PRINTER_DECL(int, perf_ioctl,
 			return 0;
 		}
 
+#ifdef ENABLE_DATASERIES
+                DS_SET_IOCTL_SIZE(uint64_t);
+#endif /* ENABLE_DATASERIES */
 		printnum_int64(tcp, arg, "%" PRIu64);
 
 		return RVAL_IOCTL_DECODED;

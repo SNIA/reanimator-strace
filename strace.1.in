@@ -1021,7 +1021,7 @@ Print the version number of
 .BR strace .
 .TP
 .BI "\-\-dataseries " dsfile
-Write the trace output in dataseries format to the file.
+Write the trace output in DataSeries format to the .IR dsfile .
 .SS "Time specification format description"
 .PP
 Time values can be specified as a decimal floating point number
