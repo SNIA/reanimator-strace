@@ -20,6 +20,9 @@ fs_x_ioctl(struct tcb *const tcp, const unsigned int code,
 	case FITRIM: {
 		struct fstrim_range fstrim;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct fstrim_range);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (!umove_or_printaddr(tcp, arg, &fstrim))
 			tprintf("{start=%#" PRIx64

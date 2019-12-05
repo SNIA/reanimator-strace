@@ -27,6 +27,9 @@ MPERS_PRINTER_DECL(int, hdio_ioctl, struct tcb *const tcp,
 		else {
 			struct_hd_geometry geo;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct_hd_geometry);
+#endif /* ENABLE_DATASERIES */
 			tprints(", ");
 			if (!umove_or_printaddr(tcp, arg, &geo))
 				tprintf("{heads=%u, sectors=%u, "

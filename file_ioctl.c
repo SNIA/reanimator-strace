@@ -115,6 +115,9 @@ file_ioctl(struct tcb *const tcp, const unsigned int code,
 	case FICLONERANGE: { /* W */
 		struct file_clone_range args;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct file_clone_range);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
@@ -144,6 +147,9 @@ file_ioctl(struct tcb *const tcp, const unsigned int code,
 		else
 			tprints(" => ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct file_dedupe_range);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
 
@@ -186,9 +192,11 @@ file_ioctl(struct tcb *const tcp, const unsigned int code,
 		else
 			tprints(" => ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct fiemap);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
-
 		if (entering(tcp)) {
 			tprintf("{fm_start=%" PRI__u64 ", "
 				"fm_length=%" PRI__u64 ", "

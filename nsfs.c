@@ -28,6 +28,9 @@ nsfs_ioctl(struct tcb *tcp, unsigned int code, kernel_ulong_t arg)
 	case NS_GET_OWNER_UID:
 		if (entering(tcp))
 			return 0;
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(unsigned int);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (!umove_or_printaddr(tcp, arg, &uid)) {
 			printuid("[", uid);

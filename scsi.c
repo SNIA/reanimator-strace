@@ -44,6 +44,9 @@ decode_sg_scsi_id(struct tcb *const tcp, const kernel_ulong_t arg)
 	if (entering(tcp))
 		return 0;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct sg_scsi_id);
+#endif /* ENABLE_DATASERIES */
 	tprints(", ");
 	if (!umove_or_printaddr(tcp, arg, &id)) {
 		tprintf("{host_no=%d"
@@ -75,6 +78,9 @@ scsi_ioctl(struct tcb *const tcp, const unsigned int code,
 		if (entering(tcp)) {
 			uint32_t iid;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(uint32_t);
+#endif /* ENABLE_DATASERIES */
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &iid)) {
 				break;
@@ -101,6 +107,9 @@ scsi_ioctl(struct tcb *const tcp, const unsigned int code,
 	/* takes a value by pointer */
 	case SG_SCSI_RESET: {
 		unsigned int val;
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(unsigned int);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (!umove_or_printaddr(tcp, arg, &val)) {
 			tprints("[");
@@ -127,6 +136,9 @@ scsi_ioctl(struct tcb *const tcp, const unsigned int code,
 	case SG_SET_KEEP_ORPHAN:
 	case SG_SET_RESERVED_SIZE:
 	case SG_SET_TIMEOUT:
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(int);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printnum_int(tcp, arg, "%d");
 		break;
@@ -145,6 +157,9 @@ scsi_ioctl(struct tcb *const tcp, const unsigned int code,
 	case SG_GET_VERSION_NUM:
 		if (entering(tcp))
 			return 0;
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(int);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printnum_int(tcp, arg, "%d");
 		break;

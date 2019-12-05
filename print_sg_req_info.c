@@ -31,6 +31,9 @@ MPERS_PRINTER_DECL(int, decode_sg_req_info,
 	if (entering(tcp))
 		return 0;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct_sg_req_info);
+#endif /* ENABLE_DATASERIES */
 	tprints(", ");
 	if (!umove_or_printaddr(tcp, arg, &info)) {
 		tprintf("{req_state=%hhd"
