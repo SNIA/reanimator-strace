@@ -27,6 +27,9 @@ ubi_ioctl(struct tcb *const tcp, const unsigned int code,
 		if (entering(tcp)) {
 			struct ubi_mkvol_req mkvol;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct ubi_mkvol_req);
+#endif /* ENABLE_DATASERIES */
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &mkvol))
 				break;
@@ -46,6 +49,9 @@ ubi_ioctl(struct tcb *const tcp, const unsigned int code,
 		}
 		if (!syserror(tcp)) {
 			tprints(" => ");
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(int);
+#endif /* ENABLE_DATASERIES */
 			printnum_int(tcp, arg, "%d");
 		}
 		break;
@@ -53,6 +59,9 @@ ubi_ioctl(struct tcb *const tcp, const unsigned int code,
 	case UBI_IOCRSVOL: {
 		struct ubi_rsvol_req rsvol;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct ubi_rsvol_req);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &rsvol))
 			break;
@@ -66,6 +75,9 @@ ubi_ioctl(struct tcb *const tcp, const unsigned int code,
 		struct ubi_rnvol_req rnvol;
 		int c;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct ubi_rnvol_req);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &rnvol))
 			break;
@@ -89,6 +101,9 @@ ubi_ioctl(struct tcb *const tcp, const unsigned int code,
 	case UBI_IOCEBCH: {
 		struct ubi_leb_change_req leb;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct ubi_leb_change_req);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &leb))
 			break;
@@ -101,6 +116,9 @@ ubi_ioctl(struct tcb *const tcp, const unsigned int code,
 		if (entering(tcp)) {
 			struct ubi_attach_req attach;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct ubi_attach_req);
+#endif /* ENABLE_DATASERIES */
 			tprints(", ");
 			if (umove_or_printaddr(tcp, arg, &attach))
 				break;
@@ -114,6 +132,9 @@ ubi_ioctl(struct tcb *const tcp, const unsigned int code,
 		}
 		if (!syserror(tcp)) {
 			tprints(" => ");
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(int);
+#endif /* ENABLE_DATASERIES */
 			printnum_int(tcp, arg, "%d");
 		}
 		break;
@@ -121,6 +142,9 @@ ubi_ioctl(struct tcb *const tcp, const unsigned int code,
 	case UBI_IOCEBMAP: {
 		struct ubi_map_req map;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct ubi_map_req);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &map))
 			break;
@@ -133,6 +157,9 @@ ubi_ioctl(struct tcb *const tcp, const unsigned int code,
 	case UBI_IOCSETVOLPROP: {
 		struct ubi_set_vol_prop_req prop;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct ubi_set_vol_prop_req);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &prop))
 			break;
@@ -145,6 +172,9 @@ ubi_ioctl(struct tcb *const tcp, const unsigned int code,
 
 
 	case UBI_IOCVOLUP:
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(int64_t);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printnum_int64(tcp, arg, "%" PRIi64);
 		break;
@@ -154,6 +184,9 @@ ubi_ioctl(struct tcb *const tcp, const unsigned int code,
 	case UBI_IOCEBISMAP:
 	case UBI_IOCEBUNMAP:
 	case UBI_IOCRMVOL:
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(int);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printnum_int(tcp, arg, "%d");
 		break;
