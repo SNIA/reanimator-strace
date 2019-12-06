@@ -197,6 +197,7 @@ file_ioctl(struct tcb *const tcp, const unsigned int code,
 #endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
+
 		if (entering(tcp)) {
 			tprintf("{fm_start=%" PRI__u64 ", "
 				"fm_length=%" PRI__u64 ", "
