@@ -174,6 +174,9 @@ static int
 kvm_ioctl_create_vcpu(struct tcb *const tcp, const kernel_ulong_t arg)
 {
 	uint32_t cpuid = arg;
+#ifdef ENABLE_DATASERIES
+	DS_SET_IOCTL_SIZE(unsigned int);
+#endif /* ENABLE_DATASERIES */
 
 	if (entering(tcp)) {
 		tprintf(", %u", cpuid);
@@ -192,6 +195,9 @@ static int
 kvm_ioctl_set_user_memory_region(struct tcb *const tcp, const kernel_ulong_t arg)
 {
 	struct kvm_userspace_memory_region u_memory_region;
+#ifdef ENABLE_DATASERIES
+	DS_SET_IOCTL_SIZE(struct kvm_userspace_memory_region);
+#endif /* ENABLE_DATASERIES */
 
 	tprints(", ");
 	if (umove_or_printaddr(tcp, arg, &u_memory_region))
@@ -219,6 +225,9 @@ kvm_ioctl_decode_regs(struct tcb *const tcp, const unsigned int code,
 	if (code == KVM_GET_REGS && entering(tcp))
 		return 0;
 
+#ifdef ENABLE_DATASERIES
+	DS_SET_IOCTL_SIZE(kernel_ulong_t);
+#endif /* ENABLE_DATASERIES */
 	tprints(", ");
 	if (!umove_or_printaddr(tcp, arg, &regs))
 		arch_print_kvm_regs(tcp, arg, &regs);
@@ -294,6 +303,9 @@ kvm_ioctl_decode_sregs(struct tcb *const tcp, const unsigned int code,
 	if (code == KVM_GET_SREGS && entering(tcp))
 		return 0;
 
+#ifdef ENABLE_DATASERIES
+	DS_SET_IOCTL_SIZE(kernel_ulong_t);
+#endif /* ENABLE_DATASERIES */
 	tprints(", ");
 	if (!umove_or_printaddr(tcp, arg, &sregs))
 		arch_print_kvm_sregs(tcp, arg, &sregs);
@@ -308,6 +320,9 @@ kvm_ioctl_decode_check_extension(struct tcb *const tcp, const unsigned int code,
 				 const kernel_ulong_t arg)
 {
 	tprints(", ");
+#ifdef ENABLE_DATASERIES
+	DS_SET_IOCTL_SIZE(kernel_ulong_t);
+#endif /* ENABLE_DATASERIES */
 	printxval64(kvm_cap, arg, "KVM_CAP_???");
 	return RVAL_IOCTL_DECODED;
 }
