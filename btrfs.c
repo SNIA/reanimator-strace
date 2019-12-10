@@ -149,6 +149,9 @@ btrfs_print_balance(struct tcb *const tcp, const kernel_ulong_t arg, bool out)
 {
 	struct btrfs_ioctl_balance_args balance_args;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_balance_args);
+#endif /* ENABLE_DATASERIES */
 	if (umove_or_printaddr(tcp, arg, &balance_args))
 		return;
 
@@ -238,6 +241,9 @@ btrfs_print_logical_ino_container(struct tcb *tcp,
 {
 	struct btrfs_data_container container;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_data_container);
+#endif /* ENABLE_DATASERIES */
 	if (umove_or_printaddr(tcp, inodes_addr, &container))
 		return;
 
@@ -277,6 +283,9 @@ btrfs_print_ino_path_container(struct tcb *tcp,
 {
 	struct btrfs_data_container container;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_data_container);
+#endif /* ENABLE_DATASERIES */
 	if (umove_or_printaddr(tcp, fspath_addr, &container))
 		return;
 
@@ -303,6 +312,9 @@ btrfs_print_qgroup_inherit(struct tcb *const tcp, const kernel_ulong_t qgi_addr)
 {
 	struct btrfs_qgroup_inherit inherit;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_qgroup_inherit);
+#endif /* ENABLE_DATASERIES */
 	if (umove_or_printaddr(tcp, qgi_addr, &inherit))
 		return;
 
@@ -373,6 +385,9 @@ btrfs_print_tree_search(struct tcb *tcp, struct btrfs_ioctl_search_key *key,
 					tprints("...");
 					break;
 				}
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_search_header);
+#endif /* ENABLE_DATASERIES */
 				if (umove(tcp, addr, &sh)) {
 					tprints("...");
 					printaddr_comment(addr);
@@ -458,6 +473,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 	/* takes a u64 */
 	case BTRFS_IOC_DEFAULT_SUBVOL: /* W */
 	case BTRFS_IOC_WAIT_SYNC: /* W */
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(uint64_t);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		printnum_int64(tcp, arg, "%" PRIu64);
 		break;
@@ -471,6 +489,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 
 		tprints(", ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(uint64_t);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &flags))
 			break;
 
@@ -483,6 +504,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 
 		tprints(", ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(uint64_t);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &flags))
 			break;
 
@@ -517,6 +541,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 
 		tprints(", ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_defrag_range_args);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
 
@@ -541,6 +568,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 			break;
 		else
 			tprints(" => ");
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_dev_info_args);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
 
@@ -577,6 +607,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		else
 			tprints(" => ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct_btrfs_ioctl_dev_replace_args);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
 
@@ -635,6 +668,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		if (entering(tcp))
 			return 0;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_feature_flags);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &flags))
 			break;
@@ -648,6 +684,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 
 		tprints(", ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZEN(struct btrfs_ioctl_feature_flags, 2);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &flarg))
 			break;
 
@@ -665,6 +704,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		if (entering(tcp))
 			return 0;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZEN(struct btrfs_ioctl_feature_flags, 3);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &flarg))
 			break;
@@ -695,6 +737,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		if (entering(tcp))
 			return 0;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_fs_info_args);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
@@ -728,6 +773,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 			break;
 		else
 			tprints(" => ");
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_get_dev_stats);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
 
@@ -779,6 +827,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		else
 			tprints(" => ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_ino_lookup_args);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
 
@@ -814,6 +865,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		else
 			tprints(" => ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_ino_path_args);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
 
@@ -842,6 +896,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		else
 			tprints(" => ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_logical_ino_args);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
 
@@ -881,6 +938,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 	case BTRFS_IOC_QGROUP_ASSIGN: { /* W */
 		struct btrfs_ioctl_qgroup_assign_args args;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_qgroup_assign_args);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
@@ -895,6 +955,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 	case BTRFS_IOC_QGROUP_CREATE: { /* W */
 		struct btrfs_ioctl_qgroup_create_args args;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_qgroup_create_args);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
@@ -911,6 +974,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		if (entering(tcp))
 			return 0;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_qgroup_limit_args);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
@@ -924,6 +990,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 	case BTRFS_IOC_QUOTA_CTL: { /* W */
 		struct btrfs_ioctl_quota_ctl_args args;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_quota_ctl_args);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
@@ -938,6 +1007,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 	case BTRFS_IOC_QUOTA_RESCAN: { /* W */
 		struct btrfs_ioctl_quota_rescan_args args;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_quota_rescan_args);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
@@ -953,6 +1025,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		if (entering(tcp))
 			return 0;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_quota_rescan_args);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
@@ -973,6 +1048,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		else
 			tprints(" => ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct_btrfs_ioctl_received_subvol_args);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
 
@@ -1003,6 +1081,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		else
 			tprints(" => ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_scrub_args);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
 
@@ -1049,6 +1130,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		else
 			tprints(" => ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_search_args);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
 
@@ -1064,6 +1148,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		struct btrfs_ioctl_search_args_v2 args;
 		uint64_t buf_offset;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_search_args_v2);
+#endif /* ENABLE_DATASERIES */
 		if (entering(tcp))
 			tprints(", ");
 		else if (syserror(tcp)) {
@@ -1093,6 +1180,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 	case BTRFS_IOC_SEND: { /* W */
 		struct_btrfs_ioctl_send_args args;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct_btrfs_ioctl_send_args);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
@@ -1128,6 +1218,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		else
 			tprints(" => ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_space_args);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
 
@@ -1171,6 +1264,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 	case BTRFS_IOC_DEVICES_READY: { /* W */
 		struct btrfs_ioctl_vol_args args;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct btrfs_ioctl_vol_args);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
@@ -1192,6 +1288,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 		else
 			tprints(" => ");
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct_btrfs_ioctl_vol_args_v2);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, arg, &args))
 			break;
 
@@ -1222,6 +1321,9 @@ MPERS_PRINTER_DECL(int, btrfs_ioctl,
 	case BTRFS_IOC_SET_FSLABEL: { /* W */
 		char label[BTRFS_LABEL_SIZE];
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZEN(char, BTRFS_LABEL_SIZE);
+#endif /* ENABLE_DATASERIES */
 		tprints(", ");
 		if (umove_or_printaddr(tcp, arg, &label))
 			break;

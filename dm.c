@@ -141,6 +141,9 @@ dm_decode_dm_target_spec(struct tcb *const tcp, const kernel_ulong_t addr,
 
 		struct dm_target_spec s;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct dm_target_spec);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, addr + offset, &s))
 			break;
 
@@ -205,6 +208,9 @@ dm_decode_dm_target_deps(struct tcb *const tcp, const kernel_ulong_t addr,
 	if (offset_end <= offset || offset_end > ioc->data_size)
 		goto misplaced;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct dm_target_deps);
+#endif /* ENABLE_DATASERIES */
 	if (umove_or_printaddr(tcp, addr + offset, &s))
 		return;
 
@@ -264,6 +270,9 @@ dm_decode_dm_name_list(struct tcb *const tcp, const kernel_ulong_t addr,
 			break;
 		}
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct fdm_name_list);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, addr + offset, &s))
 			break;
 
@@ -293,6 +302,9 @@ dm_decode_dm_name_list(struct tcb *const tcp, const kernel_ulong_t addr,
 				(addr + offset_end + rc + 7) & ~7;
 			uint32_t event_nr;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(uint32_t);
+#endif /* ENABLE_DATASERIES */
 			if ((event_addr + sizeof(event_nr)) <=
 			    (addr + offset + s.next) &&
 			    !umove(tcp, event_addr, &event_nr))
@@ -349,6 +361,9 @@ dm_decode_dm_target_versions(struct tcb *const tcp, const kernel_ulong_t addr,
 			break;
 		}
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct dm_target_versions);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, addr + offset, &s))
 			break;
 
@@ -393,6 +408,9 @@ dm_decode_dm_target_msg(struct tcb *const tcp, const kernel_ulong_t addr,
 	if (offset_end > offset && offset_end <= ioc->data_size) {
 		struct dm_target_msg s;
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct dm_target_msg);
+#endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, addr + offset, &s))
 			return;
 
@@ -464,6 +482,9 @@ dm_known_ioctl(struct tcb *const tcp, const unsigned int code,
 		ioc = alloca(sizeof(*ioc));
 	}
 
+#ifdef ENABLE_DATASERIES
+       DS_SET_IOCTL_SIZE(struct dm_ioctl);
+#endif /* ENABLE_DATASERIES */
 	if ((umoven(tcp, arg, offsetof(struct dm_ioctl, data), ioc) < 0) ||
 	    (ioc->data_size < offsetof(struct dm_ioctl, data_size))) {
 		if (entering(tcp))
