@@ -334,10 +334,16 @@ evdev_read_ioctl(struct tcb *const tcp, const unsigned int code,
 	/* fixed-number fixed-length commands */
 	switch (code) {
 		case EVIOCGVERSION:
+#ifdef ENABLE_DATASERIES
+                        DS_SET_IOCTL_SIZE(kernel_ulong_t);
+#endif /* ENABLE_DATASERIES */
 			tprints(", ");
 			printnum_int(tcp, arg, "%#x");
 			return RVAL_IOCTL_DECODED;
 		case EVIOCGEFFECTS:
+#ifdef ENABLE_DATASERIES
+                        DS_SET_IOCTL_SIZE(unsigned int);
+#endif /* ENABLE_DATASERIES */
 			tprints(", ");
 			printnum_int(tcp, arg, "%u");
 			return RVAL_IOCTL_DECODED;
@@ -419,16 +425,25 @@ evdev_write_ioctl(struct tcb *const tcp, const unsigned int code,
 			return keycode_V2_ioctl(tcp, arg);
 # endif
 		case EVIOCRMFF:
+#ifdef ENABLE_DATASERIES
+                        DS_SET_IOCTL_SIZE(int);
+#endif /* ENABLE_DATASERIES */
 			tprintf(", %d", (int) arg);
 			return RVAL_IOCTL_DECODED;
 		case EVIOCGRAB:
 # ifdef EVIOCREVOKE
 		case EVIOCREVOKE:
 # endif
+#ifdef ENABLE_DATASERIES
+                        DS_SET_IOCTL_SIZE(kernel_ulong_t);
+#endif /* ENABLE_DATASERIES */
 			tprintf(", %" PRI_klu, arg);
 			return RVAL_IOCTL_DECODED;
 # ifdef EVIOCSCLOCKID
 		case EVIOCSCLOCKID:
+#ifdef ENABLE_DATASERIES
+                        DS_SET_IOCTL_SIZE(unsigned int);
+#endif /* ENABLE_DATASERIES */
 			tprints(", ");
 			printnum_int(tcp, arg, "%u");
 			return RVAL_IOCTL_DECODED;
