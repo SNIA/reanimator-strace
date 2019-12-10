@@ -41,7 +41,7 @@ abs_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 	struct input_absinfo absinfo;
 
 #ifdef ENABLE_DATASERIES
-       DS_SET_IOCTL_SIZE(struct input_absinfo);
+	DS_SET_IOCTL_SIZE(struct input_absinfo);
 #endif /* ENABLE_DATASERIES */
 	if (!umove_or_printaddr(tcp, arg, &absinfo)) {
 		tprintf("{value=%u"
@@ -78,7 +78,7 @@ keycode_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 	unsigned int keycode[2];
 
 #ifdef ENABLE_DATASERIES
-       DS_SET_IOCTL_SIZE(keycode);
+	DS_SET_IOCTL_SIZE(keycode);
 #endif /* ENABLE_DATASERIES */
 	if (!umove_or_printaddr(tcp, arg, &keycode)) {
 		tprintf("[%u, ", keycode[0]);
@@ -98,7 +98,7 @@ keycode_V2_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 	struct input_keymap_entry ike;
 
 #ifdef ENABLE_DATASERIES
-       DS_SET_IOCTL_SIZE(struct input_keymap_entry);
+	DS_SET_IOCTL_SIZE(struct input_keymap_entry);
 #endif /* ENABLE_DATASERIES */
 	if (umove_or_printaddr(tcp, arg, &ike))
 		return RVAL_IOCTL_DECODED;
@@ -138,7 +138,7 @@ getid_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 	struct input_id id;
 
 #ifdef ENABLE_DATASERIES
-       DS_SET_IOCTL_SIZE(struct input_id);
+	DS_SET_IOCTL_SIZE(struct input_id);
 #endif /* ENABLE_DATASERIES */
 	if (!umove_or_printaddr(tcp, arg, &id))
 		tprintf("{ID_BUS=%" PRIu16
@@ -179,7 +179,7 @@ decode_bitset(struct tcb *const tcp, const kernel_ulong_t arg,
 	char decoded_arg[size];
 
 #ifdef ENABLE_DATASERIES
-       DS_SET_IOCTL_SIZE(decoded_arg);
+	DS_SET_IOCTL_SIZE(decoded_arg);
 #endif /* ENABLE_DATASERIES */
 	if (umove_or_printaddr(tcp, arg, &decoded_arg))
 		return RVAL_IOCTL_DECODED;
@@ -242,7 +242,7 @@ mtslots_ioctl(struct tcb *const tcp, const unsigned int code,
 	int buffer[size];
 
 #ifdef ENABLE_DATASERIES
-       DS_SET_IOCTL_SIZE(buffer);
+	DS_SET_IOCTL_SIZE(buffer);
 #endif /* ENABLE_DATASERIES */
 	if (umove_or_printaddr(tcp, arg, &buffer))
 		return RVAL_IOCTL_DECODED;
@@ -335,14 +335,14 @@ evdev_read_ioctl(struct tcb *const tcp, const unsigned int code,
 	switch (code) {
 		case EVIOCGVERSION:
 #ifdef ENABLE_DATASERIES
-                        DS_SET_IOCTL_SIZE(kernel_ulong_t);
+			DS_SET_IOCTL_SIZE(kernel_ulong_t);
 #endif /* ENABLE_DATASERIES */
 			tprints(", ");
 			printnum_int(tcp, arg, "%#x");
 			return RVAL_IOCTL_DECODED;
 		case EVIOCGEFFECTS:
 #ifdef ENABLE_DATASERIES
-                        DS_SET_IOCTL_SIZE(unsigned int);
+			DS_SET_IOCTL_SIZE(unsigned int);
 #endif /* ENABLE_DATASERIES */
 			tprints(", ");
 			printnum_int(tcp, arg, "%u");
@@ -426,7 +426,7 @@ evdev_write_ioctl(struct tcb *const tcp, const unsigned int code,
 # endif
 		case EVIOCRMFF:
 #ifdef ENABLE_DATASERIES
-                        DS_SET_IOCTL_SIZE(int);
+			DS_SET_IOCTL_SIZE(int);
 #endif /* ENABLE_DATASERIES */
 			tprintf(", %d", (int) arg);
 			return RVAL_IOCTL_DECODED;
@@ -435,14 +435,14 @@ evdev_write_ioctl(struct tcb *const tcp, const unsigned int code,
 		case EVIOCREVOKE:
 # endif
 #ifdef ENABLE_DATASERIES
-                        DS_SET_IOCTL_SIZE(kernel_ulong_t);
+			DS_SET_IOCTL_SIZE(kernel_ulong_t);
 #endif /* ENABLE_DATASERIES */
 			tprintf(", %" PRI_klu, arg);
 			return RVAL_IOCTL_DECODED;
 # ifdef EVIOCSCLOCKID
 		case EVIOCSCLOCKID:
 #ifdef ENABLE_DATASERIES
-                        DS_SET_IOCTL_SIZE(unsigned int);
+			DS_SET_IOCTL_SIZE(unsigned int);
 #endif /* ENABLE_DATASERIES */
 			tprints(", ");
 			printnum_int(tcp, arg, "%u");
