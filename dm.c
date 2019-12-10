@@ -271,7 +271,7 @@ dm_decode_dm_name_list(struct tcb *const tcp, const kernel_ulong_t addr,
 		}
 
 #ifdef ENABLE_DATASERIES
-       DS_SET_IOCTL_SIZE(struct fdm_name_list);
+       DS_SET_IOCTL_SIZE(struct dm_name_list);
 #endif /* ENABLE_DATASERIES */
 		if (umove_or_printaddr(tcp, addr + offset, &s))
 			break;

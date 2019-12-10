@@ -40,6 +40,9 @@ decode_request(struct tcb *const tcp, const kernel_ulong_t arg)
 	struct sg_io_v4 sg_io;
 	static const size_t skip_iid = offsetof(struct sg_io_v4, protocol);
 
+#ifdef ENABLE_DATASERIES
+	DS_SET_IOCTL_SIZE(struct sg_io_v4);
+#endif /* ENABLE_DATASERIES */
 	tprints("{guard='Q', ");
 	if (umoven_or_printaddr(tcp, arg + skip_iid, sizeof(sg_io) - skip_iid,
 				&sg_io.protocol)) {
@@ -86,6 +89,9 @@ decode_response(struct tcb *const tcp, const kernel_ulong_t arg)
 	struct sg_io_v4 *entering_sg_io = get_tcb_priv_data(tcp);
 	struct sg_io_v4 sg_io;
 	uint32_t din_len;
+#ifdef ENABLE_DATASERIES
+	DS_SET_IOCTL_SIZE(struct sg_io_v4);
+#endif /* ENABLE_DATASERIES */
 
 	if (umove(tcp, arg, &sg_io) < 0) {
 		/* print i/o fields fetched on entering syscall */
