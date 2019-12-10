@@ -54,6 +54,9 @@ decode_request(struct tcb *const tcp, const kernel_ulong_t arg)
 	static const size_t skip_iid =
 		offsetof(struct_sg_io_hdr, dxfer_direction);
 
+#ifdef ENABLE_DATASERIES
+	DS_SET_IOCTL_SIZE(struct_sg_io_hdr);
+#endif /* ENABLE_DATASERIES */
 	tprints("{interface_id='S', ");
 	if (umoven_or_printaddr(tcp, arg + skip_iid, sizeof(sg_io) - skip_iid,
 				&sg_io.dxfer_direction)) {
@@ -92,6 +95,9 @@ decode_response(struct tcb *const tcp, const kernel_ulong_t arg)
 	struct_sg_io_hdr *entering_sg_io = get_tcb_priv_data(tcp);
 	struct_sg_io_hdr sg_io;
 
+#ifdef ENABLE_DATASERIES
+	DS_SET_IOCTL_SIZE(struct_sg_io_hdr);
+#endif /* ENABLE_DATASERIES */
 	if (umove(tcp, arg, &sg_io) < 0) {
 		/* print i/o fields fetched on entering syscall */
 		if (entering_sg_io->dxfer_direction == SG_DXFER_FROM_DEV)
