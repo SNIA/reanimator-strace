@@ -885,6 +885,7 @@ int
 syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 {
 #ifdef ENABLE_DATASERIES
+	int i;
 	/*
 	 * Arguments such as pathname or read/write buffer passed to
 	 * system calls cannot be referenced directly from tcp->u_args.

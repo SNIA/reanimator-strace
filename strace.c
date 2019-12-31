@@ -29,6 +29,9 @@
 #ifdef HAVE_PRCTL
 # include <sys/prctl.h>
 #endif
+#ifdef ENABLE_DATASERIES
+# include <sys/param.h>
+#endif /* ENABLE_DATASERIES */
 
 #include "kill_save_errno.h"
 #include "filter_seccomp.h"
