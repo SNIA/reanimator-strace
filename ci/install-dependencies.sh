@@ -1,12 +1,13 @@
 #!/bin/sh -ex
 #
-# Copyright (c) 2018 The strace developers.
+# Copyright (c) 2018-2019 The strace developers.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+j=-j`nproc` || j=
 type sudo >/dev/null 2>&1 && sudo=sudo || sudo=
-common_packages='autoconf automake faketime file gawk gcc-multilib git gzip libbluetooth-dev make xz-utils'
+common_packages='autoconf automake faketime file gawk git gzip libbluetooth-dev make xz-utils'
 
 retry_if_failed()
 {
@@ -54,24 +55,41 @@ clone_repo()
 		git clone --depth=1 ${branch:+--branch $branch} "$src" "$dst"
 }
 
+case "$TARGET" in
+	aarch64)
+		packages="$common_packages gcc-multilib-arm-linux-gnueabihf libc6-dev-armhf-cross linux-libc-dev-armhf-cross"
+		;;
+	*)
+		packages="$common_packages gcc-multilib"
+		;;
+esac
+
 case "$CC" in
 	gcc-*)
 		retry_if_failed \
 			$sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-		apt_get_install $common_packages "$CC"-multilib
+		case "$TARGET" in
+			aarch64)
+				apt_get_install $packages "$CC"-multilib-arm-linux-gnueabihf "$CC"
+				;;
+			*)
+				apt_get_install $packages "$CC"-multilib
+				;;
+		esac
 		;;
 	clang*)
-		apt_get_install $common_packages "$CC"
+		apt_get_install $packages "$CC"
 		;;
 	*)
-		apt_get_install $common_packages
+		apt_get_install $packages
 		;;
 esac
 
 case "$KHEADERS" in
 	*/*)
 		clone_repo https://github.com/"$KHEADERS" kernel ${KBRANCH-}
-		$sudo make -C kernel headers_install INSTALL_HDR_PATH=/opt/kernel
+		apt_get_install rsync
+		$sudo make $j -C kernel headers_install INSTALL_HDR_PATH=/opt/kernel
 		$sudo rm -rf kernel
 		KHEADERS_INC=/opt/kernel/include
 		;;
@@ -96,8 +114,8 @@ case "$CC" in
 					;;
 			esac
 			./configure --prefix=/opt/musl --exec-prefix=/usr ${build}
-			make
-			$sudo make install
+			make $j
+			$sudo make $j install
 		cd -
 		rm -rf musl
 		$sudo ln -s \
@@ -110,16 +128,16 @@ esac
 
 case "${STACKTRACE-}" in
 	libdw)
-		apt_get_install libdw-dev
+		apt_get_install libdw-dev libiberty-dev
 		;;
 	libunwind)
-		apt_get_install libunwind8-dev
+		apt_get_install libunwind8-dev libiberty-dev
 		;;
 esac
 
 case "${CHECK-}" in
 	coverage)
-		apt_get_install lcov
+		apt_get_install lcov python-pip python-setuptools
 		retry_if_failed \
 			pip install --user codecov
 		;;

@@ -29,43 +29,118 @@
 # include "xlat/evdev_snd.h"
 # include "xlat/evdev_switch.h"
 
+/** Added by Linux commit v2.6.38-rc1~247^2~1^2~2^2~5 */
+# ifndef INPUT_PROP_MAX
+#  define INPUT_PROP_MAX 0x1f
+# endif
 # ifndef SYN_MAX
 #  define SYN_MAX 0xf
 # endif
 
-static int
-abs_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
-{
-	tprints(", ");
+typedef struct {
+	int32_t value;
+	int32_t minimum;
+	int32_t maximum;
+	int32_t fuzz;
+	int32_t flat;
+	int32_t resolution; /**< Added by Linux commit v2.6.31-rc1~100^2~1 */
+} struct_input_absinfo;
 
-	struct input_absinfo absinfo;
+/** Added by Linux commit v2.6.37-rc1~5^2~3^2~47 */
+typedef struct {
+	uint8_t  flags;
+	uint8_t  len;
+	uint16_t index;
+	uint32_t keycode;
+	uint8_t  scancode[32];
+} struct_input_keymap_entry;
+
+/** Added by Linux commit v4.4-rc1~11^2~3^2~2 */
+typedef struct {
+	uint32_t type;
+	uint32_t codes_size;
+	uint64_t codes_ptr;
+} struct_input_mask;
+
+static_assert(sizeof(struct input_absinfo) <= sizeof(struct_input_absinfo),
+	      "Unexpected struct input_absinfo size, please update "
+	      "the decoder");
+# ifdef HAVE_STRUCT_INPUT_KEYMAP_ENTRY
+static_assert(sizeof(struct input_keymap_entry)
+	      == sizeof(struct_input_keymap_entry),
+	      "Unexpected struct input_keymap_entry size, please update "
+	      "the decoder");
+# endif
+# ifdef HAVE_STRUCT_INPUT_MASK
+static_assert(sizeof(struct input_mask) == sizeof(struct_input_mask),
+	      "Unexpected struct input_mask size, please update the decoder");
+# endif
+
+/*
+ * Has to be included after struct_* type definitions, since _IO* macros
+ * used in fallback definitions require them for sizeof().
+ */
+# define XLAT_MACROS_ONLY
+#  include "xlat/evdev_ioctl_cmds.h"
+# undef XLAT_MACROS_ONLY
+
+# ifndef EVIOCGPROP
+#  define EVIOCGPROP(len)	_IOR('E', 0x09, len)
+# endif
+# ifndef EVIOCGMTSLOTS
+#  define EVIOCGMTSLOTS(len)	_IOR('E', 0x0a, len)
+# endif
+# ifndef EVIOCGSW
+#  define EVIOCGSW(len)		_IOR('E', 0x1b, len)
+# endif
+
+static int
+abs_ioctl(struct tcb *const tcp, const unsigned int code,
+	  const kernel_ulong_t arg)
+{
+	static const size_t orig_sz = offsetofend(struct_input_absinfo, flat);
+	static const size_t res_sz = offsetofend(struct_input_absinfo,
+						 resolution);
+
+	struct_input_absinfo absinfo;
+	size_t sz = _IOC_SIZE(code);
+	size_t read_sz = MIN(sz, sizeof(absinfo));
+
+	if (sz < orig_sz)
+		return RVAL_DECODED;
+
+	tprints(", ");
 
 #ifdef ENABLE_DATASERIES
 	DS_SET_IOCTL_SIZE(struct input_absinfo);
 #endif /* ENABLE_DATASERIES */
-	if (!umove_or_printaddr(tcp, arg, &absinfo)) {
-		tprintf("{value=%u"
-			", minimum=%u, ",
-			absinfo.value,
-			absinfo.minimum);
+	if (umoven_or_printaddr(tcp, arg, read_sz, &absinfo))
+		return RVAL_IOCTL_DECODED;
 
-		if (!abbrev(tcp)) {
-			tprintf("maximum=%u"
-				", fuzz=%u"
-				", flat=%u",
-				absinfo.maximum,
-				absinfo.fuzz,
-				absinfo.flat);
-# ifdef HAVE_STRUCT_INPUT_ABSINFO_RESOLUTION
-			tprintf(", resolution=%u",
-				absinfo.resolution);
-# endif
-		} else {
-			tprints("...");
+	tprintf("{value=%u"
+		", minimum=%u, ",
+		absinfo.value,
+		absinfo.minimum);
+
+	if (!abbrev(tcp)) {
+		tprintf("maximum=%u"
+			", fuzz=%u"
+			", flat=%u",
+			absinfo.maximum,
+			absinfo.fuzz,
+			absinfo.flat);
+		if (sz >= res_sz) {
+			tprintf(", resolution=%u%s",
+				absinfo.resolution,
+				sz > res_sz ? ", ..." : "");
+		} else if (sz > orig_sz) {
+			tprints(", ...");
 		}
-
-		tprints("}");
+	} else {
+		tprints("...");
 	}
+
+	tprints("}");
 
 	return RVAL_IOCTL_DECODED;
 }
@@ -89,13 +164,12 @@ keycode_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 	return RVAL_IOCTL_DECODED;
 }
 
-# ifdef EVIOCGKEYCODE_V2
 static int
 keycode_V2_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 {
 	tprints(", ");
 
-	struct input_keymap_entry ike;
+	struct_input_keymap_entry ike;
 
 #ifdef ENABLE_DATASERIES
 	DS_SET_IOCTL_SIZE(struct input_keymap_entry);
@@ -128,7 +202,6 @@ keycode_V2_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 
 	return RVAL_IOCTL_DECODED;
 }
-# endif /* EVIOCGKEYCODE_V2 */
 
 static int
 getid_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
@@ -226,7 +299,6 @@ decode_bitset(struct tcb *const tcp, const kernel_ulong_t arg,
 	return RVAL_IOCTL_DECODED;
 }
 
-# ifdef EVIOCGMTSLOTS
 static int
 mtslots_ioctl(struct tcb *const tcp, const unsigned int code,
 	      const kernel_ulong_t arg)
@@ -260,9 +332,7 @@ mtslots_ioctl(struct tcb *const tcp, const unsigned int code,
 
 	return RVAL_IOCTL_DECODED;
 }
-# endif /* EVIOCGMTSLOTS */
 
-# if defined EVIOCGREP || defined EVIOCSREP
 static int
 repeat_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 {
@@ -273,57 +343,56 @@ repeat_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 	printpair_int(tcp, arg, "%u");
 	return RVAL_IOCTL_DECODED;
 }
-# endif /* EVIOCGREP || EVIOCSREP */
 
 static int
 bit_ioctl(struct tcb *const tcp, const unsigned int ev_nr,
 	  const kernel_ulong_t arg)
 {
 	switch (ev_nr) {
-		case 0:
-			return decode_bitset(tcp, arg, evdev_ev,
-					     EV_MAX, "EV_???");
-		case EV_KEY:
-			return decode_bitset(tcp, arg, evdev_keycode,
-					     KEY_MAX, "KEY_???");
-		case EV_REL:
-			return decode_bitset(tcp, arg, evdev_relative_axes,
-					     REL_MAX, "REL_???");
-		case EV_ABS:
-			return decode_bitset(tcp, arg, evdev_abs,
-					     ABS_MAX, "ABS_???");
-		case EV_MSC:
-			return decode_bitset(tcp, arg, evdev_misc,
-					     MSC_MAX, "MSC_???");
-		case EV_SW:
-			return decode_bitset(tcp, arg, evdev_switch,
-					     SW_MAX, "SW_???");
-		case EV_LED:
-			return decode_bitset(tcp, arg, evdev_leds,
-					     LED_MAX, "LED_???");
-		case EV_SND:
-			return decode_bitset(tcp, arg, evdev_snd,
-					     SND_MAX, "SND_???");
-		case EV_REP:
-			return decode_bitset(tcp, arg, evdev_autorepeat,
-					     REP_MAX, "REP_???");
-		case EV_FF:
-			return decode_bitset(tcp, arg, evdev_ff_types,
-					     FF_MAX, "FF_???");
-		case EV_PWR:
-			tprints(", ");
+	case 0:
+		return decode_bitset(tcp, arg, evdev_ev,
+				     EV_MAX, "EV_???");
+	case EV_KEY:
+		return decode_bitset(tcp, arg, evdev_keycode,
+				     KEY_MAX, "KEY_???");
+	case EV_REL:
+		return decode_bitset(tcp, arg, evdev_relative_axes,
+				     REL_MAX, "REL_???");
+	case EV_ABS:
+		return decode_bitset(tcp, arg, evdev_abs,
+				     ABS_MAX, "ABS_???");
+	case EV_MSC:
+		return decode_bitset(tcp, arg, evdev_misc,
+				     MSC_MAX, "MSC_???");
+	case EV_SW:
+		return decode_bitset(tcp, arg, evdev_switch,
+				     SW_MAX, "SW_???");
+	case EV_LED:
+		return decode_bitset(tcp, arg, evdev_leds,
+				     LED_MAX, "LED_???");
+	case EV_SND:
+		return decode_bitset(tcp, arg, evdev_snd,
+				     SND_MAX, "SND_???");
+	case EV_REP:
+		return decode_bitset(tcp, arg, evdev_autorepeat,
+				     REP_MAX, "REP_???");
+	case EV_FF:
+		return decode_bitset(tcp, arg, evdev_ff_types,
+				     FF_MAX, "FF_???");
+	case EV_PWR:
+		tprints(", ");
 #ifdef ENABLE_DATASERIES
 			DS_SET_IOCTL_SIZE(int);
 #endif /* ENABLE_DATASERIES */
-			printnum_int(tcp, arg, "%d");
-			return RVAL_IOCTL_DECODED;
-		case EV_FF_STATUS:
-			return decode_bitset(tcp, arg, evdev_ff_status,
-					     FF_STATUS_MAX, "FF_STATUS_???");
-		default:
-			tprints(", ");
-			printaddr(arg);
-			return RVAL_IOCTL_DECODED;
+		printnum_int(tcp, arg, "%d");
+		return RVAL_IOCTL_DECODED;
+	case EV_FF_STATUS:
+		return decode_bitset(tcp, arg, evdev_ff_status,
+				     FF_STATUS_MAX, "FF_STATUS_???");
+	default:
+		tprints(", ");
+		printaddr(arg);
+		return RVAL_IOCTL_DECODED;
 	}
 }
 
@@ -333,73 +402,63 @@ evdev_read_ioctl(struct tcb *const tcp, const unsigned int code,
 {
 	/* fixed-number fixed-length commands */
 	switch (code) {
-		case EVIOCGVERSION:
+	case EVIOCGVERSION:
+		tprints(", ");
 #ifdef ENABLE_DATASERIES
-			DS_SET_IOCTL_SIZE(kernel_ulong_t);
+		DS_SET_IOCTL_SIZE(kernel_ulong_t);
 #endif /* ENABLE_DATASERIES */
-			tprints(", ");
-			printnum_int(tcp, arg, "%#x");
-			return RVAL_IOCTL_DECODED;
-		case EVIOCGEFFECTS:
+		printnum_int(tcp, arg, "%#x");
+		return RVAL_IOCTL_DECODED;
+	case EVIOCGEFFECTS:
+		tprints(", ");
 #ifdef ENABLE_DATASERIES
-			DS_SET_IOCTL_SIZE(unsigned int);
+		DS_SET_IOCTL_SIZE(unsigned int);
 #endif /* ENABLE_DATASERIES */
-			tprints(", ");
-			printnum_int(tcp, arg, "%u");
-			return RVAL_IOCTL_DECODED;
-		case EVIOCGID:
-			return getid_ioctl(tcp, arg);
-# ifdef EVIOCGREP
-		case EVIOCGREP:
-			return repeat_ioctl(tcp, arg);
-# endif
-		case EVIOCGKEYCODE:
-			return keycode_ioctl(tcp, arg);
-# ifdef EVIOCGKEYCODE_V2
-		case EVIOCGKEYCODE_V2:
-			return keycode_V2_ioctl(tcp, arg);
-# endif
+		printnum_int(tcp, arg, "%u");
+		return RVAL_IOCTL_DECODED;
+	case EVIOCGID:
+		return getid_ioctl(tcp, arg);
+	case EVIOCGREP:
+		return repeat_ioctl(tcp, arg);
+	case EVIOCGKEYCODE:
+		return keycode_ioctl(tcp, arg);
+	case EVIOCGKEYCODE_V2:
+		return keycode_V2_ioctl(tcp, arg);
 	}
 
 	/* fixed-number variable-length commands */
 	switch (_IOC_NR(code)) {
-# ifdef EVIOCGMTSLOTS
-		case _IOC_NR(EVIOCGMTSLOTS(0)):
-			return mtslots_ioctl(tcp, code, arg);
-# endif
-		case _IOC_NR(EVIOCGNAME(0)):
-		case _IOC_NR(EVIOCGPHYS(0)):
-		case _IOC_NR(EVIOCGUNIQ(0)):
-			tprints(", ");
-			if (syserror(tcp))
-				printaddr(arg);
-			else
-				printstrn(tcp, arg, tcp->u_rval);
-			return RVAL_IOCTL_DECODED;
-# ifdef EVIOCGPROP
-		case _IOC_NR(EVIOCGPROP(0)):
-			return decode_bitset(tcp, arg, evdev_prop,
-					     INPUT_PROP_MAX, "PROP_???");
-# endif
-		case _IOC_NR(EVIOCGSND(0)):
-			return decode_bitset(tcp, arg, evdev_snd,
-					     SND_MAX, "SND_???");
-# ifdef EVIOCGSW
-		case _IOC_NR(EVIOCGSW(0)):
-			return decode_bitset(tcp, arg, evdev_switch,
-					     SW_MAX, "SW_???");
-# endif
-		case _IOC_NR(EVIOCGKEY(0)):
-			return decode_bitset(tcp, arg, evdev_keycode,
-					     KEY_MAX, "KEY_???");
-		case _IOC_NR(EVIOCGLED(0)):
-			return decode_bitset(tcp, arg, evdev_leds,
-					     LED_MAX, "LED_???");
+	case _IOC_NR(EVIOCGMTSLOTS(0)):
+		return mtslots_ioctl(tcp, code, arg);
+	case _IOC_NR(EVIOCGNAME(0)):
+	case _IOC_NR(EVIOCGPHYS(0)):
+	case _IOC_NR(EVIOCGUNIQ(0)):
+		tprints(", ");
+		if (syserror(tcp))
+			printaddr(arg);
+		else
+			printstrn(tcp, arg, tcp->u_rval);
+		return RVAL_IOCTL_DECODED;
+	case _IOC_NR(EVIOCGPROP(0)):
+		return decode_bitset(tcp, arg, evdev_prop,
+				     INPUT_PROP_MAX, "PROP_???");
+	case _IOC_NR(EVIOCGSND(0)):
+		return decode_bitset(tcp, arg, evdev_snd,
+				     SND_MAX, "SND_???");
+	case _IOC_NR(EVIOCGSW(0)):
+		return decode_bitset(tcp, arg, evdev_switch,
+				     SW_MAX, "SW_???");
+	case _IOC_NR(EVIOCGKEY(0)):
+		return decode_bitset(tcp, arg, evdev_keycode,
+				     KEY_MAX, "KEY_???");
+	case _IOC_NR(EVIOCGLED(0)):
+		return decode_bitset(tcp, arg, evdev_leds,
+				     LED_MAX, "LED_???");
 	}
 
 	/* multi-number fixed-length commands */
 	if ((_IOC_NR(code) & ~ABS_MAX) == _IOC_NR(EVIOCGABS(0)))
-		return abs_ioctl(tcp, arg);
+		return abs_ioctl(tcp, code, arg);
 
 	/* multi-number variable-length commands */
 	if ((_IOC_NR(code) & ~EV_MAX) == _IOC_NR(EVIOCGBIT(0, 0)))
@@ -414,51 +473,39 @@ evdev_write_ioctl(struct tcb *const tcp, const unsigned int code,
 {
 	/* fixed-number fixed-length commands */
 	switch (code) {
-# ifdef EVIOCSREP
-		case EVIOCSREP:
-			return repeat_ioctl(tcp, arg);
-# endif
-		case EVIOCSKEYCODE:
-			return keycode_ioctl(tcp, arg);
-# ifdef EVIOCSKEYCODE_V2
-		case EVIOCSKEYCODE_V2:
-			return keycode_V2_ioctl(tcp, arg);
-# endif
-		case EVIOCRMFF:
+	case EVIOCSREP:
+		return repeat_ioctl(tcp, arg);
+	case EVIOCSKEYCODE:
+		return keycode_ioctl(tcp, arg);
+	case EVIOCSKEYCODE_V2:
+		return keycode_V2_ioctl(tcp, arg);
+	case EVIOCRMFF:
 #ifdef ENABLE_DATASERIES
-			DS_SET_IOCTL_SIZE(int);
+		DS_SET_IOCTL_SIZE(int);
 #endif /* ENABLE_DATASERIES */
-			tprintf(", %d", (int) arg);
-			return RVAL_IOCTL_DECODED;
-		case EVIOCGRAB:
-# ifdef EVIOCREVOKE
-		case EVIOCREVOKE:
-# endif
+		tprintf(", %d", (int) arg);
+		return RVAL_IOCTL_DECODED;
+	case EVIOCGRAB:
+	case EVIOCREVOKE:
 #ifdef ENABLE_DATASERIES
-			DS_SET_IOCTL_SIZE(kernel_ulong_t);
+		DS_SET_IOCTL_SIZE(kernel_ulong_t);
 #endif /* ENABLE_DATASERIES */
-			tprintf(", %" PRI_klu, arg);
-			return RVAL_IOCTL_DECODED;
-# ifdef EVIOCSCLOCKID
-		case EVIOCSCLOCKID:
-#ifdef ENABLE_DATASERIES
-			DS_SET_IOCTL_SIZE(unsigned int);
-#endif /* ENABLE_DATASERIES */
-			tprints(", ");
-			printnum_int(tcp, arg, "%u");
-			return RVAL_IOCTL_DECODED;
-# endif
-		default: {
-			int rc = evdev_write_ioctl_mpers(tcp, code, arg);
-
-			if (rc != RVAL_DECODED)
-				return rc;
-		}
+		tprintf(", %" PRI_klu, arg);
+		return RVAL_IOCTL_DECODED;
+	case EVIOCSCLOCKID:
+		tprints(", ");
+		printnum_int(tcp, arg, "%u");
+		return RVAL_IOCTL_DECODED;
 	}
+
+	int rc = evdev_write_ioctl_mpers(tcp, code, arg);
+
+	if (rc != RVAL_DECODED)
+		return rc;
 
 	/* multi-number fixed-length commands */
 	if ((_IOC_NR(code) & ~ABS_MAX) == _IOC_NR(EVIOCSABS(0)))
-		return abs_ioctl(tcp, arg);
+		return abs_ioctl(tcp, code, arg);
 
 	return 0;
 }
@@ -474,14 +521,14 @@ evdev_ioctl(struct tcb *const tcp,
 	    const unsigned int code, const kernel_ulong_t arg)
 {
 	switch (_IOC_DIR(code)) {
-		case _IOC_READ:
-			if (entering(tcp))
-				return 0;
-			return evdev_read_ioctl(tcp, code, arg);
-		case _IOC_WRITE:
-			return evdev_write_ioctl(tcp, code, arg) | RVAL_DECODED;
-		default:
-			return RVAL_DECODED;
+	case _IOC_READ:
+		if (entering(tcp))
+			return 0;
+		return evdev_read_ioctl(tcp, code, arg);
+	case _IOC_WRITE:
+		return evdev_write_ioctl(tcp, code, arg) | RVAL_DECODED;
+	default:
+		return RVAL_DECODED;
 	}
 }
 

@@ -191,7 +191,7 @@ ipc_msg-Xabbrev	+ipc.sh -Xabbrev -a26
 ipc_msg-Xraw	+ipc.sh -Xraw -a16
 ipc_msg-Xverbose	+ipc.sh -Xverbose -a34
 ipc_msgbuf-Xabbrev	+ipc_msgbuf.test -Xabbrev
-ipc_msgbuf-Xraw	+ipc_msgbuf.test -Xraw -a20
+ipc_msgbuf-Xraw	+ipc_msgbuf.test -Xraw -a19
 ipc_msgbuf-Xverbose	+ipc_msgbuf.test -Xverbose
 ipc_sem	+ipc.sh -a29
 ipc_sem-Xabbrev	+ipc.sh -Xabbrev -a29
@@ -449,7 +449,9 @@ seccomp-filter-v	-v -e trace=seccomp
 seccomp_get_action_avail	-e trace=seccomp
 select	-a36
 select-P	-a36 -e trace=select -P /dev/full 9>>/dev/full
-semop	-a32 -e trace=semop,semtimedop
+semop	-a32
+semop-indirect	-a32 -e trace=semop
+semtimedop
 sendfile	-a27
 sendfile64	-a29
 set_mempolicy	-a34 -s3

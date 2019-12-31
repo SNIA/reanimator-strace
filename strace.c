@@ -94,6 +94,15 @@ static int opt_intr;
 /* We play with signal mask only if this mode is active: */
 #define interactive (opt_intr == INTR_WHILE_WAIT)
 
+enum {
+	DAEMONIZE_NONE        = 0,
+	DAEMONIZE_GRANDCHILD  = 1,
+	DAEMONIZE_NEW_PGROUP  = 2,
+	DAEMONIZE_NEW_SESSION = 3,
+
+	DAEMONIZE_OPTS_GUARD__,
+	MAX_DAEMONIZE_OPTS    = DAEMONIZE_OPTS_GUARD__ - 1
+};
 /*
  * daemonized_tracer supports -D option.
  * With this option, strace forks twice.
@@ -106,7 +115,7 @@ static int opt_intr;
  * wait() etc. Without -D, strace process gets lodged in between,
  * disrupting parent<->child link.
  */
-static bool daemonized_tracer;
+static unsigned int daemonized_tracer;
 
 static int post_attach_sigstop = TCB_IGNORE_ONE_SIGSTOP;
 #define use_seize (post_attach_sigstop == 0)
@@ -245,10 +254,10 @@ usage(void)
 usage: strace [-ACdffhi" K_OPT "qqrtttTvVwxxyyzZ] [-I n] [-b execve] [-e expr]...\n\
               [-a column] [-o file] [-s strsize] [-X format] [-P path]...\n\
               [-p pid]... [--seccomp-bpf]\n\
-	      { -p pid | [-D] [-E var=val]... [-u username] PROG [ARGS] }\n\
+              { -p pid | [-DDD] [-E var=val]... [-u username] PROG [ARGS] }\n\
    or: strace -c[dfwzZ] [-I n] [-b execve] [-e expr]... [-O overhead]\n\
               [-S sortby] [-P path]... [-p pid]... [--seccomp-bpf]\n\
-              { -p pid | [-D] [-E var=val]... [-u username] PROG [ARGS] }\n\
+              { -p pid | [-DDD] [-E var=val]... [-u username] PROG [ARGS] }\n\
 \n\
 Output format:\n\
   -A             open the file provided in the -o option in append mode\n\
@@ -296,7 +305,9 @@ Filtering:\n\
 \n\
 Tracing:\n\
   -b execve      detach on execve syscall\n\
-  -D             run tracer process as a detached grandchild, not as parent\n\
+  -D             run tracer process as a grandchild, not as a parent\n\
+  -DD            run tracer process in a separate process group\n\
+  -DDD           run tracer process in a separate session\n\
   -f             follow forks\n\
   -ff            follow forks with output into separate files\n\
   -I interruptible\n\
@@ -419,7 +430,7 @@ set_cloexec_flag(int fd)
 {
 	int flags, newflags;
 
-	flags = fcntl(fd, F_GETFD);
+	flags = fcntl_fd(fd, F_GETFD);
 	if (flags < 0) {
 		/* Can happen only if fd is bad.
 		 * Should never happen: if it does, we have a bug
@@ -433,7 +444,7 @@ set_cloexec_flag(int fd)
 	if (flags == newflags)
 		return;
 
-	if (fcntl(fd, F_SETFD, newflags)) /* never fails */
+	if (fcntl_fd(fd, F_SETFD, newflags)) /* never fails */
 		perror_msg_and_die("fcntl(%d, F_SETFD, %#x)", fd, newflags);
 }
 
@@ -1157,6 +1168,27 @@ startup_attach(void)
 		/* grandchild */
 		/* We will be the tracer process. Remember our new pid: */
 		strace_tracer_pid = getpid();
+
+		switch (daemonized_tracer) {
+		case DAEMONIZE_NEW_PGROUP:
+			/*
+			 * If -D is passed twice, create a new process group,
+			 * so we won't be killed by kill(0, ...).
+			 */
+			if (setpgid(0, 0) < 0)
+				perror_msg_and_die("Cannot create a new"
+						   " process group");
+			break;
+		case DAEMONIZE_NEW_SESSION:
+			/*
+			 * If -D is passed thrice, create a new session,
+			 * so we won't be killed upon session termination.
+			 */
+			if (setsid() < 0)
+				perror_msg_and_die("Cannot create a new"
+						   " session");
+			break;
+		}
 	}
 
 	for (tcbi = 0; tcbi < tcbtabsize; tcbi++) {
@@ -1695,7 +1727,7 @@ init(int argc, char *argv[])
 			debug_flag = 1;
 			break;
 		case 'D':
-			daemonized_tracer = 1;
+			daemonized_tracer++;
 			break;
 		case 'e':
 			qualify(optarg);
@@ -1823,6 +1855,17 @@ init(int argc, char *argv[])
 
 	if (!argc && daemonized_tracer) {
 		error_msg_and_help("PROG [ARGS] must be specified with -D");
+	}
+
+	if (daemonized_tracer > (unsigned int) MAX_DAEMONIZE_OPTS)
+		error_msg_and_help("Too many -D's (%u), maximum supported -D "
+				   "count is %d",
+				   daemonized_tracer, MAX_DAEMONIZE_OPTS);
+
+	if (seccomp_filtering && detach_on_execve) {
+		error_msg("--seccomp-bpf is not enabled because"
+			  " it is not compatible with -b");
+		seccomp_filtering = false;
 	}
 
 	if (seccomp_filtering) {
@@ -3011,10 +3054,6 @@ timer_sighandler(int sig)
 	errno = saved_errno;
 }
 
-#ifdef ENABLE_COVERAGE_GCOV
-extern void __gcov_flush(void);
-#endif
-
 static void ATTRIBUTE_NORETURN
 terminate(void)
 {
@@ -3041,18 +3080,14 @@ terminate(void)
 		/* Child was killed by a signal, mimic that.  */
 		exit_code &= 0xff;
 		signal(exit_code, SIG_DFL);
-#ifdef ENABLE_COVERAGE_GCOV
-		__gcov_flush();
-#endif
+		GCOV_DUMP;
 		raise(exit_code);
 
 		/* Unblock the signal.  */
 		sigset_t mask;
 		sigemptyset(&mask);
 		sigaddset(&mask, exit_code);
-#ifdef ENABLE_COVERAGE_GCOV
-		__gcov_flush();
-#endif
+		GCOV_DUMP;
 		sigprocmask(SIG_UNBLOCK, &mask, NULL);
 
 		/* Paranoia - what if this signal is not fatal?

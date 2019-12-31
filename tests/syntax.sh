@@ -3,7 +3,7 @@
 # Define syntax testing primitives.
 #
 # Copyright (c) 2016 Dmitry V. Levin <ldv@altlinux.org>
-# Copyright (c) 2016-2018 The strace developers.
+# Copyright (c) 2016-2019 The strace developers.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
@@ -50,10 +50,14 @@ __EOF__
 
 check_h()
 {
-	local pattern="$1"; shift
-	cat > "$EXP" << __EOF__
-$STRACE_EXE: $pattern
-Try '$STRACE_EXE -h' for more information.
-__EOF__
+	local patterns="$1"; shift
+	{
+		local pattern
+		printf '%s\n' "$patterns" |
+			while read -r pattern; do
+				printf '%s: %s\n' "$STRACE_EXE" "$pattern"
+			done
+		printf "Try '%s -h' for more information.\\n" "$STRACE_EXE"
+	} > "$EXP"
 	check_exit_status_and_stderr "$@"
 }

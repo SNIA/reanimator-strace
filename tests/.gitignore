@@ -20,6 +20,7 @@ attach-f-p-cmd
 attach-p-cmd-cmd
 attach-p-cmd-p
 block_reset_raise_run
+block_reset_run
 bpf
 bpf-obj_get_info_by_fd
 bpf-obj_get_info_by_fd-prog
@@ -537,6 +538,8 @@ seccomp_get_action_avail
 select
 select-P
 semop
+semop-indirect
+semtimedop
 sendfile
 sendfile64
 set_mempolicy
@@ -635,6 +638,7 @@ timer_xettime
 timerfd_xettime
 times
 times-fail
+tracer_ppid_pgid_sid
 truncate
 truncate64
 ugetrlimit

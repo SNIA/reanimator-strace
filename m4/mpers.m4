@@ -68,6 +68,21 @@ pushdef([st_cv_cc], [st_cv_$1_cc])
 pushdef([st_cv_runtime], [st_cv_$1_runtime])
 pushdef([st_cv_mpers], [st_cv_$1_mpers])
 
+pushdef([EXEEXT], MPERS_NAME[_EXEEXT])dnl
+pushdef([OBJEXT], MPERS_NAME[_OBJEXT])dnl
+pushdef([LDFLAGS], [LDFLAGS_FOR_]MPERS_NAME)dnl
+pushdef([WARN_CFLAGS], [WARN_CFLAGS_FOR_]MPERS_NAME)dnl
+
+st_SAVE_VAR([CC])
+st_SAVE_VAR([CPP])
+st_SAVE_VAR([CFLAGS])
+st_SAVE_VAR([CPPFLAGS])
+
+CC=[$CC_FOR_]MPERS_NAME
+CPP=[$CPP_FOR_]MPERS_NAME
+CFLAGS=[$CFLAGS_FOR_]MPERS_NAME
+CPPFLAGS=[$CPPFLAGS_FOR_]MPERS_NAME
+
 case "$arch" in
 	[$2])
 	case "$enable_mpers" in
@@ -84,26 +99,29 @@ case "$arch" in
 			  AC_MSG_NOTICE([Created empty gnu_stubs])
 			  IFLAG=-I.])
 	popdef([gnu_stubs])
+	saved_CPPFLAGS="$CPPFLAGS"
+	CPPFLAGS="$CPPFLAGS${IFLAG:+ }$IFLAG"
 	saved_CFLAGS="$CFLAGS"
-	CFLAGS="$CFLAGS MPERS_CFLAGS $IFLAG"
-	AC_CACHE_CHECK([for mpers_name personality compile support], [st_cv_cc],
-		[AC_COMPILE_IFELSE([AC_LANG_SOURCE([[#include <stdint.h>
-						     int main(){return 0;}]])],
+	CFLAGS="$CFLAGS MPERS_CFLAGS"
+	AC_CACHE_CHECK([for mpers_name personality compile support (using $CC $CPPFLAGS $CFLAGS)],
+		[st_cv_cc],
+		[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <stdint.h>]],
+						    [[return 0]])],
 				   [st_cv_cc=yes],
 				   [st_cv_cc=no])])
 	if test $st_cv_cc = yes; then
 		AC_CACHE_CHECK([for mpers_name personality runtime support],
 			[st_cv_runtime],
-			[AC_RUN_IFELSE([AC_LANG_SOURCE([[#include <stdint.h>
-							 int main(){return 0;}]])],
+			[AC_RUN_IFELSE([AC_LANG_PROGRAM([[#include <stdint.h>]],
+							[[return 0]])],
 				       [st_cv_runtime=yes],
 				       [st_cv_runtime=no],
 				       [st_cv_runtime=no])])
 		AC_CACHE_CHECK([whether mpers.sh mpers_name MPERS_CFLAGS works],
 			[st_cv_mpers],
 			[if READELF="$READELF" \
-			    CC="$CC" CPP="$CPP" CPPFLAGS="$CPPFLAGS $IFLAG" \
-			    $srcdir/mpers_test.sh [$1] MPERS_CFLAGS; then
+			    CC="$CC" CPP="$CPP" CPPFLAGS="$CPPFLAGS" \
+			    $srcdir/mpers_test.sh [$1] "MPERS_CFLAGS"; then
 				st_cv_mpers=yes
 			 else
 				st_cv_mpers=no
@@ -132,6 +150,7 @@ case "$arch" in
 			fi
 		fi
 	fi
+	CPPFLAGS="$saved_CPPFLAGS"
 	CFLAGS="$saved_CFLAGS"
 	;;
 
@@ -161,6 +180,16 @@ esac
 
 AM_CONDITIONAL(HAVE_RUNTIME, [test "$st_cv_mpers$st_cv_runtime" = yesyes])
 AM_CONDITIONAL(HAVE_MPERS, [test "$st_cv_mpers" = yes])
+
+st_RESTORE_VAR([CC])
+st_RESTORE_VAR([CPP])
+st_RESTORE_VAR([CFLAGS])
+st_RESTORE_VAR([CPPFLAGS])
+
+popdef([WARN_CFLAGS])dnl
+popdef([LDFLAGS])dnl
+popdef([OBJEXT])dnl
+popdef([EXEEXT])dnl
 
 popdef([st_cv_mpers])
 popdef([st_cv_runtime])

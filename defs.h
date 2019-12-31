@@ -343,13 +343,13 @@ struct tcb {
 	uint64_t clone_dsid;	/* data series id is going to be used in clone */
 #endif /* ENABLE_DATASERIES */
 	int qual_flg;		/* qual_flags[scno] or DEFAULT_QUAL_FLAGS + RAW */
+# if SUPPORTED_PERSONALITIES > 1
+	unsigned int currpers;	/* Personality at the time of scno update */
+# endif
 	unsigned long u_error;	/* Error code */
 	kernel_ulong_t scno;	/* System call number */
 	kernel_ulong_t u_arg[MAX_ARGS];	/* System call arguments */
 	kernel_long_t u_rval;	/* Return value */
-# if SUPPORTED_PERSONALITIES > 1
-	unsigned int currpers;	/* Personality at the time of scno update */
-# endif
 	int sys_func_rval;	/* Syscall entry parser's return value */
 	int curcol;		/* Output column for this process */
 	FILE *outf;		/* Output file for this process */
@@ -899,18 +899,14 @@ enum xlat_style_private_flag_bits {
 	PXF_DEFAULT_STR_BIT,
 };
 
-# define FLAG_(name_) name_ = 1 << name_##_BIT
-
 enum xlat_style_private_flags {
 	/* print_array */
-	FLAG_(PAF_PRINT_INDICES),
-	FLAG_(PAF_ARRAY_TRUNCATED),
+	FLAG(PAF_PRINT_INDICES),
+	FLAG(PAF_ARRAY_TRUNCATED),
 
 	/* print_xlat */
-	FLAG_(PXF_DEFAULT_STR),
+	FLAG(PXF_DEFAULT_STR),
 };
-
-# undef FLAG_
 
 /** Print a value in accordance with xlat formatting settings. */
 extern void print_xlat_ex(uint64_t val, const char *str, enum xlat_style style);
@@ -1595,6 +1591,17 @@ extern unsigned nioctlents;
 extern const unsigned int nsyscall_vec[SUPPORTED_PERSONALITIES];
 extern const struct_sysent *const sysent_vec[SUPPORTED_PERSONALITIES];
 extern struct inject_opts *inject_vec[SUPPORTED_PERSONALITIES];
+
+# ifdef ENABLE_COVERAGE_GCOV
+#  ifdef HAVE_GCOV_H
+#   include <gcov.h>
+#  else
+extern void __gcov_dump(void);
+#  endif
+#  define GCOV_DUMP __gcov_dump()
+# else
+#  define GCOV_DUMP
+# endif
 
 # ifdef IN_MPERS_BOOTSTRAP
 /* Transform multi-line MPERS_PRINTER_DECL statements to one-liners.  */
