@@ -30,7 +30,6 @@
 # include <unistd.h>
 # include <stdlib.h>
 # include <stdio.h>
-
 /* Open-coding isprint(ch) et al proved more efficient than calling
  * generalized libc interface. We don't *want* to do non-ASCII anyway.
  */
@@ -583,33 +582,6 @@ extern unsigned os_release;
 extern DataSeriesOutputModule *ds_module;
 extern int get_proc_info(struct tcb *tcp);
 #endif /* ENABLE_DATASERIES */
-
-void error_msg(const char *fmt, ...) ATTRIBUTE_FORMAT((printf, 1, 2));
-void perror_msg(const char *fmt, ...) ATTRIBUTE_FORMAT((printf, 1, 2));
-void error_msg_and_die(const char *fmt, ...)
-	ATTRIBUTE_FORMAT((printf, 1, 2)) ATTRIBUTE_NORETURN;
-void error_msg_and_help(const char *fmt, ...)
-	ATTRIBUTE_FORMAT((printf, 1, 2)) ATTRIBUTE_NORETURN;
-void perror_msg_and_die(const char *fmt, ...)
-	ATTRIBUTE_FORMAT((printf, 1, 2)) ATTRIBUTE_NORETURN;
-void die_out_of_memory(void) ATTRIBUTE_NORETURN;
-
-void *xmalloc(size_t size) ATTRIBUTE_MALLOC ATTRIBUTE_ALLOC_SIZE((1));
-void *xcalloc(size_t nmemb, size_t size)
-	ATTRIBUTE_MALLOC ATTRIBUTE_ALLOC_SIZE((1, 2));
-void *xreallocarray(void *ptr, size_t nmemb, size_t size)
-	ATTRIBUTE_ALLOC_SIZE((2, 3));
-char *xstrdup(const char *str) ATTRIBUTE_MALLOC;
-
-#if USE_CUSTOM_PRINTF
-/*
- * See comment in vsprintf.c for allowed formats.
- * Short version: %h[h]u, %zu, %tu are not allowed, use %[l[l]]u.
- */
-int strace_vfprintf(FILE *fp, const char *fmt, va_list args);
-#else
-# define strace_vfprintf vfprintf
-#endif
 
 extern int read_int_from_file(struct tcb *, const char *, int *);
 

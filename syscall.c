@@ -704,7 +704,7 @@ syscall_entering_finish(struct tcb *tcp, int res)
 	 */
 	if (ds_module) {
 		clock_gettime(CLOCK_MONOTONIC, &tcp->etime);
-		// Initialize v_args and common_fields with NULL
+		/* initialize v_args and common_fields with NULL */
 		memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
 		memset(common_fields, 0, sizeof(void *)
 					 * DS_NUM_COMMON_FIELDS);
@@ -724,9 +724,10 @@ syscall_entering_finish(struct tcb *tcp, int res)
 						&tcp->scno;
 
 		/*
-		 * Linux has a unique implementation of threads. To the Linux kernel,
-		 * there is no concept of a thread. Linux implements all threads as standard processes.
-		 * Therefore, pid is same as tid.
+		 * Linux has a unique implementation of threads.  To the
+		 * Linux kernel, there is no concept of a thread.  Linux
+		 * implements all threads as standard processes.  Therefore,
+		 * pid is same as tid.
 		 */
 		common_fields[DS_COMMON_FIELD_EXECUTING_TID] =
 						&tcp->pid;
@@ -883,7 +884,6 @@ print_syscall_resume(struct tcb *tcp)
 int
 syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 {
-	int i;
 #ifdef ENABLE_DATASERIES
 	/*
 	 * Arguments such as pathname or read/write buffer passed to
@@ -1084,7 +1084,6 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 	if (stack_trace_enabled)
 		unwind_tcb_print(tcp);
 #endif
-
 #ifdef ENABLE_DATASERIES
 	if (ds_module) {
 		/*
@@ -1092,7 +1091,10 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 		 * is being traced.
 		 */
 
-		// First, initialize v_args and common_fields with NULL arguments.
+		/*
+		 * First, initialize v_args and common_fields with NULL
+		 * arguments.
+		 */
 		memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
 		memset(common_fields, 0, sizeof(void *) * DS_NUM_COMMON_FIELDS);
 
@@ -1105,9 +1107,10 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 		common_fields[DS_COMMON_FIELD_SYSCALL_NUM] = &tcp->scno;
 		common_fields[DS_COMMON_FIELD_BUFFER_NOT_CAPTURED] = (void *) false;
 		/*
-		 * Linux has a unique implementation of threads. To the Linux kernel,
-		 * there is no concept of a thread. Linux implements all threads as standard processes.
-		 * Therefore, pid is same as tid.
+		 * Linux has a unique implementation of threads.  To the
+		 * Linux kernel, there is no concept of a thread.  Linux
+		 * implements all threads as standard processes.  Therefore,
+		 * pid is same as tid.
 		 */
 		common_fields[DS_COMMON_FIELD_EXECUTING_TID] = &tcp->pid;
 		switch (tcp->s_ent->sen) {
@@ -1596,12 +1599,13 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 						common_fields, v_args);
 				break;
 				/*
-				 * NOTE: support for tracing the accept(2), getsockname(2)
-				 * and getpeername(2) system calls is incomplete.  We do
-				 * not currently record the struct sockaddr buffer and it
-				 * is set as NULL in ds_module for now.  Nor do we record
-				 * the value of the buffer's original length on syscall
-				 * entry.
+				 * NOTE: support for tracing the accept(2),
+				 * getsockname(2) and getpeername(2) system
+				 * calls is incomplete.  We do not currently
+				 * record the struct sockaddr buffer and it
+				 * is set as NULL in ds_module for now.  Nor
+				 * do we record the value of the buffer's
+				 * original length on syscall entry.
 				 */
 			case SEN_accept:  /* Accept system call */
 				if ((!tcp->u_arg[2]) ||
@@ -1658,10 +1662,13 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 						common_fields, v_args);
 				break;
 				/*
-				 * NOTE: support for tracing the getsockopt(2) system call is
-				 * incomplete.  We do not currently record the optval buffer
-				 * and it is set as NULL in ds_module for now.  Nor do we record
-				 * the value of the buffer's original length on syscall entry.
+				 * NOTE: support for tracing the
+				 * getsockopt(2) system call is incomplete.
+				 * We do not currently record the optval
+				 * buffer and it is set as NULL in ds_module
+				 * for now.  Nor do we record the value of
+				 * the buffer's original length on syscall
+				 * entry.
 				 */
 			case SEN_getsockopt: /* getsockopt system call */
 				if ((!tcp->u_arg[4]) ||
@@ -1680,8 +1687,8 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 						common_fields, v_args);
 				break;
 				/*
-				 * NOTE: support for replaying the recv(2) system call is
-				 * incomplete.
+				 * NOTE: support for replaying the recv(2)
+				 * system call is incomplete.
 				 */
 			case SEN_recv: /* recv system call */
 				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
@@ -1690,8 +1697,8 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 						common_fields, v_args);
 				break;
 				/*
-				 * NOTE: support for replaying the recvfrom(2) system call is
-				 * incomplete.
+				 * NOTE: support for replaying the
+				 * recvfrom(2) system call is incomplete.
 				 */
 			case SEN_recvfrom: /* recvfrom system call */
 				v_args[0] = ds_get_buffer(tcp, tcp->u_arg[1],
@@ -1706,8 +1713,8 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 				v_args[1] = NULL;
 				break;
 				/*
-				 * NOTE: support for replaying the recvmsg(2) system call is
-				 * incomplete.
+				 * NOTE: support for replaying the
+				 * recvmsg(2) system call is incomplete.
 				 */
 			case SEN_recvmsg: /* recvmsg system call*/
 				msg = ds_get_buffer(tcp, tcp->u_arg[1],
@@ -1750,9 +1757,10 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 						common_fields, v_args);
 				break;
 				/*
-				 * NOTE: support for tracing the sendmsg system call is
-				 * incomplete.  Currently, we do not record all the
-				 * fields in the struct msghdr.
+				 * NOTE: support for tracing the sendmsg
+				 * system call is incomplete.  Currently, we
+				 * do not record all the fields in the
+				 * struct msghdr.
 				 */
 			case SEN_sendmsg: /* sendmsg system call */
 				msg = ds_get_buffer(tcp, tcp->u_arg[1],

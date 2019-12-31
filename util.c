@@ -1471,7 +1471,6 @@ read_int_from_file(struct tcb *tcp, const char *const fname, int *const pvalue)
 	*pvalue = (int) lval;
 	return 0;
 }
-
 #ifdef ENABLE_DATASERIES
 /*
  * This function retrieves the path string passed as an argument to

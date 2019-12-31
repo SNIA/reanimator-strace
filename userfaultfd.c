@@ -52,6 +52,7 @@ uffdio_ioctl(struct tcb *const tcp, const unsigned int code,
 	case UFFDIO_API: {
 		uint64_t *entering_features;
 		struct uffdio_api ua;
+
 #ifdef ENABLE_DATASERIES
 		DS_SET_IOCTL_SIZE(struct uffdio_api);
 #endif /* ENABLE_DATASERIES */
@@ -92,6 +93,7 @@ uffdio_ioctl(struct tcb *const tcp, const unsigned int code,
 
 	case UFFDIO_COPY: {
 		struct uffdio_copy uc;
+
 #ifdef ENABLE_DATASERIES
 		DS_SET_IOCTL_SIZE(struct uffdio_copy);
 #endif /* ENABLE_DATASERIES */
@@ -118,6 +120,7 @@ uffdio_ioctl(struct tcb *const tcp, const unsigned int code,
 
 	case UFFDIO_REGISTER: {
 		struct uffdio_register ur;
+
 #ifdef ENABLE_DATASERIES
 		DS_SET_IOCTL_SIZE(struct uffdio_register);
 #endif /* ENABLE_DATASERIES */
@@ -147,6 +150,7 @@ uffdio_ioctl(struct tcb *const tcp, const unsigned int code,
 	case UFFDIO_UNREGISTER:
 	case UFFDIO_WAKE: {
 		struct uffdio_range ura;
+
 #ifdef ENABLE_DATASERIES
 		DS_SET_IOCTL_SIZE(struct uffdio_range);
 #endif /* ENABLE_DATASERIES */
@@ -160,6 +164,7 @@ uffdio_ioctl(struct tcb *const tcp, const unsigned int code,
 
 	case UFFDIO_ZEROPAGE: {
 		struct uffdio_zeropage uz;
+
 #ifdef ENABLE_DATASERIES
 		DS_SET_IOCTL_SIZE(struct uffdio_zeropage);
 #endif /* ENABLE_DATASERIES */

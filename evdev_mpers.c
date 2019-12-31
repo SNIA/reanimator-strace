@@ -45,6 +45,7 @@ ff_effect_ioctl(struct tcb *const tcp, const kernel_ulong_t arg)
 	tprints(", ");
 
 	struct_ff_effect ffe;
+
 #ifdef ENABLE_DATASERIES
                 DS_SET_IOCTL_SIZE(kernel_ulong_t);
 #endif /* ENABLE_DATASERIES */

@@ -11,7 +11,6 @@
 
 #include "defs.h"
 #include <stdarg.h>
-#include <sys/param.h>
 #include <limits.h>
 #include <fcntl.h>
 #include "ptrace.h"
@@ -330,7 +329,7 @@ Miscellaneous:\n\
   -V, --version  print version\n\
 "
 #ifdef ENABLE_DATASERIES
-"  -ds DSFILE      write DataSeries output to DSFILE instead of human readable to stderr (experimental)\n\
+"  --dataseries DSFILE      write DataSeries output to DSFILE instead of human readable to stderr (experimental)\n\
 "
 #endif /* ENABLE_DATASERIES */
 /* ancient, no one should use it
@@ -1680,7 +1679,7 @@ init(int argc, char *argv[])
 	    "a:Ab:cCdDe:E:fFhiI:o:O:p:P:qrs:S:tTu:vVwxX:yzZ";
 
 	enum {
-#ifdef ENABLE_DATASERIES 
+#ifdef ENABLE_DATASERIES
 		DATASERIES_OPTION = 255,
 #endif /* ENABLE_DATASERIES */
 		SECCOMP_OPTION = 0x100
@@ -1689,7 +1688,7 @@ init(int argc, char *argv[])
 		{ "seccomp-bpf", no_argument, 0, SECCOMP_OPTION },
 		{ "help", no_argument, 0, 'h' },
 		{ "version", no_argument, 0, 'V' },
-#ifdef ENABLE_DATASERIES 
+#ifdef ENABLE_DATASERIES
 		{ "dataseries", required_argument, 0, DATASERIES_OPTION},
 #endif /* ENABLE_DATASERIES */
 		{ 0, 0, 0, 0 }
