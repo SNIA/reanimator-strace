@@ -11,25 +11,25 @@
 #ifndef STRACE_DEFS_H
 # define STRACE_DEFS_H
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
+# ifdef HAVE_CONFIG_H
+#  include "config.h"
+# endif
 
-#ifdef ENABLE_DATASERIES
-# include <strace2ds.h>
-# include <utime.h>
-# include <limits.h>
-#endif /* ENABLE_DATASERIES */
+# ifdef ENABLE_DATASERIES
+#  include <strace2ds.h>
+#  include <utime.h>
+#  include <limits.h>
+# endif /* ENABLE_DATASERIES */
 
-#include <features.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <sys/types.h>
-#include <stddef.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
+# include <features.h>
+# include <stdbool.h>
+# include <stdint.h>
+# include <inttypes.h>
+# include <sys/types.h>
+# include <stddef.h>
+# include <unistd.h>
+# include <stdlib.h>
+# include <stdio.h>
 
 /* Open-coding isprint(ch) et al proved more efficient than calling
  * generalized libc interface. We don't *want* to do non-ASCII anyway.
