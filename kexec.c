@@ -1,28 +1,9 @@
 /*
  * Copyright (c) 2014-2015 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2014-2018 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "defs.h"
@@ -40,10 +21,10 @@
 static bool
 print_seg(struct tcb *tcp, void *elem_buf, size_t elem_size, void *data)
 {
-	const unsigned long *seg;
-	unsigned long seg_buf[4];
+	const kernel_ulong_t *seg;
+	kernel_ulong_t seg_buf[4];
 
-        if (elem_size < sizeof(seg_buf)) {
+	if (elem_size < sizeof(seg_buf)) {
 		unsigned int i;
 
 		for (i = 0; i < ARRAY_SIZE(seg_buf); ++i)
@@ -55,47 +36,46 @@ print_seg(struct tcb *tcp, void *elem_buf, size_t elem_size, void *data)
 
 	tprints("{buf=");
 	printaddr(seg[0]);
-	tprintf(", bufsz=%lu, mem=", seg[1]);
+	tprintf(", bufsz=%" PRI_klu ", mem=", seg[1]);
 	printaddr(seg[2]);
-	tprintf(", memsz=%lu}", seg[3]);
+	tprintf(", memsz=%" PRI_klu "}", seg[3]);
 
 	return true;
 }
 
 static void
-print_kexec_segments(struct tcb *tcp, const unsigned long addr,
-		     const unsigned long len)
+print_kexec_segments(struct tcb *const tcp, const kernel_ulong_t addr,
+		     const kernel_ulong_t len)
 {
 	if (len > KEXEC_SEGMENT_MAX) {
 		printaddr(addr);
 		return;
 	}
 
-	unsigned long seg[4];
+	kernel_ulong_t seg[4];
 	const size_t sizeof_seg = ARRAY_SIZE(seg) * current_wordsize;
 
 	print_array(tcp, addr, len, seg, sizeof_seg,
-		    umoven_or_printaddr, print_seg, 0);
+		    tfetch_mem, print_seg, 0);
 }
 
 SYS_FUNC(kexec_load)
 {
 	/* entry, nr_segments */
-	printaddr(widen_to_ulong(tcp->u_arg[0]));
-	tprintf(", %lu, ", widen_to_ulong(tcp->u_arg[1]));
+	printaddr(tcp->u_arg[0]);
+	tprintf(", %" PRI_klu ", ", tcp->u_arg[1]);
 
 	/* segments */
-	print_kexec_segments(tcp, widen_to_ulong(tcp->u_arg[2]),
-			     widen_to_ulong(tcp->u_arg[1]));
+	print_kexec_segments(tcp, tcp->u_arg[2], tcp->u_arg[1]);
 	tprints(", ");
 
 	/* flags */
-	unsigned long n = widen_to_ulong(tcp->u_arg[3]);
-	printxval_long(kexec_arch_values, n & KEXEC_ARCH_MASK, "KEXEC_ARCH_???");
-	n &= ~(unsigned long) KEXEC_ARCH_MASK;
+	kernel_ulong_t n = tcp->u_arg[3];
+	printxval64(kexec_arch_values, n & KEXEC_ARCH_MASK, "KEXEC_ARCH_???");
+	n &= ~(kernel_ulong_t) KEXEC_ARCH_MASK;
 	if (n) {
 		tprints("|");
-		printflags_long(kexec_load_flags, n, "KEXEC_???");
+		printflags64(kexec_load_flags, n, "KEXEC_???");
 	}
 
 	return RVAL_DECODED;
@@ -112,12 +92,12 @@ SYS_FUNC(kexec_file_load)
 	printfd(tcp, tcp->u_arg[1]);
 	tprints(", ");
 	/* cmdline_len */
-	tprintf("%lu, ", tcp->u_arg[2]);
+	tprintf("%" PRI_klu ", ", tcp->u_arg[2]);
 	/* cmdline */
-	printstr(tcp, tcp->u_arg[3], tcp->u_arg[2]);
+	printstrn(tcp, tcp->u_arg[3], tcp->u_arg[2]);
 	tprints(", ");
 	/* flags */
-	printflags_long(kexec_file_load_flags, tcp->u_arg[4], "KEXEC_FILE_???");
+	printflags64(kexec_file_load_flags, tcp->u_arg[4], "KEXEC_FILE_???");
 
 	return RVAL_DECODED;
 }

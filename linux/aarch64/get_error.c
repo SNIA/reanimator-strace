@@ -1,9 +1,18 @@
-#define get_error arm_get_error
+/*
+ * Copyright (c) 2015-2018 The strace developers.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
+
+#include "negated_errno.h"
+
+#define arch_get_error arm_get_error
 #include "arm/get_error.c"
-#undef get_error
+#undef arch_get_error
 
 static void
-get_error(struct tcb *tcp, const bool check_errno)
+arch_get_error(struct tcb *tcp, const bool check_errno)
 {
 	if (tcp->currpers == 1) {
 		arm_get_error(tcp, check_errno);

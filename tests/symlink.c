@@ -1,5 +1,12 @@
+/*
+ * Copyright (c) 2016-2019 The strace developers.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
 #include "tests.h"
-#include <asm/unistd.h>
+#include "scno.h"
 
 #ifdef __NR_symlink
 
@@ -7,14 +14,12 @@
 # include <unistd.h>
 
 int
-main(void)
+main(int ac, char **av)
 {
-	static const char sample_1[] = "symlink_new";
-	static const char sample_2[] = "symlink";
+	static const char sample[] = "symlink.sample";
 
-	long rc = syscall(__NR_symlink, sample_1, sample_2);
-	printf("symlink(\"%s\", \"%s\") = %ld %s (%m)\n",
-	       sample_1, sample_2, rc, errno2name());
+	long rc = syscall(__NR_symlink, sample, av[0]);
+	printf("symlink(\"%s\", \"%s\") = %s\n", sample, av[0], sprintrc(rc));
 
 	puts("+++ exited with 0 +++");
 	return 0;

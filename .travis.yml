@@ -1,12 +1,10 @@
 language: c
 
-dist: trusty
+dist: bionic
 
-before_install: ./travis-install.sh
+before_install: ci/install-dependencies.sh
 
-script: ./travis-build.sh
-
-after_success: ./travis-success.sh
+script: travis_wait 40 ci/run-build-and-tests.sh
 
 sudo: required
 
@@ -17,28 +15,116 @@ env:
   global:
     - SLEEP_A_BIT="sleep 0.2"
     - VERBOSE="1"
+    - KBRANCH="v5.4"
 
 matrix:
   include:
     - compiler: gcc
+      arch: amd64
+      env:
+        - TARGET=x86
+        - STACKTRACE=no
+    - compiler: gcc
+      arch: amd64
+      dist: trusty
       env:
         - TARGET=x86_64
-        - COVERAGE=true
+        - STACKTRACE=libunwind
+        - CHECK=coverage
+        - KHEADERS=torvalds/linux
+    - compiler: gcc-9
+      arch: amd64
+      env:
+        - TARGET=x86_64
+        - STACKTRACE=libdw
+        - KHEADERS=torvalds/linux
     - compiler: gcc
+      arch: amd64
+      env:
+        - TARGET=x86_64
+        - STACKTRACE=libdw
+    - compiler: gcc
+      arch: amd64
       env:
         - TARGET=x32
+        - STACKTRACE=no
+    - compiler: clang
+      arch: amd64
+      env:
+        - TARGET=x86_64
+        - STACKTRACE=libdw
+    - compiler: musl-gcc
+      arch: amd64
+      env:
+        - TARGET=x86_64
+        - STACKTRACE=no
+    - compiler: clang
+      arch: amd64
+      env:
+        - TARGET=x86
+        - STACKTRACE=no
+    - compiler: musl-gcc
+      arch: amd64
+      dist: trusty
+      env:
+        - TARGET=x86
+        - STACKTRACE=no
+    - compiler: gcc-9
+      arch: amd64
+      env:
+        - TARGET=x86_64
+        - STACKTRACE=libunwind
+    - compiler: gcc-9
+      arch: amd64
+      env:
+        - TARGET=x32
+        - STACKTRACE=no
+    - compiler: gcc-9
+      arch: amd64
+      env:
+        - TARGET=x86
+        - STACKTRACE=no
     - compiler: gcc
-      env:
-        - TARGET=x86
-    - compiler: clang-3.6
+      arch: amd64
       env:
         - TARGET=x86_64
-    - compiler: musl-gcc
+        - STACKTRACE=no
+    - compiler: gcc
+      arch: arm64
       env:
-        - TARGET=x86_64
-    - compiler: clang-3.6
+        - TARGET=aarch64
+        - SLEEP_A_BIT="sleep 0.5"
+        - STACKTRACE=no
+        - TIMEOUT_DURATION=1500
+    - compiler: gcc
+      arch: arm64
       env:
-        - TARGET=x86
-    - compiler: musl-gcc
+        - TARGET=aarch64
+        - SLEEP_A_BIT="sleep 0.5"
+        - STACKTRACE=no
+        - KHEADERS=torvalds/linux
+        - TIMEOUT_DURATION=1500
+    - compiler: clang
+      arch: arm64
       env:
-        - TARGET=x86
+        - TARGET=aarch64
+        - SLEEP_A_BIT="sleep 0.5"
+        - STACKTRACE=no
+        - TIMEOUT_DURATION=1500
+    - compiler: gcc-8
+      arch: arm64
+      dist: trusty
+      env:
+        - TARGET=aarch64
+        - SLEEP_A_BIT="sleep 0.5"
+        - STACKTRACE=no
+        - KHEADERS=torvalds/linux
+        - TIMEOUT_DURATION=1500
+    - compiler: gcc-8
+      arch: arm64
+      dist: trusty
+      env:
+        - TARGET=aarch64
+        - SLEEP_A_BIT="sleep 0.5"
+        - STACKTRACE=no
+        - TIMEOUT_DURATION=1500

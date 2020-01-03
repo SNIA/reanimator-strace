@@ -1,5 +1,12 @@
+/*
+ * Copyright (c) 2016-2018 Dmitry V. Levin <ldv@altlinux.org>
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
+
 #ifndef STRACE_MSGHDR_H
-#define STRACE_MSGHDR_H
+# define STRACE_MSGHDR_H
 
 /* For definitions of struct msghdr and struct mmsghdr. */
 # include <sys/socket.h>
@@ -12,6 +19,9 @@ struct mmsghdr {
 # endif
 
 struct tcb;
-extern void print_struct_msghdr(struct tcb *, const struct msghdr *, const int *, unsigned long);
+
+extern void
+print_struct_msghdr(struct tcb *, const struct msghdr *,
+		    const int *p_user_msg_namelen, kernel_ulong_t data_size);
 
 #endif /* !STRACE_MSGHDR_H */

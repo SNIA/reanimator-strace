@@ -1,9 +1,14 @@
 #!/bin/sh
-
+#
 # Check -T option.
+#
+# Copyright (c) 2016-2018 The strace developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 . "${srcdir=.}/init.sh"
 
-run_prog ./sleep 0
-run_strace -a24 -T -enanosleep ./sleep 1
+run_prog ../sleep 0
+run_strace -a24 -T -enanosleep ../sleep 1
 match_grep

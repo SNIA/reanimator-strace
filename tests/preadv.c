@@ -1,28 +1,9 @@
 /*
  * Copyright (c) 2014-2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2016-2018 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
@@ -66,7 +47,7 @@ main(void)
 {
 	const off_t offset = 0xdefaceddeadbeefLL;
 	char *buf = tail_alloc(LEN);
-	struct iovec *iov = tail_alloc(sizeof(*iov));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct iovec, iov);
 	iov->iov_base = buf;
 	iov->iov_len = LEN;
 
@@ -124,7 +105,7 @@ main(void)
 		perror_msg_and_fail("preadv: expected %u, returned %ld",
 				    r_len, rc);
 	printf("preadv(%d, [{iov_base=\"%s\", iov_len=%u}], %u, 0) = %u\n",
-	       fd, r0_c, r_len, ARRAY_SIZE(r0_iov_), r_len);
+	       fd, r0_c, r_len, (unsigned int) ARRAY_SIZE(r0_iov_), r_len);
 
 	void *r1 = tail_alloc(r_len);
 	void *r2 = tail_alloc(LENGTH_OF(w));
@@ -146,8 +127,9 @@ main(void)
 				    (int) LENGTH_OF(w) - r_len, rc);
 	printf("preadv(%d, [{iov_base=\"%s\", iov_len=%u}"
 	       ", {iov_base=\"\", iov_len=%u}], %u, %u) = %u\n",
-	       fd, r1_c, r_len, LENGTH_OF(w), ARRAY_SIZE(r1_iov_),
-		r_len, LENGTH_OF(w) - r_len);
+	       fd, r1_c, r_len, LENGTH_OF(w),
+	       (unsigned int) ARRAY_SIZE(r1_iov_),
+	       r_len, LENGTH_OF(w) - r_len);
 
 	puts("+++ exited with 0 +++");
 	return 0;

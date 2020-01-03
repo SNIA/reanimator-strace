@@ -1,4 +1,9 @@
-#warning sigreturn/rt_sigreturn signal mask decoding is not implemented for this architecture
+/*
+ * Copyright (c) 2015-2018 The strace developers.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
 
 static void
 arch_sigreturn(struct tcb *tcp)

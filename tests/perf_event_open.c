@@ -2,39 +2,19 @@
  * Check verbose decoding of perf_event_open syscall.
  *
  * Copyright (c) 2016 Eugene Syromyatnikov <evgsyr@gmail.com>
+ * Copyright (c) 2016-2019 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
-#include <asm/unistd.h>
+#include "scno.h"
 
 #if defined(__NR_perf_event_open) && defined(HAVE_LINUX_PERF_EVENT_H)
 
 # include <inttypes.h>
 # include <limits.h>
-# include <stdbool.h>
 # include <stddef.h>
 # include <stdio.h>
 # include <stdlib.h>
@@ -72,36 +52,37 @@ struct u64_val_str {
 	const char *str;
 };
 
-/* In order to avoid endianess-specific hackery */
+/* In order to avoid endianness-specific hackery. */
 struct pea_flags {
-	uint64_t disabled                 :1,
-	         inherit                  :1,
-	         pinned                   :1,
-	         exclusive                :1,
-	         exclude_user             :1,
-	         exclude_kernel           :1,
-	         exclude_hv               :1,
-	         exclude_idle             :1,
-	         mmap                     :1,
-	         comm                     :1,
-	         freq                     :1,
-	         inherit_stat             :1,
-	         enable_on_exec           :1,
-	         task                     :1,
-	         watermark                :1,
-	         precise_ip               :2,
-	         mmap_data                :1,
-	         sample_id_all            :1,
-	         exclude_host             :1,
-	         exclude_guest            :1,
-	         exclude_callchain_kernel :1,
-	         exclude_callchain_user   :1,
-	         mmap2                    :1,
-	         comm_exec                :1,
-	         use_clockid              :1,
-	         context_switch           :1,
-	         write_backward           :1,
-	         __reserved_1             :36;
+	uint64_t disabled			:1,
+		 inherit			:1,
+		 pinned				:1,
+		 exclusive			:1,
+		 exclude_user			:1,
+		 exclude_kernel			:1,
+		 exclude_hv			:1,
+		 exclude_idle			:1,
+		 mmap				:1,
+		 comm				:1,
+		 freq				:1,
+		 inherit_stat			:1,
+		 enable_on_exec			:1,
+		 task				:1,
+		 watermark			:1,
+		 precise_ip			:2,
+		 mmap_data			:1,
+		 sample_id_all			:1,
+		 exclude_host			:1,
+		 exclude_guest			:1,
+		 exclude_callchain_kernel	:1,
+		 exclude_callchain_user		:1,
+		 mmap2				:1,
+		 comm_exec			:1,
+		 use_clockid			:1,
+		 context_switch			:1,
+		 write_backward			:1,
+		 namespaces			:1,
+		 __reserved_1			:35;
 };
 
 static const char *
@@ -255,104 +236,112 @@ print_event_attr(struct perf_event_attr *attr_ptr, size_t size,
 	flags_data.raw = ((uint64_t *) attr)[5];
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_PRECISE_IP
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_PRECISE_IP
 		attr->precise_ip;
-# else
+#  else
 		flags_data.flags.precise_ip;
-# endif
+#  endif
 	printf(", precise_ip=%" PRIu64 " /* %s */", val, precise_ip_desc);
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_MMAP_DATA
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_MMAP_DATA
 		attr->mmap_data;
-# else
+#  else
 		flags_data.flags.mmap_data;
-# endif
+#  endif
 	printf(", mmap_data=%" PRIu64, val);
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_SAMPLE_ID_ALL
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_SAMPLE_ID_ALL
 		attr->sample_id_all;
-# else
+#  else
 		flags_data.flags.sample_id_all;
-# endif
+#  endif
 	printf(", sample_id_all=%" PRIu64, val);
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_EXCLUDE_HOST
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_EXCLUDE_HOST
 		attr->exclude_host;
-# else
+#  else
 		flags_data.flags.exclude_host;
-# endif
+#  endif
 	printf(", exclude_host=%" PRIu64, val);
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_EXCLUDE_GUEST
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_EXCLUDE_GUEST
 		attr->exclude_guest;
-# else
+#  else
 		flags_data.flags.exclude_guest;
-# endif
+#  endif
 	printf(", exclude_guest=%" PRIu64, val);
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_EXCLUDE_CALLCHAIN_KERNEL
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_EXCLUDE_CALLCHAIN_KERNEL
 		attr->exclude_callchain_kernel;
-# else
+#  else
 		flags_data.flags.exclude_callchain_kernel;
-# endif
+#  endif
 	printf(", exclude_callchain_kernel=%" PRIu64, val);
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_EXCLUDE_CALLCHAIN_USER
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_EXCLUDE_CALLCHAIN_USER
 		attr->exclude_callchain_user;
-# else
+#  else
 		flags_data.flags.exclude_callchain_user;
-# endif
+#  endif
 	printf(", exclude_callchain_user=%" PRIu64, val);
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_MMAP2
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_MMAP2
 		attr->mmap2;
-# else
+#  else
 		flags_data.flags.mmap2;
-# endif
+#  endif
 	printf(", mmap2=%" PRIu64, val);
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_COMM_EXEC
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_COMM_EXEC
 		attr->comm_exec;
-# else
+#  else
 		flags_data.flags.comm_exec;
-# endif
+#  endif
 	printf(", comm_exec=%" PRIu64, val);
 
 	use_clockid = val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_USE_CLOCKID
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_USE_CLOCKID
 		attr->use_clockid;
-# else
+#  else
 		flags_data.flags.use_clockid;
-# endif
+#  endif
 	printf(", use_clockid=%" PRIu64, val);
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_CONTEXT_SWITCH
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_CONTEXT_SWITCH
 		attr->context_switch;
-# else
+#  else
 		flags_data.flags.context_switch;
-# endif
+#  endif
 	printf(", context_switch=%" PRIu64, val);
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_WRITE_BACKWARD
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_WRITE_BACKWARD
 		attr->write_backward;
-# else
+#  else
 		flags_data.flags.write_backward;
-# endif
+#  endif
 	printf(", write_backward=%" PRIu64, val);
+
+	val =
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_NAMESPACES
+		attr->namespaces;
+#  else
+		flags_data.flags.namespaces;
+#  endif
+	printf(", namespaces=%" PRIu64, val);
 
 	val = flags_data.flags.__reserved_1;
 	if (val)
-		printf(", __reserved_1=%#" PRIx64 " /* Bits 63..28 */", val);
+		printf(", __reserved_1=%#" PRIx64 " /* Bits 63..29 */", val);
 
 	printf(", %s=%u",
 		attr->watermark ? "wakeup_watermark" : "wakeup_events",
@@ -362,11 +351,11 @@ print_event_attr(struct perf_event_attr *attr_ptr, size_t size,
 		printf(", bp_type=%s", bp_type);
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_CONFIG1
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_CONFIG1
 		attr->config1;
-# else
+#  else
 		((uint64_t *) attr)[56 / sizeof(uint64_t)];
-# endif
+#  endif
 	printf(", %s=%#" PRIx64,
 	       attr->type == PERF_TYPE_BREAKPOINT ? "bp_addr" : "config1",
 	       val);
@@ -378,11 +367,11 @@ print_event_attr(struct perf_event_attr *attr_ptr, size_t size,
 	}
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_CONFIG2
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_CONFIG2
 		attr->config2;
-# else
+#  else
 		((uint64_t *) attr)[64 / sizeof(uint64_t)];
-# endif
+#  endif
 	if (attr->type == PERF_TYPE_BREAKPOINT)
 		printf(", bp_len=%" PRIu64, val);
 	else
@@ -408,11 +397,11 @@ print_event_attr(struct perf_event_attr *attr_ptr, size_t size,
 	}
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_SAMPLE_REGS_USER
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_SAMPLE_REGS_USER
 		attr->sample_regs_user;
-# else
+#  else
 		((uint64_t *) attr)[80 / sizeof(uint64_t)];
-# endif
+#  endif
 	printf(", sample_regs_user=%#" PRIx64, val);
 
 	if (size <= 88) {
@@ -421,11 +410,11 @@ print_event_attr(struct perf_event_attr *attr_ptr, size_t size,
 	}
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_SAMPLE_STACK_USER
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_SAMPLE_STACK_USER
 		attr->sample_stack_user;
-# else
+#  else
 		((uint32_t *) attr)[88 / sizeof(uint32_t)];
-# endif
+#  endif
 	/*
 	 * Print branch sample type only in case PERF_SAMPLE_STACK_USER
 	 * is set in the sample_type field.
@@ -448,42 +437,42 @@ print_event_attr(struct perf_event_attr *attr_ptr, size_t size,
 	}
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_SAMPLE_REGS_INTR
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_SAMPLE_REGS_INTR
 		attr->sample_regs_intr;
-# else
+#  else
 		((uint64_t *) attr)[96 / sizeof(uint64_t)];
-# endif
+#  endif
 	printf(", sample_regs_intr=%#" PRIx64, val);
 
 	/* End of version 4 of the structure */
 	if (size <= 104) {
-		cutoff =104;
+		cutoff = 104;
 		goto end;
 	}
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_AUX_WATERMARK
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_AUX_WATERMARK
 		attr->aux_watermark;
-# else
+#  else
 		((uint32_t *) attr)[104 / sizeof(uint32_t)];
-# endif
+#  endif
 	printf(", aux_watermark=%" PRIu32, (uint32_t) val);
 
 	if (size <= 108) {
-		cutoff =108;
+		cutoff = 108;
 		goto end;
 	}
 
 	val =
-# ifdef HAVE_STRUCT_PERF_EVENT_ATTR_SAMPLE_MAX_STACK
+#  ifdef HAVE_STRUCT_PERF_EVENT_ATTR_SAMPLE_MAX_STACK
 		attr->sample_max_stack;
-# else
+#  else
 		((uint16_t *) attr)[108 / sizeof(uint16_t)];
-# endif
+#  endif
 	printf(", sample_max_stack=%" PRIu16, (uint16_t) val);
 
 	if (size <= 110) {
-		cutoff =110;
+		cutoff = 110;
 		goto end;
 	}
 
@@ -522,7 +511,8 @@ end:
 	"PERF_SAMPLE_BRANCH_IND_JUMP|" \
 	"PERF_SAMPLE_BRANCH_CALL|" \
 	"PERF_SAMPLE_BRANCH_NO_FLAGS|" \
-	"PERF_SAMPLE_BRANCH_NO_CYCLES"
+	"PERF_SAMPLE_BRANCH_NO_CYCLES|" \
+	"PERF_SAMPLE_BRANCH_TYPE_SAVE"
 
 int
 main(void)
@@ -607,7 +597,7 @@ main(void)
 	static const struct u64_val_str sample_types[] = {
 		{ ARG_STR(0) },
 		{ 0x800, "PERF_SAMPLE_BRANCH_STACK" },
-		{ ARG_ULL_STR(0xdeadc0deda780000) " /* PERF_SAMPLE_??? */" },
+		{ ARG_ULL_STR(0xdeadc0deda700000) " /* PERF_SAMPLE_??? */" },
 		{ 0xffffffffffffffffULL,
 			"PERF_SAMPLE_IP|PERF_SAMPLE_TID|PERF_SAMPLE_TIME|"
 			"PERF_SAMPLE_ADDR|PERF_SAMPLE_READ|"
@@ -617,7 +607,8 @@ main(void)
 			"PERF_SAMPLE_REGS_USER|PERF_SAMPLE_STACK_USER|"
 			"PERF_SAMPLE_WEIGHT|PERF_SAMPLE_DATA_SRC|"
 			"PERF_SAMPLE_IDENTIFIER|PERF_SAMPLE_TRANSACTION|"
-			"PERF_SAMPLE_REGS_INTR|0xfffffffffff80000" },
+			"PERF_SAMPLE_REGS_INTR|PERF_SAMPLE_PHYS_ADDR|"
+			"0xfffffffffff00000" },
 	};
 	static const struct u64_val_str read_formats[] = {
 		{ ARG_STR(0) },
@@ -649,11 +640,11 @@ main(void)
 	static const struct u64_val_str branch_sample_types[] = {
 		{ ARG_STR(0) },
 		{ 0x80, "PERF_SAMPLE_BRANCH_ABORT_TX" },
-		{ 0xffff, BRANCH_TYPE_ALL },
-		{ ARG_ULL_STR(0xdeadcaffeeed0000)
+		{ 0x1ffff, BRANCH_TYPE_ALL },
+		{ ARG_ULL_STR(0xdeadcaffeeec0000)
 			" /* PERF_SAMPLE_BRANCH_??? */" },
 		{ 0xffffffffffffffffULL,
-			BRANCH_TYPE_ALL "|0xffffffffffff0000" }
+			BRANCH_TYPE_ALL "|0xfffffffffffe0000" }
 	};
 	static const struct s32_val_str clockids[] = {
 		{ 11, "CLOCK_TAI" },
@@ -681,7 +672,7 @@ main(void)
 		ATTR_REC(attr_big_size),
 	};
 
-	struct perf_event_attr *small_attr = tail_alloc(sizeof(*small_attr));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct perf_event_attr, small_attr);
 
 	struct {
 		struct perf_event_attr *attr;
@@ -712,12 +703,12 @@ main(void)
 	size_t i;
 	int rc;
 
-	fill_memory((char *) small_attr, sizeof(*small_attr));
+	fill_memory(small_attr, sizeof(*small_attr));
 	small_attr->size = attr_small_size;
 
 	for (i = 0; i < ARRAY_SIZE(args); i++) {
 		rc = syscall(__NR_perf_event_open, args[i].attr, args[i].pid,
-		             args[i].cpu, args[i].group_fd, args[i].flags);
+			     args[i].cpu, args[i].group_fd, args[i].flags);
 		printf("perf_event_open(%s, %d, %d, %d, %s) = %s\n",
 		       printaddr(args[i].attr), args[i].pid, args[i].cpu,
 		       args[i].group_fd, args[i].flags_str, sprintrc(rc));
@@ -740,8 +731,7 @@ main(void)
 		size_t args_idx = i % ARRAY_SIZE(args);
 		const char *ip_desc_str;
 
-		fill_memory_ex((char *) attr, size,
-			fill_start, 0xff);
+		fill_memory_ex(attr, size, fill_start, 0xff);
 
 		attr->type = attr_types[type_idx].val;
 		attr->size = size;
@@ -793,19 +783,19 @@ main(void)
 			attr->size = 0;
 
 		rc = syscall(__NR_perf_event_open, attr, args[args_idx].pid,
-		             args[args_idx].cpu, args[args_idx].group_fd,
-		             args[args_idx].flags);
+			     args[args_idx].cpu, args[args_idx].group_fd,
+			     args[args_idx].flags);
 
 		printf("perf_event_open(");
 		print_event_attr(attr, i ? ((i == 1) ? 0 : size) : size + 8,
-		                 attr_types[type_idx].str,
-		                 attr_configs[type_idx][config_idx].str,
-		                 sample_types[sample_type_idx].str,
-		                 read_formats[read_format_idx].str,
-		                 ip_desc_str,
-		                 bp_types[bp_type_idx].str,
-		                 branch_sample_types[branch_sample_type_idx].str,
-		                 clockids[clockid_idx].str, size);
+				 attr_types[type_idx].str,
+				 attr_configs[type_idx][config_idx].str,
+				 sample_types[sample_type_idx].str,
+				 read_formats[read_format_idx].str,
+				 ip_desc_str,
+				 bp_types[bp_type_idx].str,
+				 branch_sample_types[branch_sample_type_idx].str,
+				 clockids[clockid_idx].str, size);
 		printf(", %d, %d, %d, %s) = %s\n", args[args_idx].pid,
 		       args[args_idx].cpu, args[args_idx].group_fd,
 		       args[args_idx].flags_str, sprintrc(rc));

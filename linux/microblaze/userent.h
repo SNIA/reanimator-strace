@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2014-2018 The strace developers.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
+
 { PT_GPR(0),		"r0" },
 { PT_GPR(1),		"r1" },
 { PT_GPR(2),		"r2" },
@@ -30,11 +37,11 @@
 { PT_GPR(29),		"r29" },
 { PT_GPR(30),		"r30" },
 { PT_GPR(31),		"r31" },
-{ PT_PC,		"rpc", },
-{ PT_MSR,		"rmsr", },
-{ PT_EAR,		"rear", },
-{ PT_ESR,		"resr", },
-{ PT_FSR,		"rfsr", },
-{ PT_KERNEL_MODE,	"kernel_mode", },
+{ PT_PC,		"rpc" },
+{ PT_MSR,		"rmsr" },
+{ PT_EAR,		"rear" },
+{ PT_ESR,		"resr" },
+{ PT_FSR,		"rfsr" },
+{ PT_KERNEL_MODE,	"kernel_mode" },
 /* Other fields in "struct user" */
 #include "../userent0.h"

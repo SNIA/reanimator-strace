@@ -1,6 +1,13 @@
+/*
+ * Copyright (c) 2016-2019 The strace developers.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
 #include "tests.h"
 #include <fcntl.h>
-#include <asm/unistd.h>
+#include "scno.h"
 
 #if defined __NR_dup3 && defined O_CLOEXEC
 
@@ -23,6 +30,6 @@ main(void)
 
 #else
 
-SKIP_MAIN_UNDEFINED("__NR_dup3 && && O_CLOEXEC")
+SKIP_MAIN_UNDEFINED("__NR_dup3 && O_CLOEXEC")
 
 #endif

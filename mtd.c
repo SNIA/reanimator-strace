@@ -1,56 +1,36 @@
 /*
  * Copyright (c) 2012 Mike Frysinger <vapier@gentoo.org>
+ * Copyright (c) 2012-2018 The strace developers.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "defs.h"
 
-#include DEF_MPERS_TYPE(struct_mtd_oob_buf)
+#ifdef HAVE_STRUCT_MTD_WRITE_REQ
 
-#include <linux/ioctl.h>
+# include DEF_MPERS_TYPE(struct_mtd_oob_buf)
 
-/* The mtd api changes quickly, so we have to keep a local copy */
-#include <linux/version.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 3, 0)
-# include "mtd-abi.h"
-#else
+# include <linux/ioctl.h>
 # include <mtd/mtd-abi.h>
-#endif
 
 typedef struct mtd_oob_buf struct_mtd_oob_buf;
 
+#endif /* HAVE_STRUCT_MTD_WRITE_REQ */
+
 #include MPERS_DEFS
 
-#include "xlat/mtd_mode_options.h"
-#include "xlat/mtd_file_mode_options.h"
-#include "xlat/mtd_type_options.h"
-#include "xlat/mtd_flags_options.h"
-#include "xlat/mtd_otp_options.h"
-#include "xlat/mtd_nandecc_options.h"
+#ifdef HAVE_STRUCT_MTD_WRITE_REQ
+
+# include "xlat/mtd_mode_options.h"
+# include "xlat/mtd_file_mode_options.h"
+# include "xlat/mtd_type_options.h"
+# include "xlat/mtd_flags_options.h"
+# include "xlat/mtd_otp_options.h"
+# include "xlat/mtd_nandecc_options.h"
 
 static void
-decode_erase_info_user(struct tcb *tcp, const long addr)
+decode_erase_info_user(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	struct erase_info_user einfo;
 
@@ -65,7 +45,7 @@ decode_erase_info_user(struct tcb *tcp, const long addr)
 }
 
 static void
-decode_erase_info_user64(struct tcb *tcp, const long addr)
+decode_erase_info_user64(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	struct erase_info_user64 einfo64;
 
@@ -81,7 +61,7 @@ decode_erase_info_user64(struct tcb *tcp, const long addr)
 }
 
 static void
-decode_mtd_oob_buf(struct tcb *tcp, const long addr)
+decode_mtd_oob_buf(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	struct_mtd_oob_buf mbuf;
 
@@ -93,12 +73,12 @@ decode_mtd_oob_buf(struct tcb *tcp, const long addr)
 		return;
 
 	tprintf("{start=%#x, length=%#x, ptr=", mbuf.start, mbuf.length);
-	printaddr((unsigned long) mbuf.ptr);
+	printaddr(ptr_to_kulong(mbuf.ptr));
 	tprints("}");
 }
 
 static void
-decode_mtd_oob_buf64(struct tcb *tcp, const long addr)
+decode_mtd_oob_buf64(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	struct mtd_oob_buf64 mbuf64;
 
@@ -115,7 +95,7 @@ decode_mtd_oob_buf64(struct tcb *tcp, const long addr)
 }
 
 static void
-decode_otp_info(struct tcb *tcp, const long addr)
+decode_otp_info(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	struct otp_info oinfo;
 
@@ -131,7 +111,7 @@ decode_otp_info(struct tcb *tcp, const long addr)
 }
 
 static void
-decode_otp_select(struct tcb *tcp, const long addr)
+decode_otp_select(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	unsigned int i;
 
@@ -148,7 +128,7 @@ decode_otp_select(struct tcb *tcp, const long addr)
 }
 
 static void
-decode_mtd_write_req(struct tcb *tcp, const long addr)
+decode_mtd_write_req(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	struct mtd_write_req mreq;
 
@@ -170,7 +150,7 @@ decode_mtd_write_req(struct tcb *tcp, const long addr)
 }
 
 static void
-decode_mtd_info_user(struct tcb *tcp, const long addr)
+decode_mtd_info_user(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	struct mtd_info_user minfo;
 
@@ -192,7 +172,7 @@ decode_mtd_info_user(struct tcb *tcp, const long addr)
 }
 
 static void
-decode_nand_oobinfo(struct tcb *tcp, const long addr)
+decode_nand_oobinfo(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	struct nand_oobinfo ninfo;
 	unsigned int i, j;
@@ -231,7 +211,7 @@ decode_nand_oobinfo(struct tcb *tcp, const long addr)
 }
 
 static void
-decode_nand_ecclayout_user(struct tcb *tcp, const long addr)
+decode_nand_ecclayout_user(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	struct nand_ecclayout_user nlay;
 	unsigned int i;
@@ -260,7 +240,7 @@ decode_nand_ecclayout_user(struct tcb *tcp, const long addr)
 }
 
 static void
-decode_mtd_ecc_stats(struct tcb *tcp, const long addr)
+decode_mtd_ecc_stats(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	struct mtd_ecc_stats es;
 
@@ -275,8 +255,8 @@ decode_mtd_ecc_stats(struct tcb *tcp, const long addr)
 		es.corrected, es.failed, es.badblocks, es.bbtblocks);
 }
 
-MPERS_PRINTER_DECL(int, mtd_ioctl, struct tcb *tcp,
-		   const unsigned int code, const long arg)
+MPERS_PRINTER_DECL(int, mtd_ioctl, struct tcb *const tcp,
+		   const unsigned int code, const kernel_ulong_t arg)
 {
 	switch (code) {
 	case MEMERASE:
@@ -307,7 +287,7 @@ MPERS_PRINTER_DECL(int, mtd_ioctl, struct tcb *tcp,
 	case OTPGETREGIONINFO:
 		if (entering(tcp))
 			return 0;
-		/* fall through */
+		ATTRIBUTE_FALLTHROUGH;
 	case OTPLOCK:
 		decode_otp_info(tcp, arg);
 		break;
@@ -318,7 +298,7 @@ MPERS_PRINTER_DECL(int, mtd_ioctl, struct tcb *tcp,
 
 	case MTDFILEMODE:
 		tprints(", ");
-		printxval_long(mtd_file_mode_options, arg, "MTD_FILE_MODE_???");
+		printxval64(mtd_file_mode_options, arg, "MTD_FILE_MODE_???");
 		break;
 
 	case MEMGETBADBLOCK:
@@ -401,5 +381,7 @@ MPERS_PRINTER_DECL(int, mtd_ioctl, struct tcb *tcp,
 		return RVAL_DECODED;
 	}
 
-	return RVAL_DECODED | 1;
+	return RVAL_IOCTL_DECODED;
 }
+
+#endif /* HAVE_STRUCT_MTD_WRITE_REQ */

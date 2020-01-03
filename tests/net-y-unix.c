@@ -1,30 +1,11 @@
 /*
  * This file is part of net-y-unix strace test.
  *
- * Copyright (c) 2013-2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2013-2017 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2016-2018 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
@@ -34,23 +15,26 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
-int
-main(int ac, const char **av)
-{
-	assert(ac == 2);
+#include "accept_compat.h"
 
-	struct sockaddr_un addr = { .sun_family = AF_UNIX };
-	unsigned int sun_path_len = strlen(av[1]);
-	assert(sun_path_len > 0 && sun_path_len <= sizeof(addr.sun_path));
-	strncpy(addr.sun_path, av[1], sizeof(addr.sun_path));
+#define TEST_SOCKET "net-y-unix.socket"
+
+int
+main(void)
+{
+	skip_if_unavailable("/proc/self/fd/");
+
+	static const struct sockaddr_un addr = {
+		.sun_family = AF_UNIX,
+		.sun_path = TEST_SOCKET
+	};
 	struct sockaddr * const listen_sa = tail_memdup(&addr, sizeof(addr));
 
-	socklen_t * const len = tail_alloc(sizeof(socklen_t));
-	*len = offsetof(struct sockaddr_un, sun_path) + strlen(av[1]) + 1;
+	TAIL_ALLOC_OBJECT_CONST_PTR(socklen_t, len);
+	*len = offsetof(struct sockaddr_un, sun_path) + strlen(TEST_SOCKET) + 1;
 	if (*len > sizeof(addr))
 		*len = sizeof(addr);
 
@@ -61,17 +45,18 @@ main(int ac, const char **av)
 	printf("socket(AF_UNIX, SOCK_STREAM, 0) = %d<socket:[%lu]>\n",
 	       listen_fd, listen_inode);
 
-	(void) unlink(av[1]);
+	(void) unlink(TEST_SOCKET);
 	if (bind(listen_fd, listen_sa, *len))
 		perror_msg_and_skip("bind");
 	printf("bind(%d<socket:[%lu]>, {sa_family=AF_UNIX, sun_path=\"%s\"}"
-	       ", %u) = 0\n", listen_fd, listen_inode, av[1], (unsigned) *len);
+	       ", %u) = 0\n",
+	       listen_fd, listen_inode, TEST_SOCKET, (unsigned) *len);
 
 	if (listen(listen_fd, 1))
 		perror_msg_and_skip("listen");
 	printf("listen(%d<socket:[%lu]>, 1) = 0\n", listen_fd, listen_inode);
 
-	unsigned int * const optval = tail_alloc(sizeof(unsigned int));
+	TAIL_ALLOC_OBJECT_CONST_PTR(unsigned int, optval);
 	*len = sizeof(*optval);
 	if (getsockopt(listen_fd, SOL_SOCKET, SO_PASSCRED, optval, len))
 		perror_msg_and_fail("getsockopt");
@@ -85,7 +70,7 @@ main(int ac, const char **av)
 		perror_msg_and_fail("getsockname");
 	printf("getsockname(%d<socket:[%lu]>, {sa_family=AF_UNIX"
 	       ", sun_path=\"%s\"}, [%d->%d]) = 0\n", listen_fd, listen_inode,
-	       av[1], (int) sizeof(addr), (int) *len);
+	       TEST_SOCKET, (int) sizeof(addr), (int) *len);
 
 	int connect_fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (connect_fd < 0)
@@ -98,12 +83,12 @@ main(int ac, const char **av)
 		perror_msg_and_fail("connect");
 	printf("connect(%d<socket:[%lu]>, {sa_family=AF_UNIX"
 	       ", sun_path=\"%s\"}, %u) = 0\n",
-	       connect_fd, connect_inode, av[1], (unsigned) *len);
+	       connect_fd, connect_inode, TEST_SOCKET, (unsigned) *len);
 
 	struct sockaddr * const accept_sa = tail_alloc(sizeof(addr));
 	memset(accept_sa, 0, sizeof(addr));
 	*len = sizeof(addr);
-	int accept_fd = accept(listen_fd, accept_sa, len);
+	int accept_fd = do_accept(listen_fd, accept_sa, len);
 	if (accept_fd < 0)
 		perror_msg_and_fail("accept");
 	unsigned long accept_inode = inode_of_sockfd(accept_fd);
@@ -119,7 +104,7 @@ main(int ac, const char **av)
 		perror_msg_and_fail("getpeername");
 	printf("getpeername(%d<socket:[%lu]>, {sa_family=AF_UNIX"
 	       ", sun_path=\"%s\"}, [%d->%d]) = 0\n", connect_fd, connect_inode,
-	       av[1], (int) sizeof(addr), (int) *len);
+	       TEST_SOCKET, (int) sizeof(addr), (int) *len);
 
 	char text[] = "text";
 	assert(sendto(connect_fd, text, sizeof(text) - 1, MSG_DONTWAIT, NULL, 0)
@@ -163,23 +148,23 @@ main(int ac, const char **av)
 		perror_msg_and_fail("getsockname");
 	printf("getsockname(%d<socket:[%lu]>, {sa_family=AF_UNIX"
 	       ", sun_path=\"%s\"}, [%d->%d]) = 0\n",
-	       listen_fd, listen_inode, av[1],
+	       listen_fd, listen_inode, TEST_SOCKET,
 	       (int) sizeof(addr), (int) *len);
 
 	if (connect(connect_fd, listen_sa, *len))
 		perror_msg_and_fail("connect");
 	printf("connect(%d<socket:[%lu]>, {sa_family=AF_UNIX"
 	       ", sun_path=\"%s\"}, %u) = 0\n",
-	       connect_fd, connect_inode, av[1], (unsigned) *len);
+	       connect_fd, connect_inode, TEST_SOCKET, (unsigned) *len);
 
 	memset(accept_sa, 0, sizeof(addr));
 	*len = sizeof(addr);
-	accept_fd = accept(listen_fd, accept_sa, len);
+	accept_fd = do_accept(listen_fd, accept_sa, len);
 	if (accept_fd < 0)
 		perror_msg_and_fail("accept");
 	accept_inode = inode_of_sockfd(accept_fd);
 	const char * const sun_path1 =
-		((struct sockaddr_un *) accept_sa) -> sun_path + 1;
+		((struct sockaddr_un *) accept_sa)->sun_path + 1;
 	printf("accept(%d<socket:[%lu]>, {sa_family=AF_UNIX"
 	       ", sun_path=@\"%s\"}, [%d->%d]) = %d<socket:[%lu]>\n",
 	       listen_fd, listen_inode, sun_path1,
@@ -192,7 +177,7 @@ main(int ac, const char **av)
 		perror_msg_and_fail("getpeername");
 	printf("getpeername(%d<socket:[%lu]>, {sa_family=AF_UNIX"
 	       ", sun_path=\"%s\"}, [%d->%d]) = 0\n",
-	       connect_fd, connect_inode, av[1],
+	       connect_fd, connect_inode, TEST_SOCKET,
 	       (int) sizeof(addr), (int) *len);
 
 	memset(accept_sa, 0, sizeof(addr));
@@ -224,7 +209,7 @@ main(int ac, const char **av)
 	assert(close(accept_fd) == 0);
 	printf("close(%d<socket:[%lu]>) = 0\n", accept_fd, accept_inode);
 
-	assert(unlink(av[1]) == 0);
+	assert(unlink(TEST_SOCKET) == 0);
 
 	assert(close(listen_fd) == 0);
 	printf("close(%d<socket:[%lu]>) = 0\n",

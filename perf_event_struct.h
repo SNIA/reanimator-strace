@@ -1,7 +1,14 @@
-#ifndef STRACE_LINUX_PERF_EVENT_STRUCT_H
-#define STRACE_LINUX_PERF_EVENT_STRUCT_H
+/*
+ * Copyright (c) 2016-2018 Eugene Syromyatnikov <evgsyr@gmail.com>
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
 
-#include <stdint.h>
+#ifndef STRACE_LINUX_PERF_EVENT_STRUCT_H
+# define STRACE_LINUX_PERF_EVENT_STRUCT_H
+
+# include <stdint.h>
 
 struct perf_event_attr {
 	uint32_t type;
@@ -13,34 +20,35 @@ struct perf_event_attr {
 	};
 	uint64_t sample_type;
 	uint64_t read_format;
-	uint64_t disabled                 :1,
-	         inherit                  :1,
-		 pinned                   :1,
-		 exclusive                :1,
-	         exclude_user             :1,
-	         exclude_kernel           :1,
-	         exclude_hv               :1,
-	         exclude_idle             :1,
-	         mmap                     :1,
-	         comm                     :1,
-	         freq                     :1,
-	         inherit_stat             :1,
-	         enable_on_exec           :1,
-	         task                     :1,
-	         watermark                :1,
-	         precise_ip               :2,
-	         mmap_data                :1,
-	         sample_id_all            :1,
-	         exclude_host             :1,
-	         exclude_guest            :1,
-	         exclude_callchain_kernel :1,
-	         exclude_callchain_user   :1,
-	         mmap2                    :1,
-	         comm_exec                :1,
-	         use_clockid              :1,
-	         context_switch           :1,
-	         write_backward           :1,
-	         __reserved_1             :36;
+	uint64_t disabled			:1,
+		 inherit			:1,
+		 pinned				:1,
+		 exclusive			:1,
+		 exclude_user			:1,
+		 exclude_kernel			:1,
+		 exclude_hv			:1,
+		 exclude_idle			:1,
+		 mmap				:1,
+		 comm				:1,
+		 freq				:1,
+		 inherit_stat			:1,
+		 enable_on_exec			:1,
+		 task				:1,
+		 watermark			:1,
+		 precise_ip			:2,
+		 mmap_data			:1,
+		 sample_id_all			:1,
+		 exclude_host			:1,
+		 exclude_guest			:1,
+		 exclude_callchain_kernel	:1,
+		 exclude_callchain_user		:1,
+		 mmap2				:1,
+		 comm_exec			:1,
+		 use_clockid			:1,
+		 context_switch			:1,
+		 write_backward			:1,
+		 namespaces			:1,
+		 __reserved_1			:35;
 	union {
 		uint32_t wakeup_events;
 		uint32_t wakeup_watermark;
@@ -68,6 +76,12 @@ struct perf_event_attr {
 	uint16_t sample_max_stack;
 	uint16_t __reserved_2;
 	/* End of ver 5 - 112 bytes */
+};
+
+struct perf_event_query_bpf {
+        uint32_t ids_len;
+        uint32_t prog_cnt;
+        uint32_t ids[0];
 };
 
 #endif /* !STRACE_LINUX_PERF_EVENT_STRUCT_H */

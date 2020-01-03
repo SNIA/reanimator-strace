@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2016-2018 The strace developers.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
+
 #ifndef PTRACE_SET_SYSCALL
 # define PTRACE_SET_SYSCALL 23
 #endif
@@ -7,7 +14,7 @@
  */
 
 static int
-arch_set_scno(struct tcb *tcp, long scno)
+arch_set_scno(struct tcb *tcp, kernel_ulong_t scno)
 {
 	unsigned int n = (uint16_t) scno;
 	int rc = ptrace(PTRACE_SET_SYSCALL, tcp->pid, NULL, (unsigned long) n);

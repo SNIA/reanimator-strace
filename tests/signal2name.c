@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2016-2018 The strace developers.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
 #include "tests.h"
 #include <signal.h>
 
@@ -50,6 +57,7 @@ signal2name(int sig)
 	CASE(SIGPWR);
 	CASE(SIGSTKFLT);
 #endif
-	default: perror_msg_and_fail("unknown signal number %d", sig);
+	default:
+		perror_msg_and_fail("unknown signal number %d", sig);
 	}
 }

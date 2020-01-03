@@ -3,29 +3,10 @@
  * of sendmmsg and recvmmsg syscalls.
  *
  * Copyright (c) 2016 Dmitry V. Levin <ldv@altlinux.org>
+ * Copyright (c) 2016-2018 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "tests.h"
@@ -39,8 +20,6 @@
 #include <sys/un.h>
 
 #include "msghdr.h"
-
-#define DEFAULT_STRLEN 32
 
 #define IOV_MAX1 (IOV_MAX + 1)
 
@@ -77,7 +56,7 @@ print_msghdr(const struct msghdr *const msg, const int user_msg_namelen)
 	}
 	printf("%d, msg_iov=[{iov_base=\"%c\", iov_len=1}]"
 	       ", msg_iovlen=1, msg_controllen=0, msg_flags=0}",
-	       (int) msg->msg_namelen, * (char *) msg->msg_iov[0].iov_base);
+	       (int) msg->msg_namelen, *(char *) msg->msg_iov[0].iov_base);
 }
 
 static void
@@ -121,9 +100,9 @@ test_mmsg_name(const int send_fd, const int recv_fd)
 		if (i)
 			printf(", ");
 		if (i >= IOV_MAX
-# if !VERBOSE
+#if !VERBOSE
 			|| i >= DEFAULT_STRLEN
-# endif
+#endif
 		   ) {
 			printf("...");
 			break;
@@ -153,7 +132,7 @@ test_mmsg_name(const int send_fd, const int recv_fd)
 	printf("sendmmsg(-1, [{msg_hdr=");
 	print_msghdr(&send_mh[IOV_MAX].msg_hdr, 0);
 	errno = saved_errno;
-	printf("}, %p], %u, MSG_DONTWAIT) = %d %s (%m)\n",
+	printf("}, ... /* %p */], %u, MSG_DONTWAIT) = %d %s (%m)\n",
 	       &send_mh[IOV_MAX1], 2, rc, errno2name());
 
 	rc = send_mmsg(send_fd, send_mh, IOV_MAX1, MSG_DONTWAIT);

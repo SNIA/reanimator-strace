@@ -1,28 +1,9 @@
 /*
  * Copyright (c) 1993, 1994, 1995, 1996 Rick Sladkey <jrs@world.std.com>
+ * Copyright (c) 1996-2018 The strace developers.
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include "defs.h"
@@ -38,13 +19,9 @@
 #include "xlat/modem_flags.h"
 
 static void
-decode_termios(struct tcb *tcp, const long addr)
+decode_termios(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	struct termios tios;
-	int i;
-
-	if (!verbose(tcp))
-		return;
 
 	tprints(", ");
 	if (umove_or_printaddr(tcp, addr, &tios))
@@ -67,20 +44,16 @@ decode_termios(struct tcb *tcp, const long addr)
 	if (!(tios.c_lflag & ICANON))
 		tprintf("c_cc[VMIN]=%d, c_cc[VTIME]=%d, ",
 			tios.c_cc[VMIN], tios.c_cc[VTIME]);
-	tprints("c_cc=\"");
-	for (i = 0; i < NCCS; i++)
-		tprintf("\\x%02x", tios.c_cc[i]);
-	tprints("\"}");
+	tprints("c_cc=");
+	print_quoted_string((char *) tios.c_cc, NCCS, QUOTE_FORCE_HEX);
+	tprints("}");
 }
 
 static void
-decode_termio(struct tcb *tcp, const long addr)
+decode_termio(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	struct termio tio;
 	int i;
-
-	if (!verbose(tcp))
-		return;
 
 	tprints(", ");
 	if (umove_or_printaddr(tcp, addr, &tio))
@@ -116,12 +89,9 @@ decode_termio(struct tcb *tcp, const long addr)
 }
 
 static void
-decode_winsize(struct tcb *tcp, const long addr)
+decode_winsize(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	struct winsize ws;
-
-	if (!verbose(tcp))
-		return;
 
 	tprints(", ");
 	if (umove_or_printaddr(tcp, addr, &ws))
@@ -132,12 +102,9 @@ decode_winsize(struct tcb *tcp, const long addr)
 
 #ifdef TIOCGSIZE
 static void
-decode_ttysize(struct tcb *tcp, const long addr)
+decode_ttysize(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	struct ttysize ts;
-
-	if (!verbose(tcp))
-		return;
 
 	tprints(", ");
 	if (umove_or_printaddr(tcp, addr, &ts))
@@ -148,12 +115,9 @@ decode_ttysize(struct tcb *tcp, const long addr)
 #endif
 
 static void
-decode_modem_flags(struct tcb *tcp, const long addr)
+decode_modem_flags(struct tcb *const tcp, const kernel_ulong_t addr)
 {
 	int i;
-
-	if (!verbose(tcp))
-		return;
 
 	tprints(", ");
 	if (umove_or_printaddr(tcp, addr, &i))
@@ -164,7 +128,8 @@ decode_modem_flags(struct tcb *tcp, const long addr)
 }
 
 int
-term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
+term_ioctl(struct tcb *const tcp, const unsigned int code,
+	   const kernel_ulong_t arg)
 {
 	switch (code) {
 	/* struct termios */
@@ -175,6 +140,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case TIOCGLCKTRMIOS:
 		if (entering(tcp))
 			return 0;
+		ATTRIBUTE_FALLTHROUGH;
 	case TCSETS:
 #ifdef TCSETS2
 	case TCSETS2:
@@ -198,6 +164,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case TCGETA:
 		if (entering(tcp))
 			return 0;
+		ATTRIBUTE_FALLTHROUGH;
 	case TCSETA:
 	case TCSETAW:
 	case TCSETAF:
@@ -211,6 +178,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case TIOCGWINSZ:
 		if (entering(tcp))
 			return 0;
+		ATTRIBUTE_FALLTHROUGH;
 	case TIOCSWINSZ:
 #ifdef ENABLE_DATASERIES
 		DS_SET_IOCTL_SIZE(struct winsize);
@@ -223,6 +191,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case TIOCGSIZE:
 		if (entering(tcp))
 			return 0;
+		ATTRIBUTE_FALLTHROUGH;
 	case TIOCSSIZE:
 #ifdef ENABLE_DATASERIES
 		DS_SET_IOCTL_SIZE(struct ttysize);
@@ -234,11 +203,11 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	/* ioctls with a direct decodable arg */
 	case TCXONC:
 		tprints(", ");
-		printxval_long(tcxonc_options, arg, "TC???");
+		printxval64(tcxonc_options, arg, "TC???");
 		break;
 	case TCFLSH:
 		tprints(", ");
-		printxval_long(tcflsh_options, arg, "TC???");
+		printxval64(tcflsh_options, arg, "TC???");
 		break;
 	case TCSBRK:
 	case TCSBRKP:
@@ -250,6 +219,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 	case TIOCMGET:
 		if (entering(tcp))
 			return 0;
+		ATTRIBUTE_FALLTHROUGH;
 	case TIOCMBIS:
 	case TIOCMBIC:
 	case TIOCMSET:
@@ -275,6 +245,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 #endif
 		if (entering(tcp))
 			return 0;
+		ATTRIBUTE_FALLTHROUGH;
 	case TIOCSPGRP:
 	case TIOCSETD:
 	case FIONBIO:
@@ -296,7 +267,7 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		if (ds_module)
 			ds_set_ioctl_size(ds_module, 1);
 #endif /* ENABLE_DATASERIES */
-		printstr(tcp, arg, 1);
+		printstrn(tcp, arg, 1);
 		break;
 
 	/* ioctls with no parameters */
@@ -323,5 +294,5 @@ term_ioctl(struct tcb *tcp, const unsigned int code, const long arg)
 		return RVAL_DECODED;
 	}
 
-	return RVAL_DECODED | 1;
+	return RVAL_IOCTL_DECODED;
 }

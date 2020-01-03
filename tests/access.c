@@ -1,5 +1,12 @@
+/*
+ * Copyright (c) 2016-2019 The strace developers.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
 #include "tests.h"
-#include <asm/unistd.h>
+#include "scno.h"
 
 #ifdef __NR_access
 
@@ -19,6 +26,7 @@ main(void)
 	printf("access(\"%s\", R_OK|W_OK|X_OK) = %ld %s (%m)\n",
 	       sample, rc, errno2name());
 
+	puts("+++ exited with 0 +++");
 	return 0;
 }
 
