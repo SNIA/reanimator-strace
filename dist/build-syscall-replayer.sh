@@ -53,6 +53,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "${install}" = true ]]; then
+    if ! hash sudo 2>/dev/null; then
+        echo "Script could not find 'sudo' command. Cannot install." >&2
+        exit 1
+    fi
+fi
+
+if [[ "${install}" = true ]]; then
     # Installing programs
     runcmd sudo apt-get install -y autoconf automake cmake gcc g++ perl git
 
