@@ -5,8 +5,9 @@
 # TODO: Can we avoid building tests? They slow down the script
 
 # Script variables
-numberOfCores="$(nproc --all)"
+readonly numberOfCores="$(nproc --all)"
 install=false
+configArgs=""
 
 # Script functions
 function runcmd
@@ -22,17 +23,21 @@ function runcmd
 
 function printUsage
 {
-    echo "Usage: ./$0 [--install]"
+    echo "Usage: ./$0 [--install]" >&2
     exit 0
 }
 
 # Parsing script arguments
 # TODO: If getopt is portable enough for us, use it.
-while [[ $# -gt 0 ]]
-do
+while [[ $# -gt 0 ]]; do
     key="$1"
 
     case "${key}" in
+        --config-args)
+            shift # past argument
+            "${configArgs}"="$1"
+            shift # past value
+            ;;
         --install)
             install=true
             shift # past argument
@@ -47,7 +52,7 @@ do
     esac
 done
 
-if [[ "${install}" = true ]] ; then
+if [[ "${install}" = true ]]; then
     # Installing programs
     runcmd sudo apt-get install -y autoconf automake cmake gcc g++ perl git
 
@@ -70,7 +75,7 @@ runcmd git clone https://github.com/sbu-fsl/fsl-strace.git
 # Building Lintel
 runcmd cd Lintel
 runcmd cmake .
-if [[ "${install}" = true ]] ; then
+if [[ "${install}" = true ]]; then
     runcmd sudo make install
 fi
 runcmd cd ..
@@ -78,7 +83,7 @@ runcmd cd ..
 # Building DataSeries
 runcmd cd DataSeries
 runcmd cmake .
-if [[ "${install}" = true ]] ; then
+if [[ "${install}" = true ]]; then
     runcmd sudo make install
 fi
 runcmd cd ..
@@ -86,9 +91,9 @@ runcmd cd ..
 # Building tcmalloc
 runcmd cd gperftools
 runcmd ./autogen.sh
-runcmd ./configure
+runcmd ./configure "${configArgs}"
 runcmd make -j"${numberOfCores}"
-if [[ "${install}" = true ]] ; then
+if [[ "${install}" = true ]]; then
     runcmd sudo make -j"${numberOfCores}" install
 fi
 runcmd cd ..
@@ -104,10 +109,8 @@ runcmd cd ..
 # Building strace2ds-library
 runcmd cd trace2model/strace2ds-library
 runcmd ./buildall install
-if [[ -v STRACE2DS ]]
-then
-    if [[ -v HOME ]]
-    then
+if [[ -v STRACE2DS ]]; then
+    if [[ -v HOME ]]; then
         runcmd export STRACE2DS="$HOME/lib/strace2ds"
         # TODO: ask the user what rc file we should append the environment variable
         runcmd echo "export STRACE2DS=\"$HOME/lib/strace2ds\"" >> "$HOME"/.bashrc
@@ -126,5 +129,5 @@ runcmd cd ..
 
 # Building syscall-replayer
 runcmd cd trace2model/syscall-replayer/
-runcmd make
+runcmd make -j"${numberOfCores}"
 runcmd cd ../../..
