@@ -137,6 +137,10 @@ else
     runcmd ../configure --enable-shared --disable-static --prefix="${HOME}"/lib/strace2ds
 fi
 runcmd make clean
+runcmd make -j"${numberOfCores}"
+if [[ "${install}" == true ]]; then
+    runcmd make install
+fi
 
 # if [[ -v STRACE2DS ]]; then
 #     if [[ -v HOME ]]; then
@@ -149,7 +153,7 @@ runcmd make clean
 # else
 #     runcmd echo "Using STRACE2DS=$STRACE2DS"
 # fi
-runcmd cd ../..
+runcmd cd ../../..
 
 # Building fsl-strace
 runcmd cd fsl-strace
