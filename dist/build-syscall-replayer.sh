@@ -139,7 +139,7 @@ fi
 runcmd make clean
 runcmd make -j"${numberOfCores}"
 if [[ "${install}" == true ]]; then
-    runcmd make install
+    runcmd sudo make install
 fi
 
 # if [[ -v STRACE2DS ]]; then
