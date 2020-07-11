@@ -10,7 +10,11 @@
 # Script variables
 readonly numberOfCores="$(nproc --all)"
 install=false
+installPackages=false
 configArgs=""
+
+readonly programDependencies=("autoconf" "automake" "cmake" "gcc" "g++" "perl" "git")
+missingPrograms=()
 
 # Script functions
 function runcmd
@@ -31,7 +35,6 @@ function printUsage
 }
 
 # Parsing script arguments
-# TODO: If getopt is portable enough for us, use it.
 while [[ $# -gt 0 ]]; do
     key="$1"
 
@@ -45,6 +48,15 @@ while [[ $# -gt 0 ]]; do
             install=true
             shift # past argument
             ;;
+        --install-packages)
+            if command -v apt-get >/dev/null; then
+                installPackages=true
+            else
+                echo "Could not find apt-get. Missing packages must be \
+                installed manually." >&2
+            fi
+            shift # past argument
+            ;;
         -h|--help)
             printUsage
             shift # past argument
@@ -56,16 +68,40 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "${install}" = true ]]; then
-    if ! hash sudo 2>/dev/null; then
+    if ! command -v sudo &>/dev/null; then
         echo "Script could not find 'sudo' command. Cannot install." >&2
         exit 1
     fi
 fi
 
-if [[ "${install}" = true ]]; then
-    # Installing programs
-    runcmd sudo apt-get install -y autoconf automake cmake gcc g++ perl git
+# Check whether program dependencies are installed
+for program in "${programDependencies[@]}"; do
+    programPath=$(command -v "${program}")
+    if [[ $? == 0 ]]; then
+        echo "${program}: Located at ${programPath}"
+    elif [[ "${installPackages}" == true ]]; then
+        echo "${program}: Not found. Installing..."
+        runcmd sudo apt-get install -y "${program}"
+    else
+        echo "${program}: Not found."
+        missingPrograms+=("${program}")
+    fi
+done
 
+# Check whether the user has all required programs for building
+if [[ "${#missingPrograms[@]}" -gt 0 ]]; then
+    echo "Could not find all required programs. Not found:"
+    for program in "${missingPrograms[@]}"; do
+        echo "  ${program}"
+    done
+
+    echo "To install on a Debian-based system, run the command"
+    echo "  sudo apt-get install ${missingPrograms[*]}"
+    exit 1
+fi
+
+if [[ "${install}" = true ]]; then
+    
     # Installing packages
     runcmd sudo apt-get install -y libboost-dev libboost-thread-dev \
         libboost-program-options-dev build-essential libxml2-dev libz-dev \
