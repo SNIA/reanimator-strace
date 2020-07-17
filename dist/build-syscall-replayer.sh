@@ -30,7 +30,7 @@ function runcmd
 
 function printUsage
 {
-    echo "Usage: ./$0 [--install]" >&2
+    echo "Usage: $0 [--install]" >&2
     exit 0
 }
 
@@ -109,14 +109,14 @@ if [[ "${install}" = true ]]; then
 fi
 
 # Cloning all repositories
-runcmd mkdir build
+runcmd mkdir -p build
 runcmd cd build
-runcmd git clone https://github.com/dataseries/Lintel.git
-runcmd git clone https://github.com/dataseries/DataSeries.git
-runcmd git clone https://github.com/gperftools/gperftools.git
-runcmd git clone https://github.com/oneapi-src/oneTBB.git
-runcmd git clone https://github.com/sbu-fsl/trace2model.git
-runcmd git clone https://github.com/sbu-fsl/fsl-strace.git
+[[ -d "Lintel" ]] || runcmd git clone https://github.com/dataseries/Lintel.git
+[[ -d "DataSeries" ]] || runcmd git clone https://github.com/dataseries/DataSeries.git
+[[ -d "gperftools" ]] || runcmd git clone https://github.com/gperftools/gperftools.git
+[[ -d "oneTBB" ]] || runcmd git clone https://github.com/oneapi-src/oneTBB.git
+[[ -d "trace2model" ]] || runcmd git clone https://github.com/sbu-fsl/trace2model.git
+[[ -d "fsl-strace" ]] || runcmd git clone https://github.com/sbu-fsl/fsl-strace.git
 
 # Building Lintel
 # TODO: Should each build be done in a subshell to avoid errors with cd?
@@ -147,6 +147,7 @@ runcmd cd ..
 
 # Building tbb
 runcmd cd oneTBB
+# TODO: change to `make tbb_build_dir=${buildDir}/lib tbb_build_prefix=one_tbb`
 runcmd make tbb_build_prefix=syscall-replayer-build
 # TODO: How do you get the exact build directory for tbb? we need it to get
 # tbbvars.sh
@@ -170,6 +171,7 @@ runcmd cd BUILD
 if [[ "${install}" == true ]]; then
     runcmd ../configure --enable-shared --disable-static --prefix=/usr/local/strace2ds
 else
+    # TODO: Test out CXXFLAGS="-I${buildDir}/include" LDFLAGS="-L${buildDir}/lib" ../configure --enable-shared --disable-static --prefix="${buildDir}"/lib/strace2ds
     runcmd ../configure --enable-shared --disable-static --prefix="${HOME}"/lib/strace2ds
 fi
 runcmd make clean
