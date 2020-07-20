@@ -3,8 +3,6 @@
 # Build the program syscall-replayer, installing any required dependecies if
 # requested.
 
-# TODO: Check for git
-# TODO: Check for perl
 # TODO: Can we avoid building tests? They slow down the script
 
 # Script variables
@@ -12,6 +10,7 @@ readonly numberOfCores="$(nproc --all)"
 install=false
 installPackages=false
 configArgs=""
+buildDir="$(pwd)/build"
 
 readonly programDependencies=("autoconf" "automake" "cmake" "gcc" "g++" "perl" "git")
 missingPrograms=()
@@ -28,6 +27,7 @@ function runcmd
     fi
 }
 
+# TODO: Expand `printUsage` to use a here document
 function printUsage
 {
     echo "Usage: $0 [--install]" >&2
@@ -46,6 +46,8 @@ while [[ $# -gt 0 ]]; do
             ;;
         --install)
             install=true
+            # TODO: Should be able to set $buildDir to /usr/local to reduce
+            # redundant code
             shift # past argument
             ;;
         --install-packages)
@@ -67,7 +69,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ "${install}" = true ]]; then
+if [[ "${install}" == true ]]; then
     if ! command -v sudo &>/dev/null; then
         echo "Script could not find 'sudo' command. Cannot install." >&2
         exit 1
@@ -100,7 +102,7 @@ if [[ "${#missingPrograms[@]}" -gt 0 ]]; then
     exit 1
 fi
 
-if [[ "${install}" = true ]]; then
+if [[ "${install}" == true ]]; then
     
     # Installing packages
     runcmd sudo apt-get install -y libboost-dev libboost-thread-dev \
@@ -121,37 +123,51 @@ runcmd cd build
 # Building Lintel
 # TODO: Should each build be done in a subshell to avoid errors with cd?
 runcmd cd Lintel
-runcmd cmake .
-if [[ "${install}" = true ]]; then
-    runcmd sudo make install
+if [[ "${install}" == true ]]; then
+    runcmd cmake .
+    runcmd sudo make -j"${numberOfCores}" install
+else
+    runcmd cmake -DCMAKE_INSTALL_PREFIX="${buildDir}" .
+    runcmd make -j"${numberOfCores}" install
 fi
 runcmd cd ..
 
 # Building DataSeries
 runcmd cd DataSeries
 runcmd cmake .
-if [[ "${install}" = true ]]; then
-    runcmd sudo make install
+if [[ "${install}" == true ]]; then
+    runcmd cmake .
+    runcmd sudo make -j"${numberOfCores}" install
+else
+    runcmd cmake -DCMAKE_INSTALL_PREFIX="${buildDir}" .
+    runcmd make -j"${numberOfCores}" install
 fi
 runcmd cd ..
 
 # Building tcmalloc
 runcmd cd gperftools
 runcmd ./autogen.sh
-runcmd ./configure "${configArgs}"
-runcmd make -j"${numberOfCores}"
-if [[ "${install}" = true ]]; then
+if [[ "${install}" == true ]]; then
+    runcmd ./configure "${configArgs}"
+    runcmd make -j"${numberOfCores}"
     runcmd sudo make -j"${numberOfCores}" install
+else
+    runcmd ./configure --prefix="${buildDir}" "${configArgs}"
+    runcmd make -j"${numberOfCores}"
+    runcmd make -j"${numberOfCores}" install
 fi
+
 runcmd cd ..
 
 # Building tbb
 runcmd cd oneTBB
-# TODO: change to `make tbb_build_dir=${buildDir}/lib tbb_build_prefix=one_tbb`
-runcmd make tbb_build_prefix=syscall-replayer-build
-# TODO: How do you get the exact build directory for tbb? we need it to get
-# tbbvars.sh
-runcmd source build/syscall-replayer-build_release/tbbvars.sh
+if [[ "${install}" == true ]]; then
+    runcmd sudo make tbb_build_dir=/usr/local/lib tbb_build_prefix=one_tbb
+    runcmd sudo cp -r ./include/. /usr/local/include
+else
+    runcmd make tbb_build_dir="${buildDir}/lib" tbb_build_prefix=one_tbb
+    runcmd cp -r ./include/. "${buildDir}/include"
+fi
 runcmd cd ..
 
 # Building strace2ds-library
@@ -165,43 +181,68 @@ runcmd perl gen-xml-enums.pl
 runcmd cd ../
 runcmd cp -r ./xml BUILD
 runcmd cd BUILD
-# TODO: On non-root build, where do we install the library? We need the strace
-# binary to be able to find these libraries during runtime WITHOUT relying on
-# an environment variable
 if [[ "${install}" == true ]]; then
-    runcmd ../configure --enable-shared --disable-static --prefix=/usr/local/strace2ds
+    runcmd ../configure --enable-shared --disable-static \
+        --prefix=/usr/local/strace2ds
+    runcmd make clean
+    runcmd make -j"${numberOfCores}"
+    runcmd sudo make -j"${numberOfCores}" install
 else
-    # TODO: Test out CXXFLAGS="-I${buildDir}/include" LDFLAGS="-L${buildDir}/lib" ../configure --enable-shared --disable-static --prefix="${buildDir}"/lib/strace2ds
-    runcmd ../configure --enable-shared --disable-static --prefix="${HOME}"/lib/strace2ds
-fi
-runcmd make clean
-runcmd make -j"${numberOfCores}"
-if [[ "${install}" == true ]]; then
-    runcmd sudo make install
+    runcmd CXXFLAGS="-I${buildDir}/include" LDFLAGS="-L${buildDir}/lib" \
+        ../configure --enable-shared --disable-static \
+        --prefix="${buildDir}/lib/strace2ds"
+    runcmd make clean
+    runcmd make -j"${numberOfCores}"
+    runcmd make -j"${numberOfCores}" install
 fi
 
-# if [[ -v STRACE2DS ]]; then
-#     if [[ -v HOME ]]; then
-#         runcmd export STRACE2DS="$HOME/lib/strace2ds"
-#         # TODO: ask the user what rc file we should append the environment variable
-#         runcmd echo "export STRACE2DS=\"$HOME/lib/strace2ds\"" >> "$HOME"/.bashrc
-#     else
-#         runcmd echo "Could not export STRACE2DS environment variable."
-#     fi
-# else
-#     runcmd echo "Using STRACE2DS=$STRACE2DS"
-# fi
 runcmd cd ../../..
 
 # Building fsl-strace
 runcmd cd fsl-strace
-# TODO: the build script for fsl-strace expects the strace2ds libraries to be
-# at $HOME/lib/strace2ds. Does this still work if the libraries are installed
-# as root or do we need to modify this build script too?
-runcmd ./build-fsl-strace
+runcmd ./bootstrap
+runcmd mkdir -p BUILD
+runcmd cd BUILD
+if [[ "${install}" == true ]]; then
+    export CPPFLAGS="-I/usr/local/strace2ds/include"
+    export LDFLAGS="\
+        -Xlinker -rpath=/usr/local/strace2ds/lib -L/usr/local/strace2ds/lib"
+else
+    export CPPFLAGS="-I${buildDir}/lib/strace2ds/include"
+    export LDFLAGS="\
+        -Xlinker -rpath=${buildDir}/lib/strace2ds/lib \
+        -L${buildDir}/lib/strace2ds/lib"
+fi
+
+libs="-lstrace2ds -lLintel -lDataSeries"
+runcmd CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS}" \
+    ../configure --enable-mpers=check --enable-dataseries
+
+runcmd make clean
+
+if [[ "${install}" == true ]]; then
+    runcmd sudo make LIBS="${libs}" CCLD=g++
+else
+    runcmd make LIBS="${libs}" CCLD=g++
+fi
+
 runcmd cd ..
 
 # Building syscall-replayer
 runcmd cd trace2model/syscall-replayer/
-runcmd make -j"${numberOfCores}"
+if [[ "${install}" == true ]]; then
+    export CPPFLAGS="-I/usr/local/strace2ds/include"
+    export LDFLAGS="\
+        -Xlinker -rpath=/usr/local/strace2ds/lib:/usr/local/lib/one_tbb_release \
+        -L/usr/local/strace2ds/lib -L/usr/local/lib/one_tbb_release"
+    runcmd sudo make -j"${numberOfCores}"
+else
+    export CPPFLAGS="-I${buildDir}/lib/strace2ds/include \
+        -I${buildDir}/include"
+    export LDFLAGS="\
+        -Xlinker -rpath=${buildDir}/lib:${buildDir}/lib/strace2ds/lib:${buildDir}/lib/one_tbb_release \
+        -L${buildDir}/lib -L${buildDir}/lib/strace2ds/lib -L${buildDir}/lib/one_tbb_release"
+    runcmd make -j"${numberOfCores}"
+fi
+
 runcmd cd ../../..
