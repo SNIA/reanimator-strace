@@ -9,7 +9,6 @@
 readonly numberOfCores="$(nproc --all)"
 install=false
 installPackages=false
-sudo_cmd=""
 configArgs=""
 installDir="$(pwd)/syscall_replayer_release"
 repositoryDir="$(pwd)/build"
@@ -48,7 +47,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --install)
             install=true
-            sudo_cmd="sudo"
             installDir="/usr/local"
             shift # past argument
             ;;
@@ -132,13 +130,21 @@ runcmd cd "${repositoryDir}"
 # Building Lintel
 runcmd cd Lintel
 runcmd cmake -DCMAKE_INSTALL_PREFIX="${installDir}" .
-runcmd "${sudo_cmd}" make -j"${numberOfCores}" install
+if [[ "${install}" == true ]]; then
+    runcmd sudo make -j"${numberOfCores}" install
+else
+    runcmd make -j"${numberOfCores}" install
+fi
 runcmd cd "${repositoryDir}"
 
 # Building DataSeries
 runcmd cd DataSeries
 runcmd cmake -DCMAKE_INSTALL_PREFIX="${installDir}" .
-runcmd "${sudo_cmd}" make -j"${numberOfCores}" install
+if [[ "${install}" == true ]]; then
+    runcmd sudo make -j"${numberOfCores}" install
+else
+    runcmd make -j"${numberOfCores}" install
+fi
 runcmd cd "${repositoryDir}"
 
 # Building tcmalloc
@@ -146,13 +152,23 @@ runcmd cd gperftools
 runcmd ./autogen.sh
 runcmd ./configure --prefix="${installDir}" "${configArgs}"
 runcmd make -j"${numberOfCores}"
-runcmd "${sudo_cmd}" make -j"${numberOfCores}" install
+if [[ "${install}" == true ]]; then
+    runcmd sudo make -j"${numberOfCores}" install
+else
+    runcmd make -j"${numberOfCores}" install
+fi
 runcmd cd "${repositoryDir}"
 
 # Building tbb
 runcmd cd oneTBB
-runcmd "${sudo_cmd}" make tbb_build_dir="${installDir}/lib" tbb_build_prefix=one_tbb
-runcmd "${sudo_cmd}" cp -r ./include/. "${installDir}/include"
+runcmd make tbb_build_dir="${installDir}/lib" tbb_build_prefix=one_tbb
+if [[ "${install}" == true ]]; then
+    runcmd sudo cp -r ./include/. "${installDir}/include"
+    runcmd sudo make -j"${numberOfCores}" install
+else
+    runcmd cp -r ./include/. "${installDir}/include"
+    runcmd make -j"${numberOfCores}" install
+fi
 runcmd cd "${repositoryDir}"
 
 # Building strace2ds-library
@@ -172,7 +188,11 @@ runcmd ../configure --enable-shared --disable-static \
     --prefix="${installDir}/lib/strace2ds"
 runcmd make clean
 runcmd make -j"${numberOfCores}"
-runcmd "${sudo_cmd}" make -j"${numberOfCores}" install
+if [[ "${install}" == true ]]; then
+    runcmd sudo make -j"${numberOfCores}" install
+else
+    runcmd make -j"${numberOfCores}" install
+fi
 
 runcmd cd "${repositoryDir}"
 
@@ -189,7 +209,7 @@ libs="-lstrace2ds -lLintel -lDataSeries"
 runcmd ../configure --enable-mpers=check --enable-dataseries
 
 runcmd make clean
-runcmd "${sudo_cmd}" make LIBS="${libs}" CCLD=g++
+runcmd make LIBS="${libs}" CCLD=g++
 
 runcmd cd "${repositoryDir}"
 
@@ -200,6 +220,6 @@ runcmd export CPPFLAGS="-I${installDir}/lib/strace2ds/include \
 runcmd export LDFLAGS="\
     -Xlinker -rpath=${installDir}/lib:${installDir}/lib/strace2ds/lib:${installDir}/lib/one_tbb_release \
     -L${installDir}/lib -L${installDir}/lib/strace2ds/lib -L${installDir}/lib/one_tbb_release"
-runcmd "${sudo_cmd}" make -j"${numberOfCores}"
+runcmd make -j"${numberOfCores}"
 
 runcmd cd "${repositoryDir}"
