@@ -10,7 +10,7 @@ readonly numberOfCores="$(nproc --all)"
 install=false
 installPackages=false
 configArgs=""
-buildDir="$(pwd)/build"
+buildDir="$(pwd)/syscall_replayer_release"
 
 readonly programDependencies=("autoconf" "automake" "cmake" "gcc" "g++" "perl" "git")
 missingPrograms=()
@@ -134,7 +134,6 @@ runcmd cd ..
 
 # Building DataSeries
 runcmd cd DataSeries
-runcmd cmake .
 if [[ "${install}" == true ]]; then
     runcmd cmake .
     runcmd sudo make -j"${numberOfCores}" install
@@ -156,7 +155,6 @@ else
     runcmd make -j"${numberOfCores}"
     runcmd make -j"${numberOfCores}" install
 fi
-
 runcmd cd ..
 
 # Building tbb
@@ -188,8 +186,9 @@ if [[ "${install}" == true ]]; then
     runcmd make -j"${numberOfCores}"
     runcmd sudo make -j"${numberOfCores}" install
 else
-    runcmd CXXFLAGS="-I${buildDir}/include" LDFLAGS="-L${buildDir}/lib" \
-        ../configure --enable-shared --disable-static \
+    runcmd export CXXFLAGS="-I${buildDir}/include"
+    runcmd export LDFLAGS="-L${buildDir}/lib"
+    runcmd ../configure --enable-shared --disable-static \
         --prefix="${buildDir}/lib/strace2ds"
     runcmd make clean
     runcmd make -j"${numberOfCores}"
@@ -204,19 +203,18 @@ runcmd ./bootstrap
 runcmd mkdir -p BUILD
 runcmd cd BUILD
 if [[ "${install}" == true ]]; then
-    export CPPFLAGS="-I/usr/local/strace2ds/include"
-    export LDFLAGS="\
+    runcmd export CPPFLAGS="-I/usr/local/strace2ds/include"
+    runcmd export LDFLAGS="\
         -Xlinker -rpath=/usr/local/strace2ds/lib -L/usr/local/strace2ds/lib"
 else
-    export CPPFLAGS="-I${buildDir}/lib/strace2ds/include"
-    export LDFLAGS="\
-        -Xlinker -rpath=${buildDir}/lib/strace2ds/lib \
-        -L${buildDir}/lib/strace2ds/lib"
+    runcmd export CPPFLAGS="-I${buildDir}/lib/strace2ds/include"
+    runcmd export LDFLAGS="\
+        -Xlinker -rpath=${buildDir}/lib:${buildDir}/lib/strace2ds/lib \
+        -L${buildDir}/lib -L${buildDir}/lib/strace2ds/lib"
 fi
 
 libs="-lstrace2ds -lLintel -lDataSeries"
-runcmd CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS}" \
-    ../configure --enable-mpers=check --enable-dataseries
+runcmd ../configure --enable-mpers=check --enable-dataseries
 
 runcmd make clean
 
@@ -226,20 +224,20 @@ else
     runcmd make LIBS="${libs}" CCLD=g++
 fi
 
-runcmd cd ..
+runcmd cd ../..
 
 # Building syscall-replayer
 runcmd cd trace2model/syscall-replayer/
 if [[ "${install}" == true ]]; then
-    export CPPFLAGS="-I/usr/local/strace2ds/include"
-    export LDFLAGS="\
+    runcmd export CPPFLAGS="-I/usr/local/strace2ds/include"
+    runcmd export LDFLAGS="\
         -Xlinker -rpath=/usr/local/strace2ds/lib:/usr/local/lib/one_tbb_release \
         -L/usr/local/strace2ds/lib -L/usr/local/lib/one_tbb_release"
     runcmd sudo make -j"${numberOfCores}"
 else
-    export CPPFLAGS="-I${buildDir}/lib/strace2ds/include \
+    runcmd export CPPFLAGS="-I${buildDir}/lib/strace2ds/include \
         -I${buildDir}/include"
-    export LDFLAGS="\
+    runcmd export LDFLAGS="\
         -Xlinker -rpath=${buildDir}/lib:${buildDir}/lib/strace2ds/lib:${buildDir}/lib/one_tbb_release \
         -L${buildDir}/lib -L${buildDir}/lib/strace2ds/lib -L${buildDir}/lib/one_tbb_release"
     runcmd make -j"${numberOfCores}"
