@@ -82,8 +82,8 @@ for program in "${programDependencies[@]}"; do
     if [[ $? == 0 ]]; then
         echo "${program}: Located at ${programPath}"
     elif [[ "${installPackages}" == true ]]; then
-        echo "${program}: Not found. Installing..."
-        runcmd sudo apt-get install -y "${program}"
+        echo "${program}: Not found. Queuing for installation..."
+        missingPrograms+=("${program}")
     else
         echo "${program}: Not found."
         missingPrograms+=("${program}")
@@ -92,23 +92,30 @@ done
 
 # Check whether the user has all required programs for building
 if [[ "${#missingPrograms[@]}" -gt 0 ]]; then
-    echo "Could not find all required programs. Not found:"
-    for program in "${missingPrograms[@]}"; do
-        echo "  ${program}"
-    done
+    if [[ "${installPackages}" == true ]]; then
+        echo "Installing missing programs."
+        runcmd sudo apt-get install -y "${missingPrograms[*]}"
+    else
+        echo "Could not find all required programs. Not found:"
+        for program in "${missingPrograms[@]}"; do
+            echo "  ${program}"
+        done
 
-    echo "To install on a Debian-based system, run the command"
-    echo "  sudo apt-get install ${missingPrograms[*]}"
-    exit 1
+        echo "To install on a Debian-based system, run the command"
+        echo "  sudo apt-get install ${missingPrograms[*]}"
+        exit 1
+    fi
 fi
 
-if [[ "${install}" == true ]]; then
+# # TODO: Either check the system for these libraries or trust the user
+# # to install them before running the script
+# if [[ "${install}" == true ]]; then
     
-    # Installing packages
-    runcmd sudo apt-get install -y libboost-dev libboost-thread-dev \
-        libboost-program-options-dev build-essential libxml2-dev libz-dev \
-        libaio-dev libtool
-fi
+#     # Installing packages
+#     runcmd sudo apt-get install -y libboost-dev libboost-thread-dev \
+#         libboost-program-options-dev build-essential libxml2-dev libz-dev \
+#         libaio-dev libtool
+# fi
 
 # Cloning all repositories
 runcmd mkdir -p build
