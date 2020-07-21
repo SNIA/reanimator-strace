@@ -9,6 +9,7 @@
 readonly numberOfCores="$(nproc --all)"
 install=false
 installPackages=false
+sudo_cmd=""
 configArgs=""
 installDir="$(pwd)/syscall_replayer_release"
 repositoryDir="$(pwd)/build"
@@ -47,6 +48,8 @@ while [[ $# -gt 0 ]]; do
             ;;
         --install)
             install=true
+            sudo_cmd="sudo"
+            installDir="/usr/local"
             shift # past argument
             ;;
         --install-packages)
@@ -127,51 +130,29 @@ runcmd cd "${repositoryDir}"
 [[ -d "fsl-strace" ]] || runcmd git clone https://github.com/sbu-fsl/fsl-strace.git
 
 # Building Lintel
-# TODO: Should each build be done in a subshell to avoid errors with cd?
 runcmd cd Lintel
-if [[ "${install}" == true ]]; then
-    runcmd cmake .
-    runcmd sudo make -j"${numberOfCores}" install
-else
-    runcmd cmake -DCMAKE_INSTALL_PREFIX="${installDir}" .
-    runcmd make -j"${numberOfCores}" install
-fi
+runcmd cmake -DCMAKE_INSTALL_PREFIX="${installDir}" .
+runcmd "${sudo_cmd}" make -j"${numberOfCores}" install
 runcmd cd "${repositoryDir}"
 
 # Building DataSeries
 runcmd cd DataSeries
-if [[ "${install}" == true ]]; then
-    runcmd cmake .
-    runcmd sudo make -j"${numberOfCores}" install
-else
-    runcmd cmake -DCMAKE_INSTALL_PREFIX="${installDir}" .
-    runcmd make -j"${numberOfCores}" install
-fi
+runcmd cmake -DCMAKE_INSTALL_PREFIX="${installDir}" .
+runcmd "${sudo_cmd}" make -j"${numberOfCores}" install
 runcmd cd "${repositoryDir}"
 
 # Building tcmalloc
 runcmd cd gperftools
 runcmd ./autogen.sh
-if [[ "${install}" == true ]]; then
-    runcmd ./configure "${configArgs}"
-    runcmd make -j"${numberOfCores}"
-    runcmd sudo make -j"${numberOfCores}" install
-else
-    runcmd ./configure --prefix="${installDir}" "${configArgs}"
-    runcmd make -j"${numberOfCores}"
-    runcmd make -j"${numberOfCores}" install
-fi
+runcmd ./configure --prefix="${installDir}" "${configArgs}"
+runcmd make -j"${numberOfCores}"
+runcmd "${sudo_cmd}" make -j"${numberOfCores}" install
 runcmd cd "${repositoryDir}"
 
 # Building tbb
 runcmd cd oneTBB
-if [[ "${install}" == true ]]; then
-    runcmd sudo make tbb_build_dir=/usr/local/lib tbb_build_prefix=one_tbb
-    runcmd sudo cp -r ./include/. /usr/local/include
-else
-    runcmd make tbb_build_dir="${installDir}/lib" tbb_build_prefix=one_tbb
-    runcmd cp -r ./include/. "${installDir}/include"
-fi
+runcmd "${sudo_cmd}" make tbb_build_dir="${installDir}/lib" tbb_build_prefix=one_tbb
+runcmd "${sudo_cmd}" cp -r ./include/. "${installDir}/include"
 runcmd cd "${repositoryDir}"
 
 # Building strace2ds-library
@@ -185,21 +166,13 @@ runcmd perl gen-xml-enums.pl
 runcmd cd ../
 runcmd cp -r ./xml BUILD
 runcmd cd BUILD
-if [[ "${install}" == true ]]; then
-    runcmd ../configure --enable-shared --disable-static \
-        --prefix=/usr/local/strace2ds
-    runcmd make clean
-    runcmd make -j"${numberOfCores}"
-    runcmd sudo make -j"${numberOfCores}" install
-else
-    runcmd export CXXFLAGS="-I${installDir}/include"
-    runcmd export LDFLAGS="-L${installDir}/lib"
-    runcmd ../configure --enable-shared --disable-static \
-        --prefix="${installDir}/lib/strace2ds"
-    runcmd make clean
-    runcmd make -j"${numberOfCores}"
-    runcmd make -j"${numberOfCores}" install
-fi
+runcmd export CXXFLAGS="-I${installDir}/include"
+runcmd export LDFLAGS="-L${installDir}/lib"
+runcmd ../configure --enable-shared --disable-static \
+    --prefix="${installDir}/lib/strace2ds"
+runcmd make clean
+runcmd make -j"${numberOfCores}"
+runcmd "${sudo_cmd}" make -j"${numberOfCores}" install
 
 runcmd cd "${repositoryDir}"
 
@@ -208,45 +181,25 @@ runcmd cd fsl-strace
 runcmd ./bootstrap
 runcmd mkdir -p BUILD
 runcmd cd BUILD
-if [[ "${install}" == true ]]; then
-    runcmd export CPPFLAGS="-I/usr/local/strace2ds/include"
-    runcmd export LDFLAGS="\
-        -Xlinker -rpath=/usr/local/strace2ds/lib -L/usr/local/strace2ds/lib"
-else
-    runcmd export CPPFLAGS="-I${installDir}/lib/strace2ds/include"
-    runcmd export LDFLAGS="\
-        -Xlinker -rpath=${installDir}/lib:${installDir}/lib/strace2ds/lib \
-        -L${installDir}/lib -L${installDir}/lib/strace2ds/lib"
-fi
-
+runcmd export CPPFLAGS="-I${installDir}/lib/strace2ds/include"
+runcmd export LDFLAGS="\
+    -Xlinker -rpath=${installDir}/lib:${installDir}/lib/strace2ds/lib \
+    -L${installDir}/lib -L${installDir}/lib/strace2ds/lib"
 libs="-lstrace2ds -lLintel -lDataSeries"
 runcmd ../configure --enable-mpers=check --enable-dataseries
 
 runcmd make clean
-
-if [[ "${install}" == true ]]; then
-    runcmd sudo make LIBS="${libs}" CCLD=g++
-else
-    runcmd make LIBS="${libs}" CCLD=g++
-fi
+runcmd "${sudo_cmd}" make LIBS="${libs}" CCLD=g++
 
 runcmd cd "${repositoryDir}"
 
 # Building syscall-replayer
 runcmd cd trace2model/syscall-replayer/
-if [[ "${install}" == true ]]; then
-    runcmd export CPPFLAGS="-I/usr/local/strace2ds/include"
-    runcmd export LDFLAGS="\
-        -Xlinker -rpath=/usr/local/strace2ds/lib:/usr/local/lib/one_tbb_release \
-        -L/usr/local/strace2ds/lib -L/usr/local/lib/one_tbb_release"
-    runcmd sudo make -j"${numberOfCores}"
-else
-    runcmd export CPPFLAGS="-I${installDir}/lib/strace2ds/include \
-        -I${installDir}/include"
-    runcmd export LDFLAGS="\
-        -Xlinker -rpath=${installDir}/lib:${installDir}/lib/strace2ds/lib:${installDir}/lib/one_tbb_release \
-        -L${installDir}/lib -L${installDir}/lib/strace2ds/lib -L${installDir}/lib/one_tbb_release"
-    runcmd make -j"${numberOfCores}"
-fi
+runcmd export CPPFLAGS="-I${installDir}/lib/strace2ds/include \
+    -I${installDir}/include"
+runcmd export LDFLAGS="\
+    -Xlinker -rpath=${installDir}/lib:${installDir}/lib/strace2ds/lib:${installDir}/lib/one_tbb_release \
+    -L${installDir}/lib -L${installDir}/lib/strace2ds/lib -L${installDir}/lib/one_tbb_release"
+runcmd "${sudo_cmd}" make -j"${numberOfCores}"
 
 runcmd cd "${repositoryDir}"
