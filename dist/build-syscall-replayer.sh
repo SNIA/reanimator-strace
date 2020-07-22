@@ -164,10 +164,10 @@ runcmd cd oneTBB
 runcmd make tbb_build_dir="${installDir}/lib" tbb_build_prefix=one_tbb
 if [[ "${install}" == true ]]; then
     runcmd sudo cp -r ./include/. "${installDir}/include"
-    runcmd sudo make -j"${numberOfCores}" install
+    runcmd sudo make -j"${numberOfCores}"
 else
     runcmd cp -r ./include/. "${installDir}/include"
-    runcmd make -j"${numberOfCores}" install
+    runcmd make -j"${numberOfCores}"
 fi
 runcmd cd "${repositoryDir}"
 
