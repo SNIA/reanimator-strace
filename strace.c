@@ -30,7 +30,8 @@
 # include <sys/prctl.h>
 #endif
 #ifdef ENABLE_DATASERIES
-# include <sys/param.h>
+#include <sys/param.h>
+#include <libgen.h>
 #endif /* ENABLE_DATASERIES */
 
 #include "kill_save_errno.h"
@@ -1939,7 +1940,7 @@ init(int argc, char *argv[])
 		if (!ds_top) {
 			struct stat relative_lib_info;
 			snprintf(relative_path, MAXPATHLEN, "%s/%s",
-				program_invocation_name, "../strace2ds");
+				dirname(program_invocation_name), "../strace2ds");
 			int lib_search_return = stat(relative_path, &relative_lib_info);
 			if (lib_search_return == 0 && S_ISDIR(relative_lib_info.st_mode)) {
 				ds_top = relative_path;
