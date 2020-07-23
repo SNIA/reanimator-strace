@@ -207,9 +207,11 @@ runcmd export LDFLAGS="\
     -L${installDir}/lib -L${installDir}/lib/strace2ds/lib"
 libs="-lstrace2ds -lLintel -lDataSeries"
 runcmd ../configure --enable-mpers=check --enable-dataseries
-
 runcmd make clean
 runcmd make LIBS="${libs}" CCLD=g++
+if [[ "${install}" == false ]]; then
+    runcmd cp ./strace "${installDir}/bin/"
+fi
 
 runcmd cd "${repositoryDir}"
 
