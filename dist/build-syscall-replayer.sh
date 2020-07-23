@@ -3,9 +3,9 @@
 # Build the program syscall-replayer, installing any required dependecies if
 # requested.
 
-# TODO: Can we avoid building tests? They slow down the script
-
-# Script variables
+####################
+# Script variables #
+####################
 readonly numberOfCores="$(nproc --all)"
 install=false
 installPackages=false
@@ -16,7 +16,9 @@ repositoryDir="$(pwd)/build"
 readonly programDependencies=("autoconf" "automake" "cmake" "gcc" "g++" "perl" "git")
 missingPrograms=()
 
-# Script functions
+####################
+# Script functions #
+####################
 function runcmd
 {
     echo "CMD: $*"
@@ -28,7 +30,6 @@ function runcmd
     fi
 }
 
-# TODO: Expand `printUsage` to use a here document
 function printUsage
 {
     (
@@ -44,7 +45,11 @@ EOF
     exit 0
 }
 
-# Parsing script arguments
+##################
+# Script startup #
+##################
+
+# Parse script arguments
 while [[ $# -gt 0 ]]; do
     key="$1"
 
@@ -78,6 +83,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Check system for sudo command
 if [[ "${install}" == true ]]; then
     if ! command -v sudo &>/dev/null; then
         echo "Script could not find 'sudo' command. Cannot install." >&2
@@ -126,6 +132,10 @@ fi
 #         libaio-dev libtool
 # fi
 
+#################
+# Build process #
+#################
+
 # Cloning all repositories
 runcmd mkdir -p "${repositoryDir}"
 runcmd cd "${repositoryDir}"
@@ -137,6 +147,7 @@ runcmd cd "${repositoryDir}"
 [[ -d "fsl-strace" ]] || runcmd git clone https://github.com/sbu-fsl/fsl-strace.git
 
 # Building Lintel
+# ---------------
 runcmd cd Lintel
 runcmd cmake -DCMAKE_INSTALL_PREFIX="${installDir}" .
 if [[ "${install}" == true ]]; then
@@ -147,6 +158,7 @@ fi
 runcmd cd "${repositoryDir}"
 
 # Building DataSeries
+# -------------------
 runcmd cd DataSeries
 runcmd cmake -DCMAKE_INSTALL_PREFIX="${installDir}" .
 if [[ "${install}" == true ]]; then
@@ -157,6 +169,7 @@ fi
 runcmd cd "${repositoryDir}"
 
 # Building tcmalloc
+# -----------------
 runcmd cd gperftools
 runcmd ./autogen.sh
 runcmd ./configure --prefix="${installDir}" "${configArgs}"
@@ -169,6 +182,7 @@ fi
 runcmd cd "${repositoryDir}"
 
 # Building tbb
+# ------------
 runcmd cd oneTBB
 runcmd make tbb_build_dir="${installDir}/lib" tbb_build_prefix=one_tbb
 if [[ "${install}" == true ]]; then
@@ -181,6 +195,7 @@ fi
 runcmd cd "${repositoryDir}"
 
 # Building strace2ds-library
+# --------------------------
 runcmd cd trace2model/strace2ds-library
 runcmd autoreconf -v -i
 runcmd rm -rf BUILD
@@ -194,7 +209,7 @@ runcmd cd BUILD
 runcmd export CXXFLAGS="-I${installDir}/include"
 runcmd export LDFLAGS="-L${installDir}/lib"
 runcmd ../configure --enable-shared --disable-static \
-    --prefix="${installDir}/lib/strace2ds"
+    --prefix="${installDir}/strace2ds"
 runcmd make clean
 runcmd make -j"${numberOfCores}"
 if [[ "${install}" == true ]]; then
@@ -202,18 +217,18 @@ if [[ "${install}" == true ]]; then
 else
     runcmd make -j"${numberOfCores}" install
 fi
-
 runcmd cd "${repositoryDir}"
 
 # Building fsl-strace
+# -------------------
 runcmd cd fsl-strace
 runcmd ./bootstrap
 runcmd mkdir -p BUILD
 runcmd cd BUILD
-runcmd export CPPFLAGS="-I${installDir}/lib/strace2ds/include"
+runcmd export CPPFLAGS="-I${installDir}/strace2ds/include"
 runcmd export LDFLAGS="\
-    -Xlinker -rpath=${installDir}/lib:${installDir}/lib/strace2ds/lib \
-    -L${installDir}/lib -L${installDir}/lib/strace2ds/lib"
+    -Xlinker -rpath=${installDir}/lib:${installDir}/strace2ds/lib \
+    -L${installDir}/lib -L${installDir}/strace2ds/lib"
 libs="-lstrace2ds -lLintel -lDataSeries"
 runcmd ../configure --enable-mpers=check --enable-dataseries
 runcmd make clean
@@ -221,16 +236,15 @@ runcmd make LIBS="${libs}" CCLD=g++
 if [[ "${install}" == false ]]; then
     runcmd cp ./strace "${installDir}/bin/"
 fi
-
 runcmd cd "${repositoryDir}"
 
 # Building syscall-replayer
+# -------------------------
 runcmd cd trace2model/syscall-replayer/
-runcmd export CPPFLAGS="-I${installDir}/lib/strace2ds/include \
+runcmd export CPPFLAGS="-I${installDir}/strace2ds/include \
     -I${installDir}/include"
 runcmd export LDFLAGS="\
-    -Xlinker -rpath=${installDir}/lib:${installDir}/lib/strace2ds/lib:${installDir}/lib/one_tbb_release \
-    -L${installDir}/lib -L${installDir}/lib/strace2ds/lib -L${installDir}/lib/one_tbb_release"
+    -Xlinker -rpath=${installDir}/lib:${installDir}/strace2ds/lib:${installDir}/lib/one_tbb_release \
+    -L${installDir}/lib -L${installDir}/strace2ds/lib -L${installDir}/lib/one_tbb_release"
 runcmd make -j"${numberOfCores}"
-
 runcmd cd "${repositoryDir}"
