@@ -1,3 +1,10 @@
+fsl-strace - an strace fork compatible with DataSeries
+============================================================
+
+fsl-strace extends strace with support for [DataSeries](https://github.com/dataseries/dataseries), an efficient, flexible data format for structured serial data. This modification to strace captures maximal information, including all data buffers and arguments. The output of fsl-strace is designed to be readable by both humans and machines, allowing researchers to use existing DataSeries tools to analyze trace files.
+
+fsl-strace is under development by the File Systems and Storage Lab (FSL) at Stony Brook University under Professor Erez Zadok, with assistance from Professor Geoff Kuenning at Harvey Mudd College.
+
 strace - the linux syscall tracer
 =================================
 
