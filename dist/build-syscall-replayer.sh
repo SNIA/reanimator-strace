@@ -31,7 +31,16 @@ function runcmd
 # TODO: Expand `printUsage` to use a here document
 function printUsage
 {
-    echo "Usage: $0 [--install]" >&2
+    (
+    cat << EOF
+Usage: $0 [options...]
+Options:
+     --config-args ARGS     Append ARGS to every ./configure command
+     --install              Install libraries and binaries under /usr/local
+     --install-packages     Automatically use apt-get to install missing packages
+ -h, --help                 Print this help message
+EOF
+    ) >&2
     exit 0
 }
 
