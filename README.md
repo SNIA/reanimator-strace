@@ -5,6 +5,26 @@ fsl-strace extends strace with support for [DataSeries](https://github.com/datas
 
 fsl-strace is under development by the File Systems and Storage Lab (FSL) at Stony Brook University under Professor Erez Zadok, with assistance from Professor Geoff Kuenning at Harvey Mudd College.
 
+Dependencies
+------------
+
+Currently, only Ubuntu 16 is officially supported.
+
+- [Lintel](https://github.com/dataseries/lintel) - general utility library for DataSeries
+- [DataSeries](https://github.com/dataseries/dataseries) - data format for structured serial data
+- [strace2ds-library](https://github.com/sbu-fsl/trace2model/tree/master/strace2ds-library) - library for outputting traces in DataSeries format
+- [tcmalloc](https://github.com/gperftools/gperftools) - high-performance, multi-threaded `malloc()` implementation
+- libboost-dev (v1.58 only)
+- libboost-thread-dev (v1.58 only)
+- libboost-program-options-dev (v1.58 only)
+- build-essential
+- libxml2-dev
+- zlib1g-dev
+- libaio-dev
+- libtool
+
+Below is the original README file from the [strace](https://strace.io) project.
+
 strace - the linux syscall tracer
 =================================
 
