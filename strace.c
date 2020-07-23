@@ -1930,9 +1930,14 @@ init(int argc, char *argv[])
 
 #ifdef ENABLE_DATASERIES
 	if (ds_fname) {
+		// TODO: Find a way to find the libraries relative to the executable.
+		// The current way searches a path relative to the user's current
+		// directory.
 		char tab_path[MAXPATHLEN], xml_path[MAXPATHLEN];
-		const char *ds_top = getenv("STRACE2DS");
-		if (!ds_top)
+		const char *ds_top = "../lib/strace2ds";
+		struct stat relative_lib_info;
+		int lib_search_return = stat(ds_top, &relative_lib_info);
+		if (lib_search_return != 0 || !(S_ISDIR(relative_lib_info.st_mode)))
 			ds_top = "/usr/local/strace2ds";
 		snprintf(tab_path, MAXPATHLEN, "%s/%s", ds_top,
 			 "tables/snia_syscall_fields.table");
