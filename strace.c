@@ -30,8 +30,8 @@
 # include <sys/prctl.h>
 #endif
 #ifdef ENABLE_DATASERIES
-#include <sys/param.h>
-#include <libgen.h>
+# include <sys/param.h>
+# include <libgen.h>
 #endif /* ENABLE_DATASERIES */
 
 #include "kill_save_errno.h"
