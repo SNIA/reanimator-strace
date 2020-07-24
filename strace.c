@@ -1931,23 +1931,20 @@ init(int argc, char *argv[])
 
 #ifdef ENABLE_DATASERIES
 	if (ds_fname) {
-		char relative_path[MAXPATHLEN], tab_path[MAXPATHLEN],
-			xml_path[MAXPATHLEN];
-		const char *ds_top = getenv("STRACE2DS");
-		if (!ds_top) {
-			struct stat relative_lib_info;
-			snprintf(relative_path, MAXPATHLEN, "%s/%s",
-				dirname(program_invocation_name), "../strace2ds");
-			int lib_search_return = stat(relative_path, &relative_lib_info);
-			if (lib_search_return == 0 && S_ISDIR(relative_lib_info.st_mode)) {
-				ds_top = relative_path;
-			} else {
-				ds_top = "/usr/local/strace2ds";
-			}
+		char ds_top[PATH_MAX], relative_path[PATH_MAX], tab_path[PATH_MAX],
+			xml_path[PATH_MAX];
+		struct stat relative_lib_info;
+		snprintf(relative_path, MAXPATHLEN, "%s/%s",
+			dirname(program_invocation_name), "../strace2ds");
+		int lib_search_return = stat(relative_path, &relative_lib_info);
+		if (lib_search_return == 0 && S_ISDIR(relative_lib_info.st_mode)) {
+			strncpy(ds_top, relative_path, PATH_MAX);
+		} else {
+			strncpy(ds_top,  "/usr/local/strace2ds", PATH_MAX);
 		}
-		snprintf(tab_path, MAXPATHLEN, "%s/%s", ds_top,
+		snprintf(tab_path, PATH_MAX, "%s/%s", ds_top,
 			 "tables/snia_syscall_fields.table");
-		snprintf(xml_path, MAXPATHLEN, "%s/%s", ds_top,
+		snprintf(xml_path, PATH_MAX, "%s/%s", ds_top,
 			 "xml/");
 		ds_module = ds_create_module(ds_fname, tab_path, xml_path);
 		if (!ds_module)
