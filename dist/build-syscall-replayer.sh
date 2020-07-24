@@ -122,16 +122,6 @@ if [[ "${#missingPrograms[@]}" -gt 0 ]]; then
     fi
 fi
 
-# # TODO: Either check the system for these libraries or trust the user
-# # to install them before running the script
-# if [[ "${install}" == true ]]; then
-    
-#     # Installing packages
-#     runcmd sudo apt-get install -y libboost-dev libboost-thread-dev \
-#         libboost-program-options-dev build-essential libxml2-dev libz-dev \
-#         libaio-dev libtool
-# fi
-
 #################
 # Build process #
 #################
