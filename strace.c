@@ -1931,9 +1931,6 @@ init(int argc, char *argv[])
 
 #ifdef ENABLE_DATASERIES
 	if (ds_fname) {
-		// TODO: Find a way to find the libraries relative to the executable.
-		// The current way searches a path relative to the user's current
-		// directory.
 		char relative_path[MAXPATHLEN], tab_path[MAXPATHLEN],
 			xml_path[MAXPATHLEN];
 		const char *ds_top = getenv("STRACE2DS");
