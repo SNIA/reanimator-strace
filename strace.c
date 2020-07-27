@@ -31,6 +31,7 @@
 #endif
 #ifdef ENABLE_DATASERIES
 # include <sys/param.h>
+# include <libgen.h>
 #endif /* ENABLE_DATASERIES */
 
 #include "kill_save_errno.h"
@@ -1930,18 +1931,22 @@ init(int argc, char *argv[])
 
 #ifdef ENABLE_DATASERIES
 	if (ds_fname) {
-		// TODO: Find a way to find the libraries relative to the executable.
-		// The current way searches a path relative to the user's current
-		// directory.
-		char tab_path[MAXPATHLEN], xml_path[MAXPATHLEN];
-		const char *ds_top = "../lib/strace2ds";
+		char ds_top[PATH_MAX] = {0};
+		char relative_path[PATH_MAX] = {0};
+		char tab_path[PATH_MAX] = {0};
+		char xml_path[PATH_MAX] = {0};
 		struct stat relative_lib_info;
-		int lib_search_return = stat(ds_top, &relative_lib_info);
-		if (lib_search_return != 0 || !(S_ISDIR(relative_lib_info.st_mode)))
-			ds_top = "/usr/local/strace2ds";
-		snprintf(tab_path, MAXPATHLEN, "%s/%s", ds_top,
+		snprintf(relative_path, MAXPATHLEN, "%s/%s",
+			dirname(program_invocation_name), "../strace2ds");
+		int lib_search_return = stat(relative_path, &relative_lib_info);
+		if (lib_search_return == 0 && S_ISDIR(relative_lib_info.st_mode)) {
+			strncpy(ds_top, relative_path, PATH_MAX);
+		} else {
+			strncpy(ds_top,  "/usr/local/strace2ds", PATH_MAX);
+		}
+		snprintf(tab_path, PATH_MAX, "%s/%s", ds_top,
 			 "tables/snia_syscall_fields.table");
-		snprintf(xml_path, MAXPATHLEN, "%s/%s", ds_top,
+		snprintf(xml_path, PATH_MAX, "%s/%s", ds_top,
 			 "xml/");
 		ds_module = ds_create_module(ds_fname, tab_path, xml_path);
 		if (!ds_module)
