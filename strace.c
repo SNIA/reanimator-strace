@@ -1931,8 +1931,10 @@ init(int argc, char *argv[])
 
 #ifdef ENABLE_DATASERIES
 	if (ds_fname) {
-		char ds_top[PATH_MAX], relative_path[PATH_MAX], tab_path[PATH_MAX],
-			xml_path[PATH_MAX];
+		char ds_top[PATH_MAX] = {0};
+		char relative_path[PATH_MAX] = {0};
+		char tab_path[PATH_MAX] = {0};
+		char xml_path[PATH_MAX] = {0};
 		struct stat relative_lib_info;
 		snprintf(relative_path, MAXPATHLEN, "%s/%s",
 			dirname(program_invocation_name), "../strace2ds");
