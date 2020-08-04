@@ -36,8 +36,10 @@ function printUsage
     cat << EOF
 Usage: $0 [options...]
 Options:
+     --build-dir DIR        Download repositories and place build files in DIR
      --config-args ARGS     Append ARGS to every ./configure command
      --install              Install libraries and binaries under /usr/local
+     --install-dir DIR      Install libraries and binaries under DIR
      --install-packages     Automatically use apt-get to install missing packages
  -h, --help                 Print this help message
 EOF
@@ -54,15 +56,25 @@ while [[ $# -gt 0 ]]; do
     key="$1"
 
     case "${key}" in
+        --build-dir)
+            shift # past argument
+            repositoryDir=$(realpath "$1" || exit $?)
+            shift # past value
+            ;;
         --config-args)
             shift # past argument
-            "${configArgs}"="$1"
+            configArgs="$1"
             shift # past value
             ;;
         --install)
             install=true
             installDir="/usr/local"
             shift # past argument
+            ;;
+        --install-dir)
+            shift # past argument
+            installDir=$(realpath "$1" || exit $?)
+            shift # past value
             ;;
         --install-packages)
             if command -v apt-get >/dev/null; then
