@@ -42,7 +42,7 @@ Requires bash.
 
 2. Clone this repository and run [`dist/build-syscall-replayer.sh`](dist/build-syscall-replayer.sh). This will place build files in the current directory under `build/` and install Lintel, DataSeries, tcmalloc, strace2ds-library, and fsl-strace under `syscall_replayer_release/`.
 
-    - The script will install include files and libraries under `/usr/local/` if invoked with `build-syscall-replayer.sh --install`.
+    - The script will install include files and libraries under `/usr/local/` if invoked with `build-syscall-replayer.sh --install`. If installed this way, the fsl-strace binary will remain in the build folder so as not to conflict with the strace binary pre-installed on many systems.
 
 ### Manual Build
 
