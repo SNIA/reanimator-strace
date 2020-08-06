@@ -122,7 +122,7 @@ done
 if [[ "${#missingPrograms[@]}" -gt 0 ]]; then
     if [[ "${installPackages}" == true ]]; then
         echo "Installing missing programs."
-        runcmd sudo apt-get install -y "${missingPrograms[*]}"
+        runcmd sudo apt-get install -y "${missingPrograms[@]}"
     else
         echo "Could not find all required programs. Not found:"
         for program in "${missingPrograms[@]}"; do
