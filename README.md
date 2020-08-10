@@ -3,7 +3,7 @@ fsl-strace - an strace fork compatible with DataSeries
 
 fsl-strace extends strace with support for [DataSeries](https://github.com/dataseries/dataseries), an efficient, flexible data format for structured serial data. This modification to strace captures maximal information, including all data buffers and arguments. The output of fsl-strace is designed to be readable by both humans and machines, allowing researchers to use existing DataSeries tools to analyze trace files.
 
-This modification is designed for use with our [syscall-replayer](https://github.com/sbu-fsl/trace2model/tree/master/syscall-replayer), a program designed to replay and analyze the system call traces collected in the DataSeries format. For more information on the Re-Animator project, please see our paper [Re-Animator: Versatile High-Fidelity Storage-System Tracing and Replaying](https://doi.org/10.1145/3383669.3398276).
+This modification is designed for use with our [syscall-replayer](https://github.com/sbu-fsl/trace2model/tree/master/syscall-replayer), a program able to replay and analyze the system call traces collected in the DataSeries format. For more information on the Re-Animator project, please see our paper [Re-Animator: Versatile High-Fidelity Storage-System Tracing and Replaying](https://doi.org/10.1145/3383669.3398276).
 
 fsl-strace is under development by Ibrahim Umit Akgun of the File Systems and Storage Lab (FSL) at Stony Brook University under Professor Erez Zadok, with assistance from Professor Geoff Kuenning at Harvey Mudd College.
 
@@ -23,7 +23,6 @@ Currently, only Ubuntu 16 is officially supported.
 - build-essential
 - libxml2-dev
 - zlib1g-dev
-- libaio-dev
 
 Build Instructions
 ------------------
@@ -35,21 +34,22 @@ Requires bash.
 1. Install the following required programs and libraries:
 
     ```plaintext
-    git cmake perl autoconf automake gcc g++ libtool libboost-dev libboost-thread-dev libboost-program-options-dev build-essential libxml2-dev libz-dev libaio-dev
+    git cmake perl autoconf automake gcc g++ libtool libboost-dev libboost-thread-dev libboost-program-options-dev build-essential libxml2-dev zlib1g-dev
     ```
 
     On Ubuntu 16, all the above requirements are available through the APT package manager.
 
-2. Clone this repository and run [`dist/build-syscall-replayer.sh`](dist/build-syscall-replayer.sh). This will place build files in the current directory under `build/` and install Lintel, DataSeries, tcmalloc, strace2ds-library, and fsl-strace under `syscall_replayer_release/`.
+2. Clone this repository and run [`build-fsl-strace.sh`](build-fsl-strace.sh). This will place build files in the current directory under `BUILD/` and install Lintel, DataSeries, tcmalloc, strace2ds-library, and fsl-strace under `dist/fsl_strace_release/`.
 
     - The script will install include files and libraries under `/usr/local/` if invoked with `build-syscall-replayer.sh --install`. If installed this way, the fsl-strace binary will remain in the build folder so as not to conflict with the strace binary pre-installed on many systems.
+    - You may specify custom build and install directories with the command line options `--build-dir DIR` and `--install-dir DIR`. Run `./build-fsl-strace.sh --help` for a full list of options.
 
 ### Manual Build
 
 1. Install the following required programs and libraries:
 
     ```plaintext
-    git cmake perl autoconf automake gcc g++ libtool libboost-dev libboost-thread-dev libboost-program-options-dev build-essential libxml2-dev libz-dev libaio-dev
+    git cmake perl autoconf automake gcc g++ libtool libboost-dev libboost-thread-dev libboost-program-options-dev build-essential libxml2-dev zlib1g-dev
     ```
 
     On Ubuntu 16, all the above requirements are available through the APT package manager.
