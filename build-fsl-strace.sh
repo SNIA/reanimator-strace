@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Build the program syscall-replayer, installing any required dependecies if
+# Build the program fsl-strace, installing any required dependencies if
 # requested.
 
 ####################
@@ -10,8 +10,9 @@ readonly numberOfCores="$(nproc --all)"
 install=false
 installPackages=false
 configArgs=""
-installDir="$(pwd)/syscall_replayer_release"
-repositoryDir="$(pwd)/build"
+installDir="$(pwd)/dist/fsl_strace_release"
+repositoryDir="$(pwd)/BUILD/repositories"
+straceDir="$(pwd)"
 
 readonly programDependencies=("autoconf" "automake" "cmake" "gcc" "g++" "perl" "git")
 missingPrograms=()
@@ -36,8 +37,10 @@ function printUsage
     cat << EOF
 Usage: $0 [options...]
 Options:
+     --build-dir DIR        Download repositories and place build files in DIR
      --config-args ARGS     Append ARGS to every ./configure command
      --install              Install libraries and binaries under /usr/local
+     --install-dir DIR      Install libraries and binaries under DIR
      --install-packages     Automatically use apt-get to install missing packages
  -h, --help                 Print this help message
 EOF
@@ -54,15 +57,25 @@ while [[ $# -gt 0 ]]; do
     key="$1"
 
     case "${key}" in
+        --build-dir)
+            shift # past argument
+            repositoryDir="$(realpath "$1" || exit $?)"
+            shift # past value
+            ;;
         --config-args)
             shift # past argument
-            "${configArgs}"="$1"
+            configArgs="$1"
             shift # past value
             ;;
         --install)
             install=true
             installDir="/usr/local"
             shift # past argument
+            ;;
+        --install-dir)
+            shift # past argument
+            installDir="$(realpath "$1" || exit $?)"
+            shift # past value
             ;;
         --install-packages)
             if command -v apt-get >/dev/null; then
@@ -109,7 +122,7 @@ done
 if [[ "${#missingPrograms[@]}" -gt 0 ]]; then
     if [[ "${installPackages}" == true ]]; then
         echo "Installing missing programs."
-        runcmd sudo apt-get install -y "${missingPrograms[*]}"
+        runcmd sudo apt-get install -y "${missingPrograms[@]}"
     else
         echo "Could not find all required programs. Not found:"
         for program in "${missingPrograms[@]}"; do
@@ -132,9 +145,7 @@ runcmd cd "${repositoryDir}"
 [[ -d "Lintel" ]] || runcmd git clone https://github.com/dataseries/Lintel.git
 [[ -d "DataSeries" ]] || runcmd git clone https://github.com/dataseries/DataSeries.git
 [[ -d "gperftools" ]] || runcmd git clone https://github.com/gperftools/gperftools.git
-[[ -d "oneTBB" ]] || runcmd git clone https://github.com/oneapi-src/oneTBB.git
 [[ -d "trace2model" ]] || runcmd git clone https://github.com/sbu-fsl/trace2model.git
-[[ -d "fsl-strace" ]] || runcmd git clone https://github.com/sbu-fsl/fsl-strace.git
 
 # Building Lintel
 # ---------------
@@ -171,20 +182,6 @@ else
 fi
 runcmd cd "${repositoryDir}"
 
-# Building tbb
-# ------------
-runcmd cd oneTBB
-if [[ "${install}" == true ]]; then
-    runcmd sudo cp -r ./include/. "${installDir}/include"
-    runcmd sudo make tbb_build_dir="${installDir}/lib" \
-        tbb_build_prefix=one_tbb -j"${numberOfCores}"
-else
-    runcmd cp -r ./include/. "${installDir}/include"
-    runcmd make tbb_build_dir="${installDir}/lib" tbb_build_prefix=one_tbb \
-        -j"${numberOfCores}"
-fi
-runcmd cd "${repositoryDir}"
-
 # Building strace2ds-library
 # --------------------------
 runcmd cd trace2model/strace2ds-library
@@ -212,7 +209,7 @@ runcmd cd "${repositoryDir}"
 
 # Building fsl-strace
 # -------------------
-runcmd cd fsl-strace
+runcmd cd "${straceDir}"
 runcmd ./bootstrap
 runcmd mkdir -p BUILD
 runcmd cd BUILD
@@ -227,15 +224,4 @@ runcmd make LIBS="${libs}" CCLD=g++
 if [[ "${install}" == false ]]; then
     runcmd cp ./strace "${installDir}/bin/"
 fi
-runcmd cd "${repositoryDir}"
-
-# Building syscall-replayer
-# -------------------------
-runcmd cd trace2model/syscall-replayer/
-runcmd export CPPFLAGS="-I${installDir}/strace2ds/include \
-    -I${installDir}/include"
-runcmd export LDFLAGS="\
-    -Xlinker -rpath=${installDir}/lib:${installDir}/strace2ds/lib:${installDir}/lib/one_tbb_release \
-    -L${installDir}/lib -L${installDir}/strace2ds/lib -L${installDir}/lib/one_tbb_release"
-runcmd make -j"${numberOfCores}"
 runcmd cd "${repositoryDir}"
