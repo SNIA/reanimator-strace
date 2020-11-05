@@ -145,7 +145,7 @@ runcmd cd "${repositoryDir}"
 [[ -d "Lintel" ]] || runcmd git clone https://github.com/dataseries/Lintel.git
 [[ -d "DataSeries" ]] || runcmd git clone https://github.com/dataseries/DataSeries.git
 [[ -d "gperftools" ]] || runcmd git clone https://github.com/gperftools/gperftools.git
-[[ -d "trace2model" ]] || runcmd git clone https://github.com/sbu-fsl/trace2model.git
+[[ -d "trace2model" ]] || runcmd git clone https://github.com/SNIA/reanimator-library.git
 
 # Building Lintel
 # ---------------
