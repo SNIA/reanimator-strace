@@ -1,11 +1,11 @@
-fsl-strace - an strace fork compatible with DataSeries
+reanimator-strace - an strace fork compatible with DataSeries
 ======================================================
 
-fsl-strace extends strace with support for [DataSeries](https://github.com/dataseries/dataseries), an efficient, flexible data format for structured serial data. This modification to strace captures maximal information, including all data buffers and arguments. The output of fsl-strace is designed to be readable by both humans and machines, allowing researchers to use existing DataSeries tools to analyze trace files.
+reanimator-strace extends strace with support for [DataSeries](https://github.com/dataseries/dataseries), an efficient, flexible data format for structured serial data. This modification to strace captures maximal information, including all data buffers and arguments. The output of reanimator-strace is designed to be readable by both humans and machines, allowing researchers to use existing DataSeries tools to analyze trace files.
 
-This modification is designed for use with our [syscall-replayer](https://github.com/sbu-fsl/trace2model/tree/master/syscall-replayer), a program able to replay and analyze the system call traces collected in the DataSeries format. For more information on the Re-Animator project, please see our paper [Re-Animator: Versatile High-Fidelity Storage-System Tracing and Replaying](https://doi.org/10.1145/3383669.3398276).
+This modification is designed for use with our [syscall-replayer](https://github.com/SNIA/reanimator-library/tree/master/syscall-replayer), a program able to replay and analyze the system call traces collected in the DataSeries format. For more information on the Re-Animator project, please see our paper [Re-Animator: Versatile High-Fidelity Storage-System Tracing and Replaying](https://doi.org/10.1145/3383669.3398276).
 
-fsl-strace is under development by Ibrahim Umit Akgun of the File Systems and Storage Lab (FSL) at Stony Brook University under Professor Erez Zadok, with assistance from Professor Geoff Kuenning at Harvey Mudd College.
+reanimator-strace is under development by Ibrahim Umit Akgun of the File Systems and Storage Lab (FSL) at Stony Brook University under Professor Erez Zadok, with assistance from Professor Geoff Kuenning at Harvey Mudd College.
 
 Dependencies
 ------------
@@ -14,7 +14,7 @@ Currently, only Ubuntu 16 is officially supported.
 
 - [Lintel](https://github.com/dataseries/lintel) - general utility library for DataSeries
 - [DataSeries](https://github.com/dataseries/dataseries) - data format for structured serial data
-- [strace2ds-library](https://github.com/sbu-fsl/trace2model/tree/master/strace2ds-library) - library for outputting traces in DataSeries format
+- [strace2ds-library](https://github.com/SNIA/reanimator-library/tree/master/strace2ds-library) - library for outputting traces in DataSeries format
 - [tcmalloc](https://github.com/gperftools/gperftools) - high-performance, multi-threaded `malloc()` implementation
 - libtool
 - libboost-dev (v1.58 only)
@@ -39,10 +39,10 @@ Requires bash.
 
     On Ubuntu 16, all the above requirements are available through the APT package manager.
 
-2. Clone this repository and run [`build-fsl-strace.sh`](build-fsl-strace.sh). This will place build files in the current directory under `BUILD/` and install Lintel, DataSeries, tcmalloc, strace2ds-library, and fsl-strace under `dist/fsl_strace_release/`.
+2. Clone this repository and run [`build-reanimator-strace.sh`](build-reanimator-strace.sh). This will place build files in the current directory under `BUILD/` and install Lintel, DataSeries, tcmalloc, strace2ds-library, and reanimator-strace under `dist/reanimator_strace_release/`.
 
-    - The script will install include files and libraries under `/usr/local/` if invoked with `build-syscall-replayer.sh --install`. If installed this way, the fsl-strace binary will remain in the build folder so as not to conflict with the strace binary pre-installed on many systems.
-    - You may specify custom build and install directories with the command line options `--build-dir DIR` and `--install-dir DIR`. Run `./build-fsl-strace.sh --help` for a full list of options.
+    - The script will install include files and libraries under `/usr/local/` if invoked with `build-reanimator-strace.sh --install`. If installed this way, the reanimator-strace binary will remain in the build folder so as not to conflict with the strace binary pre-installed on many systems.
+    - You may specify custom build and install directories with the command line options `--build-dir DIR` and `--install-dir DIR`. Run `./build-reanimator-strace.sh --help` for a full list of options.
 
 ### Manual Build
 
@@ -60,9 +60,9 @@ Requires bash.
 
 4. Install [tcmalloc](https://github.com/gperftools/gperftools) from the gperftools repository. See the gperftools [`INSTALL`](https://github.com/gperftools/gperftools/blob/master/INSTALL) file for detailed instructions.
 
-5. Install [strace2ds-library](https://github.com/sbu-fsl/trace2model/tree/master/strace2ds-library). See the strace2ds-library [`README.md`](https://github.com/sbu-fsl/trace2model/blob/master/strace2ds-library/README.md) file for detailed instructions.
+5. Install [strace2ds-library](https://github.com/SNIA/reanimator-library/tree/master/strace2ds-library). See the strace2ds-library [`README.md`](https://github.com/SNIA/reanimator-library/blob/master/strace2ds-library/README.md) file for detailed instructions.
 
-6. In the fsl-strace repository, run the `./bootstrap` script as a wrapper to autotools.
+6. In the reanimator-strace repository, run the `./bootstrap` script as a wrapper to autotools.
 
 7. Create a directory named `BUILD` in the repository and navigate to it. Run the command
 
@@ -89,7 +89,7 @@ To run the modified strace binary with DataSeries support, navigate to the build
 ./strace --dataseries output.ds <program to be traced>
 ```
 
-This will write all trace output in DataSeries format to `output.ds`. From there, you can read the output in plaintext with `ds2txt output.ds`, analyze the trace with any of the tools provided with DataSeries, or replay the trace with [syscall-replayer](https://github.com/sbu-fsl/trace2model/tree/master/syscall-replayer).
+This will write all trace output in DataSeries format to `output.ds`. From there, you can read the output in plaintext with `ds2txt output.ds`, analyze the trace with any of the tools provided with DataSeries, or replay the trace with [syscall-replayer](https://github.com/SNIA/reanimator-library/tree/master/syscall-replayer).
 
 ---
 
