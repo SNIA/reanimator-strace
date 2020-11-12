@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Build the program fsl-strace, installing any required dependencies if
+# Build the program reanimator-strace, installing any required dependencies if
 # requested.
 
 ####################
@@ -10,7 +10,7 @@ readonly numberOfCores="$(nproc --all)"
 install=false
 installPackages=false
 configArgs=""
-installDir="$(pwd)/dist/fsl_strace_release"
+installDir="$(pwd)/dist/reanimator_strace_release"
 repositoryDir="$(pwd)/BUILD/repositories"
 straceDir="$(pwd)"
 
@@ -145,7 +145,7 @@ runcmd cd "${repositoryDir}"
 [[ -d "Lintel" ]] || runcmd git clone https://github.com/dataseries/Lintel.git
 [[ -d "DataSeries" ]] || runcmd git clone https://github.com/dataseries/DataSeries.git
 [[ -d "gperftools" ]] || runcmd git clone https://github.com/gperftools/gperftools.git
-[[ -d "trace2model" ]] || runcmd git clone https://github.com/SNIA/reanimator-library.git
+[[ -d "reanimator-library" ]] || runcmd git clone https://github.com/SNIA/reanimator-library.git
 
 # Building Lintel
 # ---------------
@@ -184,7 +184,7 @@ runcmd cd "${repositoryDir}"
 
 # Building strace2ds-library
 # --------------------------
-runcmd cd trace2model/strace2ds-library
+runcmd cd reanimator-library/strace2ds-library
 runcmd autoreconf -v -i
 runcmd rm -rf BUILD
 runcmd mkdir -p BUILD
@@ -207,7 +207,7 @@ else
 fi
 runcmd cd "${repositoryDir}"
 
-# Building fsl-strace
+# Building reanimator-strace
 # -------------------
 runcmd cd "${straceDir}"
 runcmd ./bootstrap

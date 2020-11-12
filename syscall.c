@@ -1791,7 +1791,7 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 				break;
 			/*
 			 * These system calls are chosen not be traced by
-			 * fsl-strace.
+			 * reanimator-strace.
 			 */
 			case SEN_brk:
 			case SEN_mprotect:
