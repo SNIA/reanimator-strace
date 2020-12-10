@@ -182,28 +182,14 @@ else
 fi
 runcmd cd "${repositoryDir}"
 
-# Building strace2ds-library
+# Building reanimator-library
 # --------------------------
-runcmd cd reanimator-library/strace2ds-library
-runcmd autoreconf -v -i
-runcmd rm -rf BUILD
-runcmd mkdir -p BUILD
-runcmd mkdir -p xml
-runcmd cd tables
-runcmd perl gen-xml-enums.pl
-runcmd cd ../
-runcmd cp -r ./xml BUILD
-runcmd cd BUILD
-runcmd export CXXFLAGS="-I${installDir}/include"
-runcmd export LDFLAGS="-L${installDir}/lib"
-runcmd ../configure --enable-shared --disable-static \
-    --prefix="${installDir}/strace2ds"
-runcmd make clean
-runcmd make -j"${numberOfCores}"
+runcmd cd reanimator-library
+runcmd chmod +x buildall.sh
 if [[ "${install}" == true ]]; then
-    runcmd sudo make -j"${numberOfCores}" install
+    runcmd ./buildall.sh install
 else
-    runcmd make -j"${numberOfCores}" install
+    runcmd ./buildall.sh
 fi
 runcmd cd "${repositoryDir}"
 

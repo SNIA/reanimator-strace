@@ -73,3 +73,5 @@
 Makefile
 Makefile.in
 core
+BUILD
+build
