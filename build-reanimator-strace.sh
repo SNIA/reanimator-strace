@@ -186,11 +186,7 @@ runcmd cd "${repositoryDir}"
 # --------------------------
 runcmd cd reanimator-library
 runcmd chmod +x buildall.sh
-if [[ "${install}" == true ]]; then
-    runcmd ./buildall.sh install
-else
-    runcmd ./buildall.sh
-fi
+runcmd ./buildall.sh --install --install-dir /usr/local --dataseries-dir "${repositoryDir}"/DataSeries
 runcmd cd "${repositoryDir}"
 
 # Building reanimator-strace
