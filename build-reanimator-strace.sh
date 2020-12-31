@@ -142,55 +142,22 @@ fi
 # Cloning all repositories
 runcmd mkdir -p "${repositoryDir}"
 runcmd cd "${repositoryDir}"
-[[ -d "Lintel" ]] || runcmd git clone https://github.com/dataseries/Lintel.git
-[[ -d "DataSeries" ]] || runcmd git clone https://github.com/dataseries/DataSeries.git
-[[ -d "gperftools" ]] || runcmd git clone https://github.com/gperftools/gperftools.git
 [[ -d "reanimator-library" ]] || runcmd git clone https://github.com/SNIA/reanimator-library.git
 
-# Building Lintel
-# ---------------
-runcmd cd Lintel
-runcmd cmake -DCMAKE_INSTALL_PREFIX="${installDir}" .
-if [[ "${install}" == true ]]; then
-    runcmd sudo make -j"${numberOfCores}" install
-else
-    runcmd make -j"${numberOfCores}" install
-fi
-runcmd cd "${repositoryDir}"
-
-# Building DataSeries
-# -------------------
-runcmd cd DataSeries
-runcmd cmake -DCMAKE_INSTALL_PREFIX="${installDir}" .
-if [[ "${install}" == true ]]; then
-    runcmd sudo make -j"${numberOfCores}" install
-else
-    runcmd make -j"${numberOfCores}" install
-fi
-runcmd cd "${repositoryDir}"
-
-# Building tcmalloc
-# -----------------
-runcmd cd gperftools
-runcmd ./autogen.sh
-runcmd ./configure --prefix="${installDir}" "${configArgs}"
-runcmd make -j"${numberOfCores}"
-if [[ "${install}" == true ]]; then
-    runcmd sudo make -j"${numberOfCores}" install
-else
-    runcmd make -j"${numberOfCores}" install
-fi
-runcmd cd "${repositoryDir}"
-
 # Building reanimator-library
-# --------------------------
+# ---------------------------
 runcmd cd reanimator-library
-runcmd chmod +x buildall.sh
-runcmd ./buildall.sh --install --install-dir /usr/local --dataseries-dir "${repositoryDir}"/DataSeries
+runcmd chmod +x build-reanimator-library.sh
+if $install; then
+    runcmd ./build-reanimator-library.sh --install
+else
+    runcmd mkdir -p "${installDir}"
+    runcmd ./build-reanimator-library.sh --install-dir "${installDir}"
+fi
 runcmd cd "${repositoryDir}"
 
 # Building reanimator-strace
-# -------------------
+# --------------------------
 runcmd cd "${straceDir}"
 runcmd ./bootstrap
 runcmd mkdir -p BUILD

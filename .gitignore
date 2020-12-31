@@ -75,3 +75,4 @@ Makefile.in
 core
 BUILD
 build
+dist/reanimator_strace_release
