@@ -98,8 +98,7 @@ SYS_FUNC(getdents64)
 	}
 	if (!abbrev(tcp))
 		tprints("]");
-	else
-		tprintf_comment("%u entries", dents);
+
 	tprintf(", %u", count);
 	free(buf);
 	return 0;
