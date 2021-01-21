@@ -546,6 +546,14 @@ ATTRIBUTE_FORMAT((printf, 1, 0))
 static void
 tvprintf(const char *const fmt, va_list args)
 {
+#ifdef ENABLE_DATASERIES
+	/*
+	 * If writing to a DataSeries record, prevents strace from printing its
+	 * regular output.
+	 */
+	if (ds_module)
+		return;
+#endif /* ENABLE_DATASERIES */
 	if (current_tcp) {
 		int n = vfprintf(current_tcp->outf, fmt, args);
 		if (n < 0) {
