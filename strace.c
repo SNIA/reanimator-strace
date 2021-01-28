@@ -32,6 +32,7 @@
 #ifdef ENABLE_DATASERIES
 # include <sys/param.h>
 # include <libgen.h>
+# include <stdlib.h>
 #endif /* ENABLE_DATASERIES */
 
 #include "kill_save_errno.h"
@@ -1940,12 +1941,15 @@ init(int argc, char *argv[])
 #ifdef ENABLE_DATASERIES
 	if (ds_fname) {
 		char ds_top[PATH_MAX] = {0};
+		char resolved_binary_location[PATH_MAX] = {0};
 		char relative_path[PATH_MAX] = {0};
 		char tab_path[PATH_MAX] = {0};
 		char xml_path[PATH_MAX] = {0};
 		struct stat relative_lib_info;
+		realpath(dirname(program_invocation_name),
+				resolved_binary_location);
 		snprintf(relative_path, MAXPATHLEN, "%s/%s",
-			dirname(program_invocation_name), "../strace2ds");
+			resolved_binary_location, "../strace2ds");
 		int lib_search_return = stat(relative_path, &relative_lib_info);
 		if (lib_search_return == 0 && S_ISDIR(relative_lib_info.st_mode)) {
 			strncpy(ds_top, relative_path, PATH_MAX);
