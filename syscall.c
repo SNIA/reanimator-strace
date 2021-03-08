@@ -704,6 +704,7 @@ syscall_entering_finish(struct tcb *tcp, int res)
 	 */
 	if (ds_module) {
 		clock_gettime(CLOCK_MONOTONIC, &tcp->etime);
+		clock_gettime(CLOCK_REALTIME, &tcp->etime_real);
 		/* initialize v_args and common_fields with NULL */
 		memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
 		memset(common_fields, 0, sizeof(void *)
@@ -717,7 +718,7 @@ syscall_entering_finish(struct tcb *tcp, int res)
 		 * setting time_called and executing pid fields.
 		 */
 		common_fields[DS_COMMON_FIELD_TIME_CALLED] =
-						&tcp->etime;
+						&tcp->etime_real;
 		common_fields[DS_COMMON_FIELD_EXECUTING_PID] =
 						&tcp->pid;
 		common_fields[DS_COMMON_FIELD_SYSCALL_NUM] =
@@ -751,7 +752,7 @@ syscall_entering_finish(struct tcb *tcp, int res)
 			ds_write_record(ds_module, "exit", tcp->u_arg,
 					common_fields, v_args);
 			v_args[0] = NULL;
-			common_fields[DS_COMMON_FIELD_TIME_RETURNED] = &tcp->etime;
+			common_fields[DS_COMMON_FIELD_TIME_RETURNED] = &tcp->etime_real;
 			break;
 		case SEN_execve: /* execve system call */
 			/*
@@ -834,6 +835,7 @@ syscall_exiting_decode(struct tcb *tcp, struct timespec *pts)
 	/* Get a time stamp for time_returned and store as in a timeval tv. */
 	if (ds_module) {
 		clock_gettime(CLOCK_MONOTONIC, pts);
+		clock_gettime(CLOCK_REALTIME, &tcp->exit_real);
 	}
 	else if ((Tflag || cflag) && !filtered(tcp))
 		clock_gettime(CLOCK_MONOTONIC, pts);
@@ -1100,8 +1102,8 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 		memset(common_fields, 0, sizeof(void *) * DS_NUM_COMMON_FIELDS);
 
 		/* Then, store the common field values */
-		common_fields[DS_COMMON_FIELD_TIME_CALLED] = &tcp->etime;
-		common_fields[DS_COMMON_FIELD_TIME_RETURNED] = ts;
+		common_fields[DS_COMMON_FIELD_TIME_CALLED] = &tcp->etime_real;
+		common_fields[DS_COMMON_FIELD_TIME_RETURNED] = &tcp->exit_real;
 		common_fields[DS_COMMON_FIELD_RETURN_VALUE] = &tcp->u_rval;
 		common_fields[DS_COMMON_FIELD_ERRNO_NUMBER] = &tcp->u_error;
 		common_fields[DS_COMMON_FIELD_EXECUTING_PID] = &tcp->pid;

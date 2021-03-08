@@ -368,6 +368,12 @@ struct tcb {
 	struct timespec etime;	/* Syscall entry time (CLOCK_MONOTONIC) */
 	struct timespec delay_expiration_time; /* When does the delay end */
 
+#ifdef ENABLE_DATASERIES
+	/* DataSeries-specific Real Time timespec structs */
+	struct timespec etime_real;	/* Syscall entry time (CLOCK_REALTIME) */
+	struct timespec exit_real; /* Syscall exit time (CLOCK_REALTIME) */
+#endif /* ENABLE_DATASERIES */
+
 	struct mmap_cache_t *mmap_cache;
 
 	/*
