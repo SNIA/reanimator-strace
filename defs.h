@@ -370,8 +370,8 @@ struct tcb {
 
 #ifdef ENABLE_DATASERIES
 	/* DataSeries-specific Real Time timespec structs */
-	struct timespec etime_real;	/* Syscall entry time (CLOCK_REALTIME) */
-	struct timespec exit_real; /* Syscall exit time (CLOCK_REALTIME) */
+	int64_t entry_real_ns;  /* Syscall entry time (CLOCK_REALTIME in nanoseconds) */
+	int64_t exit_real_ns;  /* Syscall exit time (CLOCK_REALTIME in nanoseconds) */
 #endif /* ENABLE_DATASERIES */
 
 	struct mmap_cache_t *mmap_cache;
