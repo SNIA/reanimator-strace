@@ -681,8 +681,14 @@ syscall_entering_trace(struct tcb *tcp, unsigned int *sig)
 }
 
 #ifdef ENABLE_DATASERIES
+/*
+ * Entry and exit times are initially recorded as a CLOCK_REALTIME timespec.
+ * We convert these timespecs into nanoseconds represented as a signed 64-bit int.
+ * Signed ints are used because timestamps can occur before the Unix epoch (i.e. negative timestamps).
+ */
 int64_t
 timespec_to_ns(struct timespec *t) {
+  // Convert seconds field to nanoseconds and add to existing nanoseconds field
   int64_t time_ns = t->tv_sec * 1000000000 + t->tv_nsec;
   return time_ns;
 }
