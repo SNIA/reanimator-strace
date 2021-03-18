@@ -680,6 +680,20 @@ syscall_entering_trace(struct tcb *tcp, unsigned int *sig)
 	return res;
 }
 
+#ifdef ENABLE_DATASERIES
+/*
+ * Entry and exit times are initially recorded as a CLOCK_REALTIME timespec.
+ * We convert these timespecs into nanoseconds represented as a signed 64-bit int.
+ * Signed ints are used because timestamps can occur before the Unix epoch (i.e. negative timestamps).
+ */
+int64_t
+timespec_to_ns(struct timespec *t) {
+  // Convert seconds field to nanoseconds and add to existing nanoseconds field
+  int64_t time_ns = t->tv_sec * 1000000000 + t->tv_nsec;
+  return time_ns;
+}
+#endif /* ENABLE_DATASERIES */
+
 void
 syscall_entering_finish(struct tcb *tcp, int res)
 {
@@ -703,8 +717,10 @@ syscall_entering_finish(struct tcb *tcp, int res)
 	 * in tcp->etime.
 	 */
 	if (ds_module) {
+		struct timespec entry_time_real;
+		clock_gettime(CLOCK_REALTIME, &entry_time_real);
+		tcp->entry_real_ns = timespec_to_ns(&entry_time_real);
 		clock_gettime(CLOCK_MONOTONIC, &tcp->etime);
-		clock_gettime(CLOCK_REALTIME, &tcp->etime_real);
 		/* initialize v_args and common_fields with NULL */
 		memset(v_args, 0, sizeof(void *) * DS_MAX_ARGS);
 		memset(common_fields, 0, sizeof(void *)
@@ -718,7 +734,7 @@ syscall_entering_finish(struct tcb *tcp, int res)
 		 * setting time_called and executing pid fields.
 		 */
 		common_fields[DS_COMMON_FIELD_TIME_CALLED] =
-						&tcp->etime_real;
+						&tcp->entry_real_ns;
 		common_fields[DS_COMMON_FIELD_EXECUTING_PID] =
 						&tcp->pid;
 		common_fields[DS_COMMON_FIELD_SYSCALL_NUM] =
@@ -752,7 +768,7 @@ syscall_entering_finish(struct tcb *tcp, int res)
 			ds_write_record(ds_module, "exit", tcp->u_arg,
 					common_fields, v_args);
 			v_args[0] = NULL;
-			common_fields[DS_COMMON_FIELD_TIME_RETURNED] = &tcp->etime_real;
+			common_fields[DS_COMMON_FIELD_TIME_RETURNED] = &tcp->entry_real_ns;
 			break;
 		case SEN_execve: /* execve system call */
 			/*
@@ -835,7 +851,9 @@ syscall_exiting_decode(struct tcb *tcp, struct timespec *pts)
 	/* Get a time stamp for time_returned and store as in a timeval tv. */
 	if (ds_module) {
 		clock_gettime(CLOCK_MONOTONIC, pts);
-		clock_gettime(CLOCK_REALTIME, &tcp->exit_real);
+		struct timespec exit_time_real;
+		clock_gettime(CLOCK_REALTIME, &exit_time_real);
+		tcp->exit_real_ns = timespec_to_ns(&exit_time_real);
 	}
 	else if ((Tflag || cflag) && !filtered(tcp))
 		clock_gettime(CLOCK_MONOTONIC, pts);
@@ -1102,8 +1120,8 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 		memset(common_fields, 0, sizeof(void *) * DS_NUM_COMMON_FIELDS);
 
 		/* Then, store the common field values */
-		common_fields[DS_COMMON_FIELD_TIME_CALLED] = &tcp->etime_real;
-		common_fields[DS_COMMON_FIELD_TIME_RETURNED] = &tcp->exit_real;
+		common_fields[DS_COMMON_FIELD_TIME_CALLED] = &tcp->entry_real_ns;
+		common_fields[DS_COMMON_FIELD_TIME_RETURNED] = &tcp->exit_real_ns;
 		common_fields[DS_COMMON_FIELD_RETURN_VALUE] = &tcp->u_rval;
 		common_fields[DS_COMMON_FIELD_ERRNO_NUMBER] = &tcp->u_error;
 		common_fields[DS_COMMON_FIELD_EXECUTING_PID] = &tcp->pid;
